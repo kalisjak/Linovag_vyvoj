@@ -1,0 +1,21 @@
+<RCC>
+  <qresource prefix="/qml">
+    <file>App.qml</file>
+    <file>HomePage.qml</file>
+    <file>TempPage.qml</file>
+    <file>QrPage.qml</file>
+    <file>TopBar.qml</file>
+    <file>DockNav.qml</file>
+    <file>OverlayPage.qml</file>
+    <file>WifiPage.qml</file>
+    <file>SettingsPage.qml</file>
+    <file>LoginPage.qml</file>
+    <file>KeyboardPanel.qml</file>
+    <file>fonts/bootstrap-icons.ttf</file>
+
+    <!-- Obrázky -->
+    <file alias="qr_web.png">../assets/qr_web_bila2.png</file>
+    <file alias="plocha_tmava.png">../assets/tmave.png</file>
+    <file alias="logo.png">../assets/logo.png</file>
+  </qresource>
+</RCC>
