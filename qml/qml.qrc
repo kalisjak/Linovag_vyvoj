@@ -2,6 +2,7 @@
   <qresource prefix="/qml">
     <file>App.qml</file>
     <file>HomePage.qml</file>
+    <file>SetTempPage.qml</file>
     <file>TempPage.qml</file>
     <file>QrPage.qml</file>
     <file>TopBar.qml</file>

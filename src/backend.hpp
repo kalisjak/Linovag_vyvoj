@@ -17,12 +17,15 @@ class Backend : public QObject {
     Q_PROPERTY(double value2 READ value2 NOTIFY value2Changed)
     Q_PROPERTY(bool   mqttConnected READ mqttConnected NOTIFY mqttConnectedChanged)
     Q_PROPERTY(QString serialNumber READ serialNumber NOTIFY serialNumberChanged)
+    Q_PROPERTY(double targetTemp READ targetTemp WRITE setTargetTemp NOTIFY targetTempChanged)
     
     public:
     explicit Backend(QObject* parent = nullptr);
     
     double value1() const { return value1_; }
     double value2() const { return value2_; }
+    double targetTemp() const { return targetTemp_; }
+    void setTargetTemp(double t);
     bool   mqttConnected() const { return mqttConnected_; }
     double readDS18B20( std::string& deviceId);
     QString serialNumber() const;
@@ -34,6 +37,7 @@ class Backend : public QObject {
     signals:
     void value1Changed();
     void value2Changed();
+    void targetTempChanged();
     void mqttConnectedChanged();
     void serialNumberChanged();
     
@@ -46,6 +50,7 @@ class Backend : public QObject {
     // demo data
     double value1_ = 0.0;
     double value2_ = 0.0;
+    double targetTemp_ = 5.0;   // výchozí požadovaná teplota
     QTimer* timer_ = nullptr;
     
     // sensors

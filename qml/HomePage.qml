@@ -11,21 +11,21 @@ Page {
     contentItem: Item {
         anchors.fill: parent
 
-        Row {
+                Row {
             anchors.centerIn: parent
             spacing: 48
 
-            // Tlačítko "Domů/TempPage"
+            // Tlačítko "Teploty" – nová SetTempPage s teploměrem
             Rectangle {
                 width: 160; height: 160; radius: 24
                 color: "#00000055"; border.color: "#FFFFFF33"; border.width: 0
 
                 Column {
                     anchors.centerIn: parent; spacing: 8
-                    // dům
                     Loader {
                         sourceComponent: biIcon
                         onLoaded: {
+                            // teploměr – bootstrap icons "thermometer"
                             item.code = "\uF5CD"
                             item.px = 80
                             item.iconColor = "#EDEFF2"
@@ -34,19 +34,46 @@ Page {
                     Text { text: "Teploty"; color: "#EDEFF2"; font.bold: true }
                 }
                 MouseArea {
-                    anchors.fill: parent; onClicked: dock.dotClicked(1) // TempPage
-                    hoverEnabled: true; onEntered: parent.color = "#00000077"; onExited: parent.color = "#00000055"
+                    anchors.fill: parent; onClicked: dock.dotClicked(1) // SetTempPage (index 1)
+                    hoverEnabled: true
+                    onEntered: parent.color = "#00000077"
+                    onExited:  parent.color = "#00000055"
                 }
             }
 
-            // Tlačítko "QR stránka"
+            // Tlačítko pro původní TempPage (ikona psaníčka)
             Rectangle {
                 width: 160; height: 160; radius: 24
                 color: "#00000055"; border.color: "#FFFFFF33"; border.width: 0
 
                 Column {
                     anchors.centerIn: parent; spacing: 8
-                    // QR
+                    Loader {
+                        sourceComponent: biIcon
+                        onLoaded: {
+                            // obálka – bootstrap icons "envelope"
+                            item.code = "\uF32F"
+                            item.px = 80
+                            item.iconColor = "#EDEFF2"
+                        }
+                    }
+                    Text { text: "Historie"; color: "#EDEFF2"; font.bold: true }
+                }
+                MouseArea {
+                    anchors.fill: parent; onClicked: dock.dotClicked(2) // TempPage (index 2)
+                    hoverEnabled: true
+                    onEntered: parent.color = "#00000077"
+                    onExited:  parent.color = "#00000055"
+                }
+            }
+
+            // Tlačítko "QR stránka" (tohle už v souboru máš, jen zůstává jako je)
+            Rectangle {
+                width: 160; height: 160; radius: 24
+                color: "#00000055"; border.color: "#FFFFFF33"; border.width: 0
+
+                Column {
+                    anchors.centerIn: parent; spacing: 8
                     Loader {
                         sourceComponent: biIcon
                         onLoaded: {
@@ -58,11 +85,14 @@ Page {
                     Text { text: "QR"; color: "#EDEFF2"; font.bold: true }
                 }
                 MouseArea {
-                    anchors.fill: parent; onClicked: dock.dotClicked(2) // QrPage
-                    hoverEnabled: true; onEntered: parent.color = "#00000077"; onExited: parent.color = "#00000055"
+                    anchors.fill: parent; onClicked: dock.dotClicked(3) // QrPage – nově index 3
+                    hoverEnabled: true
+                    onEntered: parent.color = "#00000077"
+                    onExited:  parent.color = "#00000055"
                 }
             }
         }
+
     }
 
 }

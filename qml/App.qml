@@ -94,8 +94,9 @@ ApplicationWindow {
             clip: true
 
             HomePage { }
-            TempPage { }     // index 1
-            QrPage   { }     // index 2
+            SetTempPage { }  // index 1
+            TempPage { }     // index 2
+            QrPage   { }     // index 3
             //bottomPadding: osk.exposedHeight
         }
 

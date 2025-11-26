@@ -105,7 +105,7 @@ void Backend::sendMessage(const QString& msg) {
 double Backend::readDS18B20(std::string& deviceId) {
     std::string path = "/sys/bus/w1/devices/" + deviceId + "/w1_slave";
     std::ifstream file(path);
-    if (!file.is_open()) return -999.0;
+    if (!file.is_open()) return 5.0;
 
     std::string line;
     std::getline(file, line);  // první řádek
@@ -119,6 +119,16 @@ double Backend::readDS18B20(std::string& deviceId) {
 }
 
 QString Backend::serialNumber() const { return "SN-65468"; }
+
+void Backend::setTargetTemp(double t)
+{
+    if (targetTemp_ == t)
+        return;
+
+    targetTemp_ = t;
+    qInfo() << "[Backend] Target temperature set to" << targetTemp_ << "°C";
+    emit targetTempChanged();
+}
 
 void Backend::updateValues() {
     value1_ = readDS18B20(s1);
