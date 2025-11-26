@@ -61,8 +61,9 @@ class Backend : public QObject {
 
     // broker config (případně načti z configu/env)
     const QString brokerHost_ = "192.168.3.101";
-    const quint16 brokerPort_ = 1883;
+    const quint16 brokerPort_ = 8883;
     const QString brokerUser_ = "device1";
     const QString brokerPass_ = "pass1";
     const QString topic_      = "devices/device1/telemetry";
+    const QString ca_file_      = "/usr/local/share/ca-certificates/rootCA.pem";
 };

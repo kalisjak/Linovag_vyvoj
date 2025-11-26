@@ -1,361 +1,472 @@
-// KeyboardPanel.qml (v1.2 – sjednocené anchors + animace bottomMargin)
 import QtQuick 2.15
 import QtQuick.Layouts 1.15
 import QtQuick.Controls 2.15
 
 Item {
-    id: kb
+    id: osk
+
+    // --- pozice a rozměry ---
+
+    anchors.left: parent ? parent.left : undefined
+    anchors.right: parent ? parent.right : undefined
     width: parent ? parent.width : 800
+
+    // výška max ~ půlka okna
     height: parent ? parent.height * 0.5 : 240
+
+    // vysouvání odspodu podle exposedHeight
+    y: parent ? parent.height - exposedHeight : 0
     z: 2000
 
-    // ✨ Nové: viditelná výška panelu (0…height)
+    // API pro App.qml
+    property bool show: false
     property real exposedHeight: show ? height : 0
-    Behavior on exposedHeight { NumberAnimation { duration: 180; easing.type: Easing.InOutQuad } }
-
-    // místo anchors.bottomMargin animujeme prostě y podle exposedHeight
-    anchors.left:   parent ? parent.left   : undefined
-    anchors.right:  parent ? parent.right  : undefined
-    y: parent ? parent.height - exposedHeight : 0
-
-    // panel je pořád "visible", jen mění výšku (y)
-    visible: true
-
-    Rectangle { anchors.fill: parent; color: bgColor }
-
-    // --- API / téma ---
-    property bool  forceVisible: false
-    property color bgColor: "#161616EE"
-    property color keyBg:  "#2A2A2A"
-    property color keyBgAlt: "#333333"
-    property color keyFg:  "#EDEFF2"
-    property color keyStroke: "#444444"
-    property color accent: "#4A90E2"
-
-    // --- stav ---
-    property bool numericMode: false
-    property var  _target: null
-    property bool _hasEditableFocus: _target !== null
-    property bool show: forceVisible || _hasEditableFocus
-    // SHIFT režim: 0=off, 1=once (po jednom znaku spadne), 2=locked (caps)
-    property int  shiftState: 0
-    property bool shift: shiftState > 0  // z toho se dál počítají řádky písmen
-
-    // --- sledování focusu a režimu ABC/123 ---
-    property var  _lastFocused: null       // paměť posledního focusu
-    property bool manualMode: false        // když uživatel přepne 123/ABC ručně
-
-    Timer {
-        interval: 100; running: true; repeat: true
-        onTriggered: {
-            function findEditable(obj) {
-                if (!obj) return null
-                if (typeof obj.insert === "function") return obj     // TextInput / TextArea
-                if (obj.contentItem && typeof obj.contentItem.insert === "function")
-                    return obj.contentItem                           // TextField.contentItem
-                return null
-            }
-            function getHints(obj) {
-                // vezmi hints z vlastníku pole (TextField) i z contentItem
-                var h = 0
-                if (obj && obj.inputMethodHints !== undefined) h |= obj.inputMethodHints
-                if (obj && obj.parent && obj.parent.inputMethodHints !== undefined) h |= obj.parent.inputMethodHints
-                return h
-            }
-
-            var f = (win && win.activeFocusItem) ? win.activeFocusItem : null
-            var t = findEditable(f)
-
-            // když máme nový cíl, znovu rozhodni počáteční režim
-            if (t !== kb._target) {
-                kb._target = t
-                kb._lastFocused = t
-                kb.manualMode = false   // reset uživatelského přepnutí na novém poli
-
-                // POZOR: automatický numeric jen jako výchozí,
-                // a jen pokud to dává smysl podle hints
-                var imh = getHints(t)
-                var wantNums = !!(imh & (Qt.ImhDigitsOnly | Qt.ImhFormattedNumbersOnly | Qt.ImhPreferNumbers))
-                kb.numericMode = wantNums
-            }
-
-            // pokud dočasně není focus (klik na klávesu), drž poslední známý target
-            // if (!kb._target && kb._lastFocused) kb._target = kb._lastFocused
-        }
+    Behavior on exposedHeight {
+        NumberAnimation { duration: 180; easing.type: Easing.InOutQuad }
     }
 
-    function insertAtCursor(s) {
-        if (!kb._target) return
-        var t = kb._target
-        var pos = (t.cursorPosition !== undefined) ? t.cursorPosition : 0
+    // cílové pole, na které píšeme
+    property var target: null    // sem nastavíš TextField / TextArea zvenku
 
-        if (typeof t.insert === "function") {
-            // preferulní podpis insert(position, text); fallback na insert(text)
-            try {
-                if (t.insert.length >= 2) t.insert(pos, s)
-                else                      t.insert(s)
-            } catch (e) {
-                // nouzový ruční update textu
-                var txt = t.text || ""
-                t.text = txt.slice(0, pos) + s + txt.slice(pos)
-            }
-        } else {
-            var txt2 = t.text || ""
-            t.text = txt2.slice(0, pos) + s + txt2.slice(pos)
-        }
+    // režimy
+    property bool numericMode: false
+    property int  shiftState: 0      // 0=off, 1=once, 2=locked (caps)
+    property bool shift: shiftState > 0
 
-        if (t.cursorPosition !== undefined)
-            t.cursorPosition = pos + s.length
+    // rozložení kláves
+    property var lettersRow1: [ "q","w","e","r","t","y","u","i","o","p" ]
+    property var lettersRow2: [ "a","s","d","f","g","h","j","k","l" ]
+    property var lettersRow3: [ "z","x","c","v","b","n","m" ]
+
+    property var numsRow1:   [ "1","2","3","4","5","6","7","8","9","0" ]
+    property var numsRow2:   [ "-","/",":",";","(",")","€","&","@","#" ]
+    property var numsRow3:   [ ".","_",",","?","!","\"","'" ]
+
+    // --- veřejné funkce ---
+
+    function hide() {
+        show = false
+    }
+
+    function showFor(field) {
+        // můžeš volat zvenku: osk.showFor(input)
+        target = field
+        show = true
+        if (target) target.forceActiveFocus()
+    }
+
+    // pomocná funkce: vrátí skutečný editovatelný objekt (TextInput/TextArea)
+    function editObject() {
+        var t = target
+        if (!t) return null
+
+        // když je to TextField z Controls 2 – má contentItem (TextInput)
+        if (t.contentItem && t.contentItem.text !== undefined)
+            return t.contentItem
+
+        // TextInput / TextArea
+        if (t.text !== undefined)
+            return t
+
+        return null
+    }
+
+    function insertText(s) {
+        var e = editObject()
+        if (!e) return
+
+        var txt = e.text || ""
+        var pos = (e.cursorPosition !== undefined) ? e.cursorPosition : txt.length
+
+        e.text = txt.slice(0, pos) + s + txt.slice(pos)
+        if (e.cursorPosition !== undefined)
+            e.cursorPosition = pos + s.length
+    }
+
+    function backspace() {
+        var e = editObject()
+        if (!e) return
+
+        var txt = e.text || ""
+        var pos = (e.cursorPosition !== undefined) ? e.cursorPosition : txt.length
+
+        if (pos <= 0 || txt.length === 0)
+            return
+
+        e.text = txt.slice(0, pos - 1) + txt.slice(pos)
+        if (e.cursorPosition !== undefined)
+            e.cursorPosition = pos - 1
     }
 
     function commitText(s) {
-        insertAtCursor(s)
-        // Když je SHIFT jen jednorázový (1), po napsání znaku spadne zpět
-        if (!numericMode && kb.shiftState === 1)
-            kb.shiftState = 0
+        insertText(s)
+        // jednorázový shift spadne po prvním znaku
+        if (!numericMode && shiftState === 1)
+            shiftState = 0
     }
+
+    // function doEnter() {
+    //     var t = target
+    //     var e = editObject()
+    //     if (!t && !e) return
+
+    //     // když má TextField/parent signál accepted(), zkus ho
+    //     if (t && typeof t.accepted === "function") {
+    //         t.accepted()
+    //         return
+    //     }
+    //     if (t && t.parent && typeof t.parent.accepted === "function") {
+    //         t.parent.accepted()
+    //         return
+    //     }
+
+    //     // jinak prostě nový řádek
+    //     commitText("\n")
+    // }
 
     function doEnter() {
-        if (!kb._target) return
-        var t = kb._target
+    // pokud je aktivní plovoucí editor, potvrď ho
+    if (floatEditor && floatEditor.active) {
+        floatEditor.accept()
+    } else {
+        commitText("\n")
+    }
+}
 
-        // 1) pokud pole má accepted(), použij ho (TextField enter)
-        if (typeof t.accepted === "function") {
-            t.accepted()
-            return
-        }
-        // 2) jinak newline do multiline
-        if (t.wrapMode !== undefined && t.wrapMode !== TextInput.NoWrap) {
-            insertAtCursor("\n")
-            return
-        }
-        // 3) fallback – prostě „potvrď“ přes parent, pokud má accepted
-        if (t.parent && typeof t.parent.accepted === "function") {
-            t.parent.accepted()
-        }
+    // --- pozadí panelu ---
+
+    Rectangle {
+        anchors.fill: parent
+        color: "#202020"
+        border.color: "#505050"
+        radius: 10
+        opacity: exposedHeight > 0 ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: 120 } }
     }
 
-    function doBackspace() {
-        if (!_target) return
-        if (typeof _target.backspace === "function") _target.backspace()
-        else {
-            var pos = _target.cursorPosition || 0
-            if (pos > 0) {
-                var txt = _target.text || ""
-                _target.text = txt.slice(0, pos-1) + txt.slice(pos)
-                _target.cursorPosition = pos - 1
-            }
-        }
-    }
-
-    function hide() {
-        kb.forceVisible = false
-        kb.shift = false
-        kb.manualMode = false
-        kb._target = null
-        // zajisti, že nikdo nezůstane ve focusu
-        if (win && win.activeFocusItem) win.activeFocusItem.focus = false
-    }
-    
-    // Šablona klávesy
-    Component {
-        id: keyButton
-        Rectangle {
-            id: key
-            implicitWidth: 54
-            implicitHeight: 46
-            radius: 8
-            color: keyBg
-            border.color: keyStroke
-
-            property string label: ""
-            property string send: ""
-            property bool   wide: false
-            property bool   xwide: false
-            property bool   accentKey: false
-
-            width: xwide ? 200 : (wide ? 100 : implicitWidth)
-
-            Text {
-                anchors.centerIn: parent
-                text: key.label
-                color: key.accentKey ? accent : keyFg
-                font.pixelSize: 18
-                renderType: Text.NativeRendering
-            }
-
-            Timer {
-                id: repeatTimer
-                interval: 70
-                repeat: true
-                onTriggered: { if (key.send === "__BKSP") kb.doBackspace() }
-            }
-
-            MouseArea {
-                anchors.fill: parent
-                preventStealing: true         // nenech klávesu „ukrást“ focus poli
-                hoverEnabled: false
-                propagateComposedEvents: false
-
-                onPressed: {
-                    // vizuální stisk
-                    key.color = keyBgAlt
-
-                    // udrž fokus v cílovém poli, aby _target zůstal platný
-                    if (kb._target) kb._target.forceActiveFocus()
-
-                    // Backspace: první smazání hned + nastartuj opakování
-                    if (key.send === "__BKSP") {
-                        kb.doBackspace()
-                        repeatTimer.start()
-                    }
-                }
-
-                onReleased: {
-                    key.color = keyBg
-                    repeatTimer.stop()
-                }
-
-                onCanceled: {
-                    key.color = keyBg
-                    repeatTimer.stop()
-                }
-
-                onClicked: {
-                    // po kliknutí znovu vrať fokus do aktivního pole
-                    if (kb._target) kb._target.forceActiveFocus()
-
-                    // akce podle typu klávesy
-                    if (key.send === "__SHIFT")  {
-                        if      (kb.shiftState === 0) kb.shiftState = 1;   // první tap: jednorázově
-                        else if (kb.shiftState === 1) kb.shiftState = 2;   // druhý tap: zamknout (caps)
-                        else                          kb.shiftState = 0;   // třetí tap: vypnout
-                    }
-                    else if (key.send === "__BKSP")   { /* řeší pressed/repeat */ }
-                    else if (key.send === "__ENTER")  { kb.doEnter() }
-                    else if (key.send === "__SPACE")  { kb.commitText(" ") }
-                    else if (key.send === "__HIDE")   { kb.hide() }
-                    else if (key.send === "__MODE")   { kb.numericMode = !kb.numericMode; kb.manualMode = true }
-                    else                               { kb.commitText(key.send) }
-                }
-            }
-        }
-    }
-
-    // Rozložení kláves
-    property var row1: shift ? ["Q","W","E","R","T","Y","U","I","O","P"]
-                             : ["q","w","e","r","t","y","u","i","o","p"]
-    property var row2: shift ? ["A","S","D","F","G","H","J","K","L"]
-                             : ["a","s","d","f","g","h","j","k","l"]
-    property var row3: shift ? ["Z","X","C","V","B","N","M"]
-                             : ["z","x","c","v","b","n","m"]
-
-    property var nums1: ["1","2","3","4","5","6","7","8","9","0"]
-    property var nums2: ["-","/",";",":","(",")","€","&","@","\""]
-    property var nums3: [".",",","?","!","'"]
+    // --- layout kláves ---
 
     ColumnLayout {
+        id: layoutRoot
         anchors.fill: parent
         anchors.margins: 10
         spacing: 8
 
-        // --- Písmena ---
-        Item { Layout.fillWidth: true; height: 0; visible: !kb.numericMode }
-
+        // PÍSMENA – 1. řádek
         RowLayout {
-            spacing: 6; visible: !kb.numericMode
+            Layout.fillWidth: true
+            spacing: 6
+            visible: !osk.numericMode
+
             Repeater {
-                model: kb.row1.length
+                model: osk.lettersRow1.length
                 delegate: Loader {
                     sourceComponent: keyButton
-                    onLoaded: { item.send = kb.row1[index]; item.label = kb.row1[index] }
+                    onLoaded: {
+                        item.keyText  = osk.lettersRow1[index]
+                        item.keyType  = "char"
+                        item.isLetter = true
+                    }
                 }
             }
         }
 
+        // PÍSMENA – 2. řádek
         RowLayout {
-            spacing: 6; visible: !kb.numericMode
-            Item { Layout.preferredWidth: 16; Layout.fillHeight: true }
+            Layout.fillWidth: true
+            spacing: 6
+            visible: !osk.numericMode
+
             Repeater {
-                model: kb.row2.length
+                model: osk.lettersRow2.length
                 delegate: Loader {
                     sourceComponent: keyButton
-                    onLoaded: { item.send = kb.row2[index]; item.label = kb.row2[index] }
+                    onLoaded: {
+                        item.keyText  = osk.lettersRow2[index]
+                        item.keyType  = "char"
+                        item.isLetter = true
+                    }
                 }
             }
         }
 
+        // PÍSMENA – 3. řádek (SHIFT + písmena + BKSP)
         RowLayout {
-            spacing: 6; visible: !kb.numericMode
-            // Loader { sourceComponent: keyButton; onLoaded: { item.send="__SHIFT"; item.label="⇧"; item.wide=true; item.accentKey=true } }
+            Layout.fillWidth: true
+            spacing: 6
+            visible: !osk.numericMode
+
             Loader {
                 sourceComponent: keyButton
                 onLoaded: {
-                    item.send = "__SHIFT"
-                    item.wide = true
-                    // label se mění podle stavu: ⇧ (momentary) / ⇪ (locked)
-                    item.label = Qt.binding(function() { return kb.shiftState === 2 ? "⇪" : "⇧" })
-                    // zvýraznění, když je shift aktivní (1 i 2)
-                    item.accentKey = Qt.binding(function() { return kb.shift })
+                    item.keyType  = "shift"
+                    item.keyText  = "⇧"
+                    item.wide     = true
+                    item.accent   = true
                 }
             }
+
             Repeater {
-                model: kb.row3.length
+                model: osk.lettersRow3.length
                 delegate: Loader {
                     sourceComponent: keyButton
-                    onLoaded: { item.send = kb.row3[index]; item.label = kb.row3[index] }
+                    onLoaded: {
+                        item.keyText  = osk.lettersRow3[index]
+                        item.keyType  = "char"
+                        item.isLetter = true
+                    }
                 }
             }
-            Loader { sourceComponent: keyButton; onLoaded: { item.send="__BKSP"; item.label="⌫"; item.wide=true; item.accentKey=true } }
+
+            Loader {
+                sourceComponent: keyButton
+                onLoaded: {
+                    item.keyType  = "backspace"
+                    item.keyText  = "⌫"
+                    item.wide     = true
+                    item.accent   = true
+                }
+            }
         }
 
+        // PÍSMENA – spodní řádek
         RowLayout {
-            spacing: 6; visible: !kb.numericMode
-            Loader { sourceComponent: keyButton; onLoaded: { item.send="__MODE";  item.label="123";   item.wide=true } }
-            Loader { sourceComponent: keyButton; onLoaded: { item.send="__SPACE"; item.label="Space"; item.xwide=true } }
-            Loader { sourceComponent: keyButton; onLoaded: { item.send="__ENTER"; item.label="⏎";     item.wide=true; item.accentKey=true } }
-            Loader { sourceComponent: keyButton; onLoaded: { item.send="__HIDE";  item.label="▾";     item.wide=true } }
+            Layout.fillWidth: true
+            spacing: 6
+            visible: !osk.numericMode
+
+            Loader {
+                sourceComponent: keyButton
+                onLoaded: {
+                    item.keyType = "mode"
+                    item.keyText = "123"
+                    item.wide    = true
+                }
+            }
+
+            Loader {
+                sourceComponent: keyButton
+                onLoaded: {
+                    item.keyType   = "space"
+                    item.keyText   = "Space"
+                    item.extraWide = true
+                }
+            }
+
+            Loader {
+                sourceComponent: keyButton
+                onLoaded: {
+                    item.keyType  = "enter"
+                    item.keyText  = "⏎"
+                    item.wide     = true
+                    item.accent   = true
+                }
+            }
+
+            Loader {
+                sourceComponent: keyButton
+                onLoaded: {
+                    item.keyType = "hide"
+                    item.keyText = "▾"
+                    item.wide    = true
+                }
+            }
         }
 
-        // --- Numeric ---
+        // ČÍSLA – 1. řádek
         RowLayout {
-            spacing: 6; visible: kb.numericMode
+            Layout.fillWidth: true
+            spacing: 6
+            visible: osk.numericMode
+
             Repeater {
-                model: kb.nums1.length
+                model: osk.numsRow1.length
                 delegate: Loader {
                     sourceComponent: keyButton
-                    onLoaded: { item.send = kb.nums1[index]; item.label = kb.nums1[index] }
+                    onLoaded: {
+                        item.keyText = osk.numsRow1[index]
+                        item.keyType = "char"
+                    }
                 }
             }
-        }
-        RowLayout {
-            spacing: 6; visible: kb.numericMode
-            Repeater {
-                model: kb.nums2.length
-                delegate: Loader {
-                    sourceComponent: keyButton
-                    onLoaded: { item.send = kb.nums2[index]; item.label = kb.nums2[index] }
-                }
-            }
-        }
-        RowLayout {
-            spacing: 6; visible: kb.numericMode
-            Loader { sourceComponent: keyButton; onLoaded: { item.send="__MODE"; item.label="ABC"; item.wide=true; item.accentKey=true } }
-            Repeater {
-                model: kb.nums3.length
-                delegate: Loader {
-                    sourceComponent: keyButton
-                    onLoaded: { item.send = kb.nums3[index]; item.label = kb.nums3[index] }
-                }
-            }
-            Loader { sourceComponent: keyButton; onLoaded: { item.send="__BKSP"; item.label="⌫"; item.wide=true; item.accentKey=true } }
         }
 
+        // ČÍSLA – 2. řádek
         RowLayout {
-            spacing: 6; visible: kb.numericMode
-            Loader { sourceComponent: keyButton; onLoaded: { item.send="__SPACE"; item.label="Space"; item.xwide=true } }
-            Loader { sourceComponent: keyButton; onLoaded: { item.send="__ENTER"; item.label="⏎";     item.wide=true; item.accentKey=true } }
-            Loader { sourceComponent: keyButton; onLoaded: { item.send="__HIDE";  item.label="▾";     item.wide=true } }
+            Layout.fillWidth: true
+            spacing: 6
+            visible: osk.numericMode
+
+            Repeater {
+                model: osk.numsRow2.length
+                delegate: Loader {
+                    sourceComponent: keyButton
+                    onLoaded: {
+                        item.keyText = osk.numsRow2[index]
+                        item.keyType = "char"
+                    }
+                }
+            }
+        }
+
+        // ČÍSLA – 3. řádek
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 6
+            visible: osk.numericMode
+
+            Repeater {
+                model: osk.numsRow3.length
+                delegate: Loader {
+                    sourceComponent: keyButton
+                    onLoaded: {
+                        item.keyText = osk.numsRow3[index]
+                        item.keyType = "char"
+                    }
+                }
+            }
+
+            Loader {
+                sourceComponent: keyButton
+                onLoaded: {
+                    item.keyType  = "backspace"
+                    item.keyText  = "⌫"
+                    item.wide     = true
+                    item.accent   = true
+                }
+            }
+        }
+
+        // ČÍSLA – spodní řádek
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 6
+            visible: osk.numericMode
+
+            Loader {
+                sourceComponent: keyButton
+                onLoaded: {
+                    item.keyType = "mode"
+                    item.keyText = "ABC"
+                    item.wide    = true
+                }
+            }
+
+            Loader {
+                sourceComponent: keyButton
+                onLoaded: {
+                    item.keyType   = "space"
+                    item.keyText   = "Space"
+                    item.extraWide = true
+                }
+            }
+
+            Loader {
+                sourceComponent: keyButton
+                onLoaded: {
+                    item.keyType  = "enter"
+                    item.keyText  = "⏎"
+                    item.wide     = true
+                    item.accent   = true
+                }
+            }
+
+            Loader {
+                sourceComponent: keyButton
+                onLoaded: {
+                    item.keyType = "hide"
+                    item.keyText = "▾"
+                    item.wide    = true
+                }
+            }
+        }
+    }
+
+    // --- šablona klávesy ---
+
+    Component {
+        id: keyButton
+
+        Rectangle {
+            id: keyRect
+
+            property string keyText: ""
+            property string keyType: "char"   // char/shift/backspace/mode/space/enter/hide
+            property bool   isLetter: false
+            property bool   wide: false
+            property bool   extraWide: false
+            property bool   accent: false
+
+            implicitWidth: 54
+            implicitHeight: 46
+            radius: 8
+
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            Layout.preferredWidth: extraWide ? implicitWidth * 3
+                                             : (wide ? implicitWidth * 1.5 : implicitWidth)
+
+            color: {
+                var base = accent ? "#d0d0d0" : "#f5f5f5"
+                if (keyRect.keyType === "shift" && osk.shift)
+                    base = "#c0c0c0"
+                return base
+            }
+            border.color: "#a0a0a0"
+
+            Text {
+                anchors.centerIn: parent
+                font.pixelSize: 18
+                text: {
+                    var t = keyRect.keyText
+                    if (keyRect.keyType === "mode")
+                        t = osk.numericMode ? "ABC" : "123"
+                    if (keyRect.isLetter) {
+                        t = osk.shift ? t.toUpperCase() : t.toLowerCase()
+                    }
+                    return t
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    if (keyRect.keyType === "shift") {
+                        if (osk.shiftState === 0)       osk.shiftState = 1
+                        else if (osk.shiftState === 1)  osk.shiftState = 2
+                        else                            osk.shiftState = 0
+                        return
+                    }
+                    if (keyRect.keyType === "mode") {
+                        osk.numericMode = !osk.numericMode
+                        osk.shiftState = 0
+                        return
+                    }
+                    if (keyRect.keyType === "hide") {
+                        osk.hide()
+                        return
+                    }
+
+                    // ostatní klávesy už potřebují target
+                    if (!osk.target)
+                        return
+
+                    osk.target.forceActiveFocus()
+
+                    if (keyRect.keyType === "backspace") {
+                        osk.backspace()
+                    } else if (keyRect.keyType === "space") {
+                        osk.commitText(" ")
+                    } else if (keyRect.keyType === "enter") {
+                        osk.doEnter()
+                    } else if (keyRect.keyType === "char") {
+                        var ch = keyRect.keyText
+                        if (keyRect.isLetter && osk.shift)
+                            ch = ch.toUpperCase()
+                        osk.commitText(ch)
+                    }
+                }
+            }
         }
     }
 }

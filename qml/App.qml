@@ -40,7 +40,7 @@ ApplicationWindow {
 
 
     // --- volitelné otočení celé scény (ponechám pro RPi orientaci) ---
-    property bool rotateScene: true
+    property bool rotateScene: false
 
 
     // --- KOŘEN PRO CELOU SCÉNU (rotovatelný) ---
@@ -48,6 +48,11 @@ ApplicationWindow {
         id: rot
         width: rotateScene ? win.height : win.width
         height: rotateScene ? win.width  : win.height
+
+        // transformOrigin: Item.BottomRight
+        // x: 0
+        // y: rotateScene ? win.height : 0
+        // rotation: rotateScene ? 270 : 0
 
         x: rotateScene ? win.width : 0
         y: 0
@@ -91,7 +96,7 @@ ApplicationWindow {
             HomePage { }
             TempPage { }     // index 1
             QrPage   { }     // index 2
-            bottomPadding: osk.exposedHeight
+            //bottomPadding: osk.exposedHeight
         }
 
         // Spodní "dock" s tečkami a domečkem
@@ -99,7 +104,7 @@ ApplicationWindow {
             id: dock
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: 10 + osk.exposedHeight
+            anchors.bottomMargin: 10 // + osk.exposedHeight
             count: pages.count
             currentIndex: pages.currentIndex
             onGoHome: pages.currentIndex = 0
@@ -126,17 +131,149 @@ ApplicationWindow {
             id: osk
             z: 30
         }
+                // plovoucí editor nad klávesnicí
+            // plovoucí editor nad klávesnicí
+    Item {
+        id: floatEditor
+        anchors.fill: parent
+        visible: active
+        z: 2500
 
+        property bool active: false
+        property var sourceField   // původní TextField / TextArea
+
+        function openFor(field) {
+            sourceField = field
+
+            // načteme aktuální text
+            if (field) {
+                if (field.text !== undefined)
+                    edit.text = field.text
+                else if (field.contentItem && field.contentItem.text !== undefined)
+                    edit.text = field.contentItem.text
+            }
+
+            active = true
+            osk.showFor(edit)      // klávesnice píše do plovoucího pole
+            edit.forceActiveFocus()
+        }
+
+        function accept() {
+            // ořízneme případné \n na konci (Enter z OSK)
+            var t = edit.text
+            if (t.length > 0 && t.charAt(t.length-1) === "\n")
+                t = t.slice(0, t.length-1)
+
+            if (sourceField) {
+                if (sourceField.text !== undefined)
+                    sourceField.text = t
+                else if (sourceField.contentItem && sourceField.contentItem.text !== undefined)
+                    sourceField.contentItem.text = t
+            }
+            close()
+        }
+
+        function close() {
+            active = false
+            osk.target = null
+            osk.hide()
+        }
+
+        // MouseArea přes celou obrazovku:
+        // klik MIMO panel a MIMO klávesnici -> accept()
         MouseArea {
+            id: overlayCatcher
             anchors.fill: parent
-            z: osk.z - 1           // pod klávesnicí, nad obsahem
-            enabled: osk.show
-            hoverEnabled: false
+            z: 0
+            propagateComposedEvents: true
+
             onClicked: {
-                if (win.activeFocusItem) win.activeFocusItem.focus = false
-                osk.hide()
+                var keyboardTop = height - osk.exposedHeight
+
+                var inPanel = mouse.x >= panel.x && mouse.x <= panel.x + panel.width &&
+                              mouse.y >= panel.y && mouse.y <= panel.y + panel.height
+
+                var inKeyboard = mouse.y >= keyboardTop
+
+                if (!inPanel && !inKeyboard) {
+                    floatEditor.accept()
+                } else {
+                    mouse.accepted = false    // pusť event dál (panel / klávesnice)
+                }
             }
         }
+
+        // jen vizuální zatemnění, bez MouseArea
+        Rectangle {
+            anchors.fill: parent
+            color: "#00000080"
+            z: 0
+        }
+
+        // samotný panel s textovým polem
+        Rectangle {
+            id: panel
+            width: parent.width * 0.9
+            height: 120
+            radius: 10
+            color: "#333333"
+            border.color: "#888888"
+            z: 1
+
+            anchors.horizontalCenter: parent.horizontalCenter
+            // pozice: kousek nad klávesnicí – bez anchoru na osk.top!
+            y: parent.height - osk.exposedHeight - height - 8
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 8
+                spacing: 4
+
+                TextField {
+                    id: edit
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    placeholderText: "Zadej text…"
+                    color: "white"
+                    placeholderTextColor: "#CCCCCC"
+                    property bool isFloatingEditor: true
+
+                    background: Rectangle {
+                        color: "#000000"
+                        opacity: 0.3
+                        radius: 6
+                        border.color: "#FFFFFF40"
+                    }
+
+                    // Enter / šipka dolů z HW klávesnice -> potvrdit
+                    Keys.onReturnPressed: floatEditor.accept()
+                    Keys.onDownPressed: floatEditor.accept()
+
+                    // Enter z OSK:
+                    // OSK vloží "\n", to tady odchytíme, smažeme a potvrdíme
+                    onTextChanged: {
+                        if (isFloatingEditor && text.length > 0 &&
+                            text.charAt(text.length-1) === "\n") {
+                            text = text.slice(0, text.length-1)
+                            floatEditor.accept()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+        // MouseArea {
+        //     anchors.fill: parent
+        //     z: osk.z - 1           // pod klávesnicí, nad obsahem
+        //     enabled: osk.show
+        //     hoverEnabled: false
+        //     onClicked: {
+        //         if (win.activeFocusItem) win.activeFocusItem.focus = false
+        //         osk.hide()
+        //     }
+        // }
 
         // --- SPLASH OVERLAY (3 s logo přes celou obrazovku) ---
         Item {
