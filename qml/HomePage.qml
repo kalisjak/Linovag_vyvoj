@@ -31,7 +31,7 @@ Page {
                             item.iconColor = "#EDEFF2"
                         }
                     }
-                    Text { text: "Teploty"; color: "#EDEFF2"; font.bold: true }
+                    Text { text: "Temperaturen"; color: "#EDEFF2"; font.bold: true }
                 }
                 MouseArea {
                     anchors.fill: parent; onClicked: dock.dotClicked(1) // SetTempPage (index 1)
@@ -41,7 +41,7 @@ Page {
                 }
             }
 
-            // Tlačítko pro původní TempPage (ikona psaníčka)
+            // Tlačítko „Historie“ – nová HistPage
             Rectangle {
                 width: 160; height: 160; radius: 24
                 color: "#00000055"; border.color: "#FFFFFF33"; border.width: 0
@@ -51,21 +51,23 @@ Page {
                     Loader {
                         sourceComponent: biIcon
                         onLoaded: {
-                            // obálka – bootstrap icons "envelope"
-                            item.code = "\uF32F"
+                            // hodiny s historií – bootstrap icons "clock-history"
+                            // Unicode: U+F292
+                            item.code = "\uF292"
                             item.px = 80
                             item.iconColor = "#EDEFF2"
                         }
                     }
-                    Text { text: "Historie"; color: "#EDEFF2"; font.bold: true }
+                    Text { text: "Geschichte"; color: "#EDEFF2"; font.bold: true }
                 }
                 MouseArea {
-                    anchors.fill: parent; onClicked: dock.dotClicked(2) // TempPage (index 2)
+                    anchors.fill: parent; onClicked: dock.dotClicked(2) // HistPage – nově index 2
                     hoverEnabled: true
                     onEntered: parent.color = "#00000077"
                     onExited:  parent.color = "#00000055"
                 }
             }
+
 
             // Tlačítko "QR stránka" (tohle už v souboru máš, jen zůstává jako je)
             Rectangle {

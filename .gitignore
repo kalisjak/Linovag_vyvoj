@@ -2,3 +2,6 @@ build/
 .vscode/
 backend01.*
 main01.cpp
+logs/
+zk_fan.cpp
+old_srpts/

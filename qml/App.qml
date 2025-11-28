@@ -95,8 +95,9 @@ ApplicationWindow {
 
             HomePage { }
             SetTempPage { }  // index 1
-            TempPage { }     // index 2
+            HistPage { }     // index 2
             QrPage   { }     // index 3
+            TempPage { }     // index 4
             //bottomPadding: osk.exposedHeight
         }
 
