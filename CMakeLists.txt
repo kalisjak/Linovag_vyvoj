@@ -15,6 +15,12 @@ add_executable(lnvg_app
     src/main.cpp
     src/backend.cpp
     src/backend.hpp
+    src/SensorWorker.cpp
+    src/SensorWorker.hpp
+    src/MqttWorker.cpp
+    src/MqttWorker.hpp
+    src/WatchdogWorker.cpp
+    src/WatchdogWorker.hpp
     qml/qml.qrc     # vice .qml dohromady
 )
 

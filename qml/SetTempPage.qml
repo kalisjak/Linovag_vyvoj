@@ -26,15 +26,25 @@ Page {
             width: parent.width * 0.66
             color: "transparent"
 
-            Text {
+            Row {
                 anchors.centerIn: parent
-                textFormat: Text.RichText
-                // číslo barevné, °C menší jako horní index, vlastní barva
-                text: Number(root.currentTemp).toLocaleString(Qt.locale(), "f", 1)
-                      + " <span style='font-size:0.6em; vertical-align:super; color:#EDEFF2; font-weight:400; '>°C</span>"
-                color: root.diff > 2.5 ? "orange" : "#00ff00"
-                font.pixelSize: 120
-                font.bold: true
+                spacing: 8
+
+                Text {
+                    id: currentTempText
+                    text: Number(root.currentTemp).toLocaleString(Qt.locale(), "f", 1)
+                    color: root.diff > 2.5 ? "orange" : "#00ff00"
+                    font.pixelSize: 160
+                    font.bold: true
+                }
+
+                Text {
+                    text: "°C"
+                    color: "#c6c5df"        // nemění barvu, neutrální
+                    font.pixelSize: 60      // polovina velikosti
+                    font.bold: true
+                    // anchors.baseline: currentTempText.baseline
+                }
             }
         }
 
@@ -92,17 +102,37 @@ Page {
                 }
 
                 // zvolená teplota (požadovaná)
-                Text {
-                    id: setTempLabel
-                    textFormat: Text.RichText
-                    text: Number(backend.targetTemp).toLocaleString(Qt.locale(), "f", 1)
-                          + " <span style='font-size:0.5em; vertical-align:super; color:#EDEFF2;font-weight:450; '>°C</span>"
-                    color: "#EDEFF2"
-                    font.pixelSize: 40
-                    font.bold: true
-                    horizontalAlignment: Text.AlignHCenter
+                Row {
                     anchors.horizontalCenter: parent.horizontalCenter
+                    spacing: 4
+
+                    Text {
+                        id: targetTempText
+                        text: Number(backend.targetTemp).toLocaleString(Qt.locale(), "f", 1)
+                        color: "#EDEFF2"
+                        font.pixelSize: 45
+                        font.bold: true
+                    }
+
+                    Text {
+                        text: "°C"
+                        color: "#c6c5df"
+                        font.pixelSize: 23
+                        font.bold: true
+                        // anchors.baseline: targetTempText.baseline
+                    }
                 }
+                // Text {
+                //     id: setTempLabel
+                //     textFormat: Text.RichText
+                //     text: Number(backend.targetTemp).toLocaleString(Qt.locale(), "f", 1)
+                //           + " <span style='font-size:0.5em; vertical-align:super; color:#EDEFF2;font-weight:450; '>°C</span>"
+                //     color: "#EDEFF2"
+                //     font.pixelSize: 40
+                //     font.bold: true
+                //     horizontalAlignment: Text.AlignHCenter
+                //     anchors.horizontalCenter: parent.horizontalCenter
+                // }
 
                 // tlačítko -0.5 °C
                 Rectangle {

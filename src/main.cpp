@@ -1,92 +1,87 @@
-
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
-#include <QByteArray>
-#include <QString>
-#include "backend.hpp"
+#include <QThread>
 
-// Pomocná: čtení bool z env
-static bool envIsOn(const char* name) {
-    const QByteArray v = qgetenv(name);
-    const QByteArray l = v.toLower();
-    return (!v.isEmpty() && (v == "1" || l == "true" || l == "yes" || v == "on"));
-}
+#include "backend.hpp"
+#include "SensorWorker.hpp"
+#include "MqttWorker.hpp"
+#include "WatchdogWorker.hpp"
 
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
 
-    // 1) Detekce platformy + přepínače
-    const QByteArray platform = qgetenv("QT_QPA_PLATFORM"); // "eglfs", "xcb", ...
-    bool rotateScene = (platform == "eglfs");               // výchozí: otočit na RPi/eglfs
-
-    // volitelný override z argumentu
-    for (int i = 1; i < argc; ++i) {
-        const QString a = QString::fromLocal8Bit(argv[i]);
-        if (a == "--rotate")   rotateScene = true;
-        if (a == "--norotate") rotateScene = false;
-    }
-    // override z proměnné prostředí (má přednost, pokud je nastavena)
-    if (qEnvironmentVariableIsSet("PR_ROTATE"))
-        rotateScene = envIsOn("PR_ROTATE");
-
-    // 2) Tvůj backend
     Backend backend;
 
-    // 3) QML engine + context properties
+    // vlákna
+    QThread sensorThread;
+    QThread mqttThread;
+    QThread watchdogThread;
+
+    SensorWorker  sensorWorker;
+    MqttWorker    mqttWorker;
+    WatchdogWorker watchdog;
+
+    sensorWorker.moveToThread(&sensorThread);
+    mqttWorker.moveToThread(&mqttThread);
+    watchdog.moveToThread(&watchdogThread);
+
+    // start/stop
+    QObject::connect(&sensorThread, &QThread::started,
+                     &sensorWorker, &SensorWorker::start);
+    QObject::connect(&mqttThread, &QThread::started,
+                     &mqttWorker, &MqttWorker::start);
+    QObject::connect(&watchdogThread, &QThread::started,
+                     &watchdog, &WatchdogWorker::start);
+
+    QObject::connect(&app, &QCoreApplication::aboutToQuit, [&](){
+        sensorWorker.stop();
+        mqttWorker.stop();
+        watchdog.stop();
+
+        sensorThread.quit();
+        mqttThread.quit();
+        watchdogThread.quit();
+
+        sensorThread.wait();
+        mqttThread.wait();
+        watchdogThread.wait();
+    });
+
+    // propojení: senzory → backend
+    QObject::connect(&sensorWorker, &SensorWorker::sensorValues,
+                     &backend,      &Backend::onSensorValues);
+
+    // heartbeat → watchdog
+    QObject::connect(&sensorWorker, &SensorWorker::heartbeat,
+                     &watchdog,     &WatchdogWorker::onHeartbeat);
+    QObject::connect(&mqttWorker,   &MqttWorker::heartbeat,
+                     &watchdog,     &WatchdogWorker::onHeartbeat);
+
+    // backend → mqtt worker
+    QObject::connect(&backend,    &Backend::publishMqtt,
+                     &mqttWorker, &MqttWorker::publish);
+
+    // mqtt worker → backend (stav připojení)
+    QObject::connect(&mqttWorker, &MqttWorker::connectedChanged,
+                     &backend,    &Backend::onMqttConnectedChanged);
+
+    // watchdog → zatím jen log / do budoucna restart konkrétního workeru
+    QObject::connect(&watchdog, &WatchdogWorker::restartRequested,
+                     [&](const QString& name){
+        qWarning() << "[Main] Restart requested for" << name;
+        // tady můžeš později implementovat real restart specifického threadu
+    });
+
+    // QML
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("backend", &backend);
-    engine.rootContext()->setContextProperty("rotateScene", rotateScene);
+    engine.load(QUrl(QStringLiteral("qrc:/qml/App.qml")));
 
-    // 4) Načtení App.qml z resource
-    const QUrl url("qrc:/qml/App.qml");
-    QObject::connect(
-        &engine, &QQmlApplicationEngine::objectCreated, &app,
-        [url](QObject *obj, const QUrl &objUrl) {
-            if (!obj && url == objUrl) QCoreApplication::exit(-1);
-        },
-        Qt::QueuedConnection
-    );
-    engine.load(url);
+    sensorThread.start();
+    mqttThread.start();
+    watchdogThread.start();
 
     return app.exec();
 }
-
-
-
-
-
-
-
-
-// #include <QGuiApplication>
-// #include <QQmlApplicationEngine>
-// #include <QQmlContext>
-// #include "backend.hpp"
-
-// static bool envIsOn(const char* name) {
-//     QByteArray v = qgetenv(name);
-//     return (!v.isEmpty() && (v == "1" || v.toLower() == "true" || v.toLower() == "yes"));
-// }
-
-// int main(int argc, char *argv[])
-// {
-//     QGuiApplication app(argc, argv);
-
-//     Backend backend;
-
-//     QQmlApplicationEngine engine;
-//     engine.rootContext()->setContextProperty("backend", &backend);
-
-//     // const QUrl url = QUrl::fromLocalFile("qml/Main.qml");
-//     const QUrl url = QUrl::fromLocalFile("qrc:/qml/App.qml");
-//     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated, &app,
-//                      [url](QObject *obj, const QUrl &objUrl) {
-//                          if (!obj && url == objUrl)
-//                              QCoreApplication::exit(-1);
-//                      }, Qt::QueuedConnection);
-
-//     engine.load(url);
-//     return app.exec();
-// }
