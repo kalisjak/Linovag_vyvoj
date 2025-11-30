@@ -4,8 +4,8 @@ import QtQuick.Layouts 1.15
 
 ApplicationWindow {
     id: win
-    width: 800
-    height: 480
+    width: 1280 // 800
+    height: 720 // 480
     visible: true
     title: "Linovag"
     flags: Qt.FramelessWindowHint
@@ -98,7 +98,6 @@ ApplicationWindow {
             HistPage { }     // index 2
             QrPage   { }     // index 3
             TempPage { }     // index 4
-            //bottomPadding: osk.exposedHeight
         }
 
         // Spodní "dock" s tečkami a domečkem
@@ -125,16 +124,11 @@ ApplicationWindow {
             focus: depth > 0
         }
 
-        // Component.onCompleted: {
-        //     onCurrentIndexChanged: console.log("pages idx ->", pages.currentIndex)
-        // }
-
         KeyboardPanel {
             id: osk
             z: 30
         }
-                // plovoucí editor nad klávesnicí
-            // plovoucí editor nad klávesnicí
+
     Item {
         id: floatEditor
         anchors.fill: parent
@@ -264,18 +258,6 @@ ApplicationWindow {
             }
         }
     }
-
-
-        // MouseArea {
-        //     anchors.fill: parent
-        //     z: osk.z - 1           // pod klávesnicí, nad obsahem
-        //     enabled: osk.show
-        //     hoverEnabled: false
-        //     onClicked: {
-        //         if (win.activeFocusItem) win.activeFocusItem.focus = false
-        //         osk.hide()
-        //     }
-        // }
 
         // --- SPLASH OVERLAY (3 s logo přes celou obrazovku) ---
         Item {

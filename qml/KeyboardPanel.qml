@@ -33,7 +33,7 @@ Item {
     property int  shiftState: 0      // 0=off, 1=once, 2=locked (caps)
     property bool shift: shiftState > 0
 
-    // rozložení kláves
+    // rozložení kláves TODO: NEKOMPLETNÍ
     property var lettersRow1: [ "q","w","e","r","t","y","u","i","o","p" ]
     property var lettersRow2: [ "a","s","d","f","g","h","j","k","l" ]
     property var lettersRow3: [ "z","x","c","v","b","n","m" ]
@@ -104,25 +104,6 @@ Item {
         if (!numericMode && shiftState === 1)
             shiftState = 0
     }
-
-    // function doEnter() {
-    //     var t = target
-    //     var e = editObject()
-    //     if (!t && !e) return
-
-    //     // když má TextField/parent signál accepted(), zkus ho
-    //     if (t && typeof t.accepted === "function") {
-    //         t.accepted()
-    //         return
-    //     }
-    //     if (t && t.parent && typeof t.parent.accepted === "function") {
-    //         t.parent.accepted()
-    //         return
-    //     }
-
-    //     // jinak prostě nový řádek
-    //     commitText("\n")
-    // }
 
     function doEnter() {
     // pokud je aktivní plovoucí editor, potvrď ho

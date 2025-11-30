@@ -17,7 +17,8 @@
 
     <!-- Obrázky -->
     <file alias="qr_web.png">../assets/qr_web_bila2.png</file>
-    <file alias="plocha_tmava.png">../assets/tmave.png</file>
+    <file alias="plocha_tmava.png">../assets/pozadi_velke.png</file>
+    <!-- <file alias="plocha_tmava.png">../assets/tmave.png</file> -->
     <file alias="logo.png">../assets/logo.png</file>
   </qresource>
 </RCC>

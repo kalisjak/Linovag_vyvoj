@@ -79,7 +79,6 @@ Page {
                 }
 
                 GroupBox {
-                    // přebarvený label
                     label: Label {
                         text: "Poslat zprávu do C++"
                         color: "white"
@@ -91,25 +90,6 @@ Page {
                         anchors.fill: parent
                         anchors.margins: 4
                         spacing: 8
-
-                        // TextField {
-                        //     id: input
-                        //     Layout.fillWidth: true
-                        //     placeholderText: "zapiš teplotu…"
-                        //     color: "white"
-                        //     placeholderTextColor: "#CCCCCC"
-                        //     background: Rectangle {
-                        //         color: "#FFFFFF"; opacity: 0.3
-                        //         radius: 6
-                        //         border.color: "#FFFFFF"
-                        //         border.width: 1
-                        //     }
-                        //     onPressed: forceActiveFocus()
-                        //     onActiveFocusChanged: if (activeFocus && typeof scroll !== "undefined") scroll.ensureVisible(this)
-                        //     onAccepted: sendBtn.clicked()
-                        //     validator: DoubleValidator { bottom: -100; top: 1000; decimals: 3 }
-                        //     inputMethodHints: Qt.ImhFormattedNumbersOnly | Qt.ImhPreferNumbers
-                        // }
 
                         TextField {
                                 id: input

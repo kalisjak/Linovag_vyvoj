@@ -12,11 +12,13 @@
 #include <QStandardPaths>
 #include <QTextStream>
 #include <QTimer>
-// #include <QMqttClient>  // ponecháno kvůli kompatibilitě s headerem, i když ho tady už nepoužíváme
 
 Backend::Backend(QObject* parent) : QObject(parent), rng_(std::random_device{}()) {
-    // V nové architektuře zde už nespouštíme žádné timery ani MQTT.
-    // Všechny „aktivní“ věci (senzory, MQTT, watchdog) běží ve workerech v jiných threadech.
+    mqttTimer_ = new QTimer(this);
+    mqttTimer_->setInterval(20000);  // 20 s
+    connect(mqttTimer_, &QTimer::timeout,
+            this, &Backend::onMqttTimerTick);
+    mqttTimer_->start();
 
     initLogs();
 }
@@ -27,7 +29,7 @@ void Backend::setTargetTemp(double t) {
     if (targetTemp_ == t) return;
 
     targetTemp_ = t;
-    qInfo() << "[Backend] Target temperature set to" << targetTemp_ << "°C";
+    // qInfo() << "[Backend] Target temperature set to" << targetTemp_ << "°C";
     emit targetTempChanged();
 }
 
@@ -74,7 +76,6 @@ void Backend::sendMessage(const QString& msg) {
         return;
     }
 
-    // Ukázkové payload JSON (ponechávám tvůj původní princip)
     const QString ts = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
 
     const QString payloadStr = QString::fromLatin1(
@@ -93,21 +94,25 @@ void Backend::sendMessage(const QString& msg) {
 
     const QByteArray payload = payloadStr.toUtf8();
 
-    qInfo().noquote() << "[Backend] Prepared payload:" << payload;
+    qInfo().noquote() << "[Backend] Prepared payload"; // << payload;
 
     // Reálné odesílání necháváme na MqttWorkeru v jiném vlákně
     emit publishMqtt(payload);
 }
 
+void Backend::onMqttTimerTick() 
+{
+    sendMessage(QString::number(value1_));
+}
+
 // --- Logování teplot do souborů + bufferu ----------------------------------
 
 void Backend::initLogs() {
-    // Základní adresář pro logy: AppDataLocation/…/logs (pokud je k dispozici),
-    // jinak adresář aplikace + "/logs".
+    // Základní adresář pro logy je adresář aplikace + "/logs".
     QString basePath = ""; //QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     if (basePath.isEmpty()) {
         basePath = QCoreApplication::applicationDirPath() + QStringLiteral("/..");
-        qInfo() << "[Backend] Logs is in " << basePath << "hej tady to hledej";
+        // qInfo() << "[Backend] Logs is in " << basePath << "hej tady to hledej";
     }
 
     QDir dir(basePath);
@@ -256,6 +261,5 @@ void Backend::cleanupOldLogFiles() {
 }
 
 QString Backend::serialNumber() const {
-    // Původní chování necháváme stejné
     return QStringLiteral("SN-65468");
 }

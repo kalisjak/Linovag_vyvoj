@@ -8,12 +8,9 @@
 #include <QStringList>
 #include <QByteArray>
 
-// QT_BEGIN_NAMESPACE
-// class QTimer;
-// QT_END_NAMESPACE
-
-// namespace QtMqtt { }
-// class QMqttClient;
+QT_BEGIN_NAMESPACE
+class QTimer;
+QT_END_NAMESPACE
 
 class Backend : public QObject {
     Q_OBJECT
@@ -38,6 +35,7 @@ public:
 
 public slots:
     void setTargetTemp(double t);
+     void onMqttTimerTick();
 
     // sloty, které budou volat worker vlákna:
     void onSensorValues(double v1, double v2);
@@ -60,6 +58,7 @@ private:
     double targetTemp_ = 5.0;
     std::mt19937 rng_;
     bool   mqttConnected_ = false;
+    QTimer* mqttTimer_ = nullptr;   // nový timer na MQTT payload
 
     QStringList historyLog_;
     QString logsDirPath_;

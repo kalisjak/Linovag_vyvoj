@@ -15,7 +15,7 @@ Page {
             anchors.centerIn: parent
             spacing: 48
 
-            // Tlačítko "Teploty" – nová SetTempPage s teploměrem
+            // Tlačítko "Teploty"
             Rectangle {
                 width: 160; height: 160; radius: 24
                 color: "#00000055"; border.color: "#FFFFFF33"; border.width: 0
@@ -25,7 +25,7 @@ Page {
                     Loader {
                         sourceComponent: biIcon
                         onLoaded: {
-                            // teploměr – bootstrap icons "thermometer"
+                            // bootstrap icons "thermometer"
                             item.code = "\uF5CD"
                             item.px = 80
                             item.iconColor = "#EDEFF2"
@@ -34,14 +34,14 @@ Page {
                     Text { text: "Temperaturen"; color: "#EDEFF2"; font.bold: true }
                 }
                 MouseArea {
-                    anchors.fill: parent; onClicked: dock.dotClicked(1) // SetTempPage (index 1)
+                    anchors.fill: parent; onClicked: dock.dotClicked(1)
                     hoverEnabled: true
                     onEntered: parent.color = "#00000077"
                     onExited:  parent.color = "#00000055"
                 }
             }
 
-            // Tlačítko „Historie“ – nová HistPage
+            // Tlačítko „Historie“
             Rectangle {
                 width: 160; height: 160; radius: 24
                 color: "#00000055"; border.color: "#FFFFFF33"; border.width: 0
@@ -51,8 +51,7 @@ Page {
                     Loader {
                         sourceComponent: biIcon
                         onLoaded: {
-                            // hodiny s historií – bootstrap icons "clock-history"
-                            // Unicode: U+F292
+                            // bootstrap icons "journal-richtext"
                             item.code = "\uF292"
                             item.px = 80
                             item.iconColor = "#EDEFF2"
@@ -61,7 +60,7 @@ Page {
                     Text { text: "Geschichte"; color: "#EDEFF2"; font.bold: true }
                 }
                 MouseArea {
-                    anchors.fill: parent; onClicked: dock.dotClicked(2) // HistPage – nově index 2
+                    anchors.fill: parent; onClicked: dock.dotClicked(2)
                     hoverEnabled: true
                     onEntered: parent.color = "#00000077"
                     onExited:  parent.color = "#00000055"
@@ -69,7 +68,7 @@ Page {
             }
 
 
-            // Tlačítko "QR stránka" (tohle už v souboru máš, jen zůstává jako je)
+            // Tlačítko "QR stránka"
             Rectangle {
                 width: 160; height: 160; radius: 24
                 color: "#00000055"; border.color: "#FFFFFF33"; border.width: 0
@@ -87,7 +86,7 @@ Page {
                     Text { text: "QR"; color: "#EDEFF2"; font.bold: true }
                 }
                 MouseArea {
-                    anchors.fill: parent; onClicked: dock.dotClicked(3) // QrPage – nově index 3
+                    anchors.fill: parent; onClicked: dock.dotClicked(3)
                     hoverEnabled: true
                     onEntered: parent.color = "#00000077"
                     onExited:  parent.color = "#00000055"

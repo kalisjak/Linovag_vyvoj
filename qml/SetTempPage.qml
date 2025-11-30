@@ -43,7 +43,6 @@ Page {
                     color: "#c6c5df"        // nemění barvu, neutrální
                     font.pixelSize: 60      // polovina velikosti
                     font.bold: true
-                    // anchors.baseline: currentTempText.baseline
                 }
             }
         }
@@ -87,7 +86,7 @@ Page {
                         anchors.centerIn: parent
                         sourceComponent: biIcon
                         onLoaded: {
-                            // chevron-up (bootstrap-icons)
+                            // bootstrap-icons - chevron-up
                             item.code = "\uF286"
                             item.px = 80
                             item.iconColor = "#EDEFF2"
@@ -119,20 +118,8 @@ Page {
                         color: "#c6c5df"
                         font.pixelSize: 23
                         font.bold: true
-                        // anchors.baseline: targetTempText.baseline
                     }
                 }
-                // Text {
-                //     id: setTempLabel
-                //     textFormat: Text.RichText
-                //     text: Number(backend.targetTemp).toLocaleString(Qt.locale(), "f", 1)
-                //           + " <span style='font-size:0.5em; vertical-align:super; color:#EDEFF2;font-weight:450; '>°C</span>"
-                //     color: "#EDEFF2"
-                //     font.pixelSize: 40
-                //     font.bold: true
-                //     horizontalAlignment: Text.AlignHCenter
-                //     anchors.horizontalCenter: parent.horizontalCenter
-                // }
 
                 // tlačítko -0.5 °C
                 Rectangle {

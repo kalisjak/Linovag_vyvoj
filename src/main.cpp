@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
     QObject::connect(&mqttWorker, &MqttWorker::connectedChanged,
                      &backend,    &Backend::onMqttConnectedChanged);
 
-    // watchdog → zatím jen log / do budoucna restart konkrétního workeru
+    // TODO: watchdog → zatím jen log / do budoucna restart konkrétního workeru
     QObject::connect(&watchdog, &WatchdogWorker::restartRequested,
                      [&](const QString& name){
         qWarning() << "[Main] Restart requested for" << name;
