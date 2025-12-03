@@ -3,6 +3,9 @@ import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 
 Page {
+    id: homeP
+    property real uiScale: 1.0
+
     title: "Homepage"
     background: Item {}
     visible: SwipeView.isCurrentItem
@@ -11,27 +14,35 @@ Page {
     contentItem: Item {
         anchors.fill: parent
 
-                Row {
+        Row {
             anchors.centerIn: parent
-            spacing: 48
+            spacing: 48 * uiScale
 
             // Tlačítko "Teploty"
             Rectangle {
-                width: 160; height: 160; radius: 24
+                width: 200 * uiScale; height: 200 * uiScale; radius: 24 * uiScale
                 color: "#00000055"; border.color: "#FFFFFF33"; border.width: 0
 
                 Column {
-                    anchors.centerIn: parent; spacing: 8
+                    anchors.centerIn: parent; spacing: 8 * uiScale
                     Loader {
                         sourceComponent: biIcon
                         onLoaded: {
                             // bootstrap icons "thermometer"
                             item.code = "\uF5CD"
-                            item.px = 80
+                            item.px = 140 * uiScale
                             item.iconColor = "#EDEFF2"
                         }
                     }
-                    Text { text: "Temperaturen"; color: "#EDEFF2"; font.bold: true }
+                    Text { 
+                        text: "Temperaturen"
+                        color: "#EDEFF2"
+                        font.bold: true
+                        font.pixelSize: 16 * uiScale
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                        width: parent.width * 0.9
+                    }
                 }
                 MouseArea {
                     anchors.fill: parent; onClicked: dock.dotClicked(1)
@@ -43,21 +54,29 @@ Page {
 
             // Tlačítko „Historie“
             Rectangle {
-                width: 160; height: 160; radius: 24
+                width: 200 * uiScale; height: 200 * uiScale; radius: 24 * uiScale
                 color: "#00000055"; border.color: "#FFFFFF33"; border.width: 0
 
                 Column {
-                    anchors.centerIn: parent; spacing: 8
+                    anchors.centerIn: parent; spacing: 8 * uiScale
                     Loader {
                         sourceComponent: biIcon
                         onLoaded: {
                             // bootstrap icons "journal-richtext"
                             item.code = "\uF292"
-                            item.px = 80
+                            item.px = 140 * uiScale
                             item.iconColor = "#EDEFF2"
                         }
                     }
-                    Text { text: "Geschichte"; color: "#EDEFF2"; font.bold: true }
+                    Text { 
+                        text: "History"
+                        color: "#EDEFF2"
+                        font.bold: true
+                        font.pixelSize: 16 * uiScale
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                        width: parent.width * 0.9
+                    }
                 }
                 MouseArea {
                     anchors.fill: parent; onClicked: dock.dotClicked(2)
@@ -70,20 +89,28 @@ Page {
 
             // Tlačítko "QR stránka"
             Rectangle {
-                width: 160; height: 160; radius: 24
+                width: 200 * uiScale; height: 200 * uiScale; radius: 24 * uiScale
                 color: "#00000055"; border.color: "#FFFFFF33"; border.width: 0
 
                 Column {
-                    anchors.centerIn: parent; spacing: 8
+                    anchors.centerIn: parent; spacing: 8 * uiScale
                     Loader {
                         sourceComponent: biIcon
                         onLoaded: {
                             item.code = "\uF6AE"
-                            item.px = 80
+                            item.px = 140 * uiScale
                             item.iconColor = "#EDEFF2"
                         }
                     }
-                    Text { text: "QR"; color: "#EDEFF2"; font.bold: true }
+                    Text { 
+                        text: "QR"
+                        color: "#EDEFF2"
+                        font.bold: true
+                        font.pixelSize: 16 * uiScale
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                        width: parent.width * 0.9
+                    }
                 }
                 MouseArea {
                     anchors.fill: parent; onClicked: dock.dotClicked(3)
@@ -93,6 +120,7 @@ Page {
                 }
             }
         }
+        
 
     }
 

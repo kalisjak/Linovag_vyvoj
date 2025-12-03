@@ -5,8 +5,10 @@ import QtQuick.Layouts 1.15
 
 Item {
     id: dock
-    width: parent ? parent.width : 800
-    height: 40
+    property real uiScale: 1.0
+
+    width: parent ? parent.width : 800 * uiScale
+    height: 40 * uiScale
 
     // API
     property int count: 3
@@ -16,29 +18,20 @@ Item {
 
     // jediný řádek uprostřed
     Row {
-        id: r
+        id: dockN
         anchors.centerIn: parent
+        anchors.verticalCenter: parent.verticalCenter
         spacing: 24
 
         // tečky
         Repeater {
             model: dock.count
             delegate: Rectangle {
-                width: 12; height: 12; radius: 6
-                // studená světle šedá → méně „žloutne“ na teplé tapetě
-                color: (index === dock.currentIndex) ? "#EDEFF2" : "#50505096"
+                width: 16 * uiScale; height: 16 * uiScale; radius: 8 * uiScale
+                // anchors.topMargin: 3 * uiScale
+                color: (index === dock.currentIndex) ? "#EDEFF2" : "transparent"
                 border.color: "#c0c0c0c0"
                 border.width: 1
-
-                // jemný „halo“ podklad (pomůže proti barvení pozadím)
-                Rectangle {
-                    anchors.centerIn: parent
-                    width: parent.width + 6
-                    height: parent.height + 6
-                    radius: (width/2)
-                    color: "#00000033"
-                    z: -1
-                }
 
                 MouseArea {
                     anchors.fill: parent
@@ -49,18 +42,15 @@ Item {
 
         // domeček
         Item {
-            width: 28; height: 28
+            // anchors.bottomMargin: 40 * uiScale
+            width: 28 * uiScale; height: 28 * uiScale;
 
-            Rectangle {
-                anchors.centerIn: parent
-                width: 28; height: 28; radius: 14
-                color: "#00000033"   // halo
-                z: -1
-            }
             Text {
                 anchors.centerIn: parent
+                anchors.verticalCenter: parent.verticalCenter
+                // anchors.bottomMargin: 10
                 text: "⌂"
-                font.pixelSize: 27
+                font.pixelSize: 27* uiScale
                 color: "#EDEFF2"
             }
             MouseArea {

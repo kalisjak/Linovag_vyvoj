@@ -4,8 +4,12 @@ import QtQuick.Layouts 1.15
 
 Rectangle {
     id: bar
-    height: 48
-    color: "#12121288"          // <<< poloprůhledná (AA–99–88 zkuste dle chuti)
+    property real uiScale: 1.0
+
+    implicitHeight: 54 * uiScale
+    height: implicitHeight
+
+    color: "transparent"
     anchors.left: parent.left
     anchors.right: parent.right
 
@@ -24,7 +28,9 @@ Rectangle {
 
     RowLayout {
         anchors.fill: parent
-        anchors.margins: 8
+        anchors.leftMargin: 15
+        anchors.rightMargin: 8
+        anchors.verticalCenter: parent.verticalCenter
         spacing: 8
 
         // Vlevo výrobní číslo (z backendu)
@@ -33,41 +39,61 @@ Rectangle {
             text: (typeof backend !== "undefined" && backend.serialNumber && backend.serialNumber.length > 0)
                   ? backend.serialNumber : "SN-000000"
             color: "#E0E0E0"
-            font.pixelSize: 16
+            font.pixelSize: 20 * uiScale
             Layout.alignment: Qt.AlignVCenter | Qt.AlignLeft
+            Layout.fillWidth: true
         }
 
         // Uprostřed volitelné ikony (placeholdery)
-        Row {
-            Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
-            Layout.fillWidth: true
-            spacing: 12
+        // Row {
+        //     Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
+        //     Layout.fillWidth: true
+        //     spacing: 8 * uiScale
 
-            // Sem později přidáme např. Bootstrap/Fontello ikonky
-            // Zatím placeholdery:
-            ToolButton { text: "★";  onClicked: console.log("mid icon 1") }
-            ToolButton { text: "☆";  onClicked: console.log("mid icon 2") }
-        }
+        //     // Sem později přidáme např. Bootstrap/Fontello ikonky
+        //     // Zatím placeholdery:
+        //     ToolButton { text: "★";  onClicked: console.log("mid icon 1") }
+        //     ToolButton { text: "☆";  onClicked: console.log("mid icon 2") }
+        //     ToolButton { text: "☆";  onClicked: console.log("mid icon 2") }
+        //     ToolButton { text: "☆";  onClicked: console.log("mid icon 2") }
+        // }
 
         // Vpravo Wi-Fi / Nastavení / Přihlášení
         Row {
-            spacing: 10
+            spacing: 15 * uiScale
+            // Layout.fillWidth: true
 
             ToolButton {
                 onClicked: bar.openWifi()
-                contentItem: biIcon.createObject(this, { "code": "\uF61C", "px": 22, "iconColor": "#EDEFF2" })
-                background: Rectangle { radius: 6; color: "#00000033"; implicitWidth: 36; implicitHeight: 32 }
+                contentItem: biIcon.createObject(this, { "code": "\uF61C", "px": 34 * uiScale, "iconColor": "#EDEFF2" })
+                background: Rectangle {
+                    radius: 6 * uiScale
+                    color: "#00000033"
+                    implicitWidth: 40 * uiScale
+                    implicitHeight: 36 * uiScale
+                }
             }
             ToolButton {
                 onClicked: bar.openSettings()
-                contentItem: biIcon.createObject(this, { "code": "\uF3E5", "px": 22, "iconColor": "#EDEFF2" })
-                background: Rectangle { radius: 6; color: "#00000033"; implicitWidth: 36; implicitHeight: 32 }
+                contentItem: biIcon.createObject(this, { "code": "\uF3E5", "px": 34 * uiScale, "iconColor": "#EDEFF2" })
+                background: Rectangle {
+                    radius: 6 * uiScale
+                    color: "#00000033"
+                    implicitWidth: 40 * uiScale
+                    implicitHeight: 36 * uiScale
+                }
             }
             ToolButton {
                 onClicked: bar.openLogin()
-                contentItem: biIcon.createObject(this, { "code": "\uF4E1", "px": 22, "iconColor": "#EDEFF2" })
-                background: Rectangle { radius: 6; color: "#00000033"; implicitWidth: 36; implicitHeight: 32 }
+                contentItem: biIcon.createObject(this, { "code": "\uF4E1", "px": 34 * uiScale, "iconColor": "#EDEFF2" })
+                background: Rectangle {
+                    radius: 6 * uiScale
+                    color: "#00000033"
+                    implicitWidth: 40 * uiScale
+                    implicitHeight: 36 * uiScale
+                }
             }
+            // Layout.alignment: Qt.AlignVCenter | Qt.AlignLeft
         }
     }
 }

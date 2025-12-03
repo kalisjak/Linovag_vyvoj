@@ -3,7 +3,9 @@ import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 
 Page {
-    id: root
+    id: histP
+    property real uiScale: 1.0
+
     title: "Historie teplot"
     background: Item {}
     visible: SwipeView.isCurrentItem
@@ -11,7 +13,7 @@ Page {
     contentItem: Item {
         anchors.fill: parent
         // relativní odsazení, aby to fungovalo i na 720x1280
-        anchors.margins: Math.min(parent.width, parent.height) * 0.03
+        anchors.margins: 19 * uiScale // Math.min(parent.width, parent.height) * 0.03
 
         // LEVÁ ČÁST – QR kód (2/5 šířky)
         Rectangle {
@@ -29,23 +31,28 @@ Page {
                 anchors.horizontalCenter: parent.horizontalCenter
                 // posunout QR trochu níž
                 anchors.bottom: parent.bottom
-                anchors.bottomMargin: parent.height * 0.12
+                // anchors.bottomMargin: parent.height * 0.12
+                anchors.topMargin: 10 * uiScale
+                anchors.bottomMargin: 70 * uiScale
                 spacing: 16
 
                 Image {
                     id: qrImage
-                    source: "qrc:/qml/qr_web.png"
+                    source: "qrc:/qml/qr_hist.png"
                     fillMode: Image.PreserveAspectFit
                     // velikost relativně k menšímu rozměru
-                    sourceSize.width: Math.min(root.width, root.height) * 0.5
-                    sourceSize.height: Math.min(root.width, root.height) * 0.5
+                    // sourceSize.width: Math.min(histP.width, histP.height) * 0.5
+                    // sourceSize.height: Math.min(histP.width, histP.height) * 0.5
+                    sourceSize.width: 320 * uiScale
+                    sourceSize.height: 320 * uiScale
                     cache: true
                 }
 
                 Text {
-                    text: "Otevřít webový přehled"
+                    text: "Otevřít webový přehled historie"
                     color: "#EDEFF2"
-                    font.pixelSize: Math.min(root.width, root.height) * 0.05
+                    // font.pixelSize: Math.min(histP.width, histP.height) * 0.05
+                    font.pixelSize: 32 * uiScale
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.WordWrap
                     width: parent.width * 0.9
@@ -72,40 +79,42 @@ Page {
                 left: divider.right
                 right: parent.right
                 // odsazení od středové čáry
-                leftMargin: Math.min(parent.width, parent.height) * 0.03
-                topMargin: Math.min(parent.width, parent.height) * 0.06
+                leftMargin: 20 * uiScale //Math.min(parent.width, parent.height) * 0.03
+                topMargin: 35 * uiScale // Math.min(parent.width, parent.height) * 0.06
+                bottomMargin: 30 * uiScale
             }
             color: "transparent"
 
             // TODO: tmavší průhledné pozadí přes celou pravou část
-            Rectangle {
-                anchors.fill: parent
-                radius: 24
-                color: "#000000AA"      // tmavší, ale pořád průhledné
-                border.color: "#FFFFFF22"
-                border.width: 0
-            }
+            // Rectangle {
+            //     anchors.fill: parent
+            //     radius: 24
+            //     // z: 20
+            //     color: "transparent"      // tmavší, ale pořád průhledné
+            //     border.color: "#FFFFFF22"
+            //     border.width: 0
+            // }
 
             ColumnLayout {
                 anchors.fill: parent
-                anchors.margins: Math.min(parent.width, parent.height) * 0.03
-                spacing: Math.min(parent.width, parent.height) * 0.01
+                anchors.margins: 20 * uiScale // Math.min(parent.width, parent.height) * 0.03
+                spacing: 6 * uiScale // Math.min(parent.width, parent.height) * 0.01
 
                 Text {
                     text: "Log teplot"
                     color: "#EDEFF2"
-                    font.pixelSize: Math.min(root.width, root.height) * 0.07
+                    font.pixelSize: 45 * uiScale // Math.min(histP.width, histP.height) * 0.07
                     font.bold: true
                     Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
                     // odsazení nadpisu od středové čáry
-                    Layout.leftMargin: Math.min(parent.width, parent.height) * 0.03
+                    Layout.leftMargin: 20 * uiScale // Math.min(parent.width, parent.height) * 0.03
                 }
 
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     radius: 18
-                    color: "#00000088"
+                    color: "#060a11ff"
                     border.color: "#FFFFFF33"
                     border.width: 0
                     clip: true
@@ -113,7 +122,7 @@ Page {
                     ListView {
                         id: logView
                         anchors.fill: parent
-                        anchors.margins: Math.min(root.width, root.height) * 0.03
+                        anchors.margins: 20 * uiScale // Math.min(histP.width, histP.height) * 0.03
                         spacing: 4
                         clip: true
 
@@ -125,7 +134,7 @@ Page {
                         delegate: Text {
                             text: modelData
                             color: "#EDEFF2"
-                            font.pixelSize: Math.min(root.width, root.height) * 0.045
+                            font.pixelSize: 30 * uiScale // Math.min(histP.width, histP.height) * 0.045
                             font.family: "monospace"
                             elide: Text.ElideRight
                         }

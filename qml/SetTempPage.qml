@@ -2,7 +2,9 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 
 Page {
-    id: root
+    id: setTP
+    property real uiScale: 1.0
+
     title: "Nastavení teploty"
     background: Item {}
     visible: SwipeView.isCurrentItem
@@ -13,11 +15,12 @@ Page {
 
     contentItem: Item {
         anchors.fill: parent
-        anchors.margins: 32
+        anchors.margins: 32 * uiScale
 
         // levá část – velké číslo s aktuální teplotou
         Rectangle {
             id: leftPane
+            
             anchors {
                 left: parent.left
                 top: parent.top
@@ -32,16 +35,17 @@ Page {
 
                 Text {
                     id: currentTempText
-                    text: Number(root.currentTemp).toLocaleString(Qt.locale(), "f", 1)
-                    color: root.diff > 2.5 ? "orange" : "#00ff00"
-                    font.pixelSize: 160
+                    // text: Number(setTP.currentTemp).toLocaleString(Qt.locale(), "f", 1)
+                    text: Number(setTP.currentTemp).toFixed(1)
+                    color: setTP.diff > 2.5 ? "orange" : "#00ff00"
+                    font.pixelSize: 300 * uiScale
                     font.bold: true
                 }
 
                 Text {
                     text: "°C"
                     color: "#c6c5df"        // nemění barvu, neutrální
-                    font.pixelSize: 60      // polovina velikosti
+                    font.pixelSize: 110 * uiScale     // polovina velikosti
                     font.bold: true
                 }
             }
@@ -70,17 +74,17 @@ Page {
 
             Column {
                 anchors.centerIn: parent
-                spacing: 24
+                spacing: 24 * uiScale
 
                 // tlačítko +0.5 °C
                 Rectangle {
                     id: upButton
-                    width: 90
-                    height: 90
-                    radius: 24
+                    width: 160 * uiScale
+                    height: 130 * uiScale
+                    radius: 24 * uiScale
                     color: upArea.pressed ? "#5a5a5ac4" : "#00000099"
                     border.color: "transparent"
-                    border.width: 1
+                    border.width: 0
 
                     Loader {
                         anchors.centerIn: parent
@@ -88,7 +92,7 @@ Page {
                         onLoaded: {
                             // bootstrap-icons - chevron-up
                             item.code = "\uF286"
-                            item.px = 80
+                            item.px = 130 * uiScale
                             item.iconColor = "#EDEFF2"
                         }
                     }
@@ -103,20 +107,20 @@ Page {
                 // zvolená teplota (požadovaná)
                 Row {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    spacing: 4
+                    spacing: 4 * uiScale
 
                     Text {
                         id: targetTempText
-                        text: Number(backend.targetTemp).toLocaleString(Qt.locale(), "f", 1)
+                        text: Number(backend.targetTemp).toFixed(1)
                         color: "#EDEFF2"
-                        font.pixelSize: 45
+                        font.pixelSize: 100 * uiScale
                         font.bold: true
                     }
 
                     Text {
                         text: "°C"
                         color: "#c6c5df"
-                        font.pixelSize: 23
+                        font.pixelSize: 50  * uiScale
                         font.bold: true
                     }
                 }
@@ -124,12 +128,12 @@ Page {
                 // tlačítko -0.5 °C
                 Rectangle {
                     id: downButton
-                    width: 90
-                    height: 90
-                    radius: 24
+                    width: 160 * uiScale
+                    height: 130 * uiScale
+                    radius: 24 * uiScale
                     color: downArea.pressed ? "#5a5a5ac4" : "#00000099"
                     border.color: "transparent"
-                    border.width: 1
+                    border.width: 0
 
                     Loader {
                         anchors.centerIn: parent
@@ -137,7 +141,7 @@ Page {
                         onLoaded: {
                             // chevron-down (bootstrap-icons)
                             item.code = "\uF282"
-                            item.px = 80
+                            item.px = 130 * uiScale
                             item.iconColor = "#EDEFF2"
                         }
                     }

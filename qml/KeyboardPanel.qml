@@ -4,19 +4,18 @@ import QtQuick.Controls 2.15
 
 Item {
     id: osk
+    property real uiScale: 1.0
 
+    width: parent ? parent.width : 800 * uiScale
+    height: parent ? parent.height * 0.5 : 240 * uiScale
     // --- pozice a rozměry ---
 
     anchors.left: parent ? parent.left : undefined
     anchors.right: parent ? parent.right : undefined
-    width: parent ? parent.width : 800
-
-    // výška max ~ půlka okna
-    height: parent ? parent.height * 0.5 : 240
 
     // vysouvání odspodu podle exposedHeight
     y: parent ? parent.height - exposedHeight : 0
-    z: 2000
+    z: 200
 
     // API pro App.qml
     property bool show: false
@@ -451,3 +450,112 @@ Item {
         }
     }
 }
+
+
+// Item {
+//     id: osk
+//     property real uiScale: 1.0
+
+//     // --- pozice a rozměry ---
+
+//     anchors.left: parent ? parent.left : undefined
+//     anchors.right: parent ? parent.right : undefined
+//     anchors.bottom: parent ? parent.bottom : undefined
+
+//     width: parent ? parent.width : 800 * uiScale
+//     // výška max ~ půlka okna
+//     height: parent ? parent.height * 0.5 : 240 * uiScale
+
+//     // vysouvání odspodu podle exposedHeight
+//     y: parent ? parent.height - exposedHeight : 0
+//     z: 2000
+
+//     // API pro App.qml
+//     property bool show: false
+//     property real exposedHeight: show ? height : 0
+//     Behavior on exposedHeight {
+//         NumberAnimation {
+//             duration: 180
+//             easing.type: Easing.InOutQuad
+//         }
+//     }
+
+//     // vnitřek
+//     Rectangle {
+//         anchors.fill: parent
+//         color: "#000000DD"
+
+//         Column {
+//             anchors.fill: parent
+//             anchors.margins: 4 * uiScale
+//             spacing: 4 * uiScale
+
+//             // Pole pro text
+//             TextInput {
+//                 id: inputField
+//                 width: parent.width
+//                 height: 40 * uiScale
+//                 font.pixelSize: 20 * uiScale
+//                 color: "white"
+//                 focus: show
+//             }
+
+//             // řádky kláves
+//             Column {
+//                 id: rows
+//                 anchors.left: parent.left
+//                 anchors.right: parent.right
+//                 spacing: 4 * uiScale
+
+//                 // Příklad jednoho řádku (předpokládám, že ostatní máš podobně)
+//                 Row {
+//                     anchors.horizontalCenter: parent.horizontalCenter
+//                     spacing: 4 * uiScale
+
+//                     Repeater {
+//                         model: [
+//                             "Q","W","E","R","T","Y","U","I","O","P"
+//                         ]
+
+//                         Rectangle {
+//                             width: 40 * uiScale
+//                             height: 40 * uiScale
+//                             radius: 4 * uiScale
+//                             color: "#333333"
+//                             border.color: "#777777"
+//                             border.width: 1 * uiScale
+
+//                             property string keyText: modelData
+//                             property bool isLetter: true
+//                             property string keyType: "char"
+
+//                             Text {
+//                                 anchors.centerIn: parent
+//                                 text: parent.keyText
+//                                 color: "white"
+//                                 font.pixelSize: 18 * uiScale
+//                             }
+
+//                             MouseArea {
+//                                 anchors.fill: parent
+//                                 onClicked: {
+//                                     var ch = parent.keyText
+//                                     osk.commitText(ch)
+//                                 }
+//                             }
+//                         }
+//                     }
+//                 }
+
+//                 // ... zbytek řádků (čísla, mezerník, backspace, enter) 
+//                 // jenom stejný princip – šířky/výšky/radius/font.pixelSize 
+//                 // přenásobit * uiScale
+//             }
+//         }
+//     }
+
+//     // API pro zbytek aplikace
+//     signal commitText(string text)
+//     signal backspace()
+//     signal doEnter()
+// }

@@ -12,6 +12,14 @@ ApplicationWindow {
     color: "black"
     Component.onCompleted: win.contentItem.focus = true
 
+    // --- škálování vůči návrhovému rozlišení ---
+    readonly property int designWidth: 1280
+    readonly property int designHeight: 720
+
+    // jednotný scale (1.0 = původní vzhled pro 1280x720)
+    property real uiScale: Math.min(width / designWidth,
+                                    height / designHeight)
+
     // Bootstrap Icons font
     FontLoader {
         id: biFont
@@ -70,6 +78,7 @@ ApplicationWindow {
 
         TopBar {
             id: topbar
+            uiScale: win.uiScale
             z: 10
             width: parent.width
             anchors.top: parent.top
@@ -93,16 +102,17 @@ ApplicationWindow {
             interactive: true
             clip: true
 
-            HomePage { }
-            SetTempPage { }  // index 1
-            HistPage { }     // index 2
-            QrPage   { }     // index 3
-            TempPage { }     // index 4
+            HomePage   { uiScale: win.uiScale }
+            SetTempPage { uiScale: win.uiScale }  // index 1
+            HistPage { uiScale: win.uiScale }     // index 2
+            QrPage   { uiScale: win.uiScale }     // index 3
+            TempPage {  }     // index 4
         }
 
         // Spodní "dock" s tečkami a domečkem
         DockNav {
             id: dock
+            uiScale: win.uiScale
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 10 // + osk.exposedHeight
@@ -126,6 +136,7 @@ ApplicationWindow {
 
         KeyboardPanel {
             id: osk
+            uiScale: win.uiScale
             z: 30
         }
 
@@ -133,7 +144,7 @@ ApplicationWindow {
         id: floatEditor
         anchors.fill: parent
         visible: active
-        z: 2500
+        z: 250
 
         property bool active: false
         property var sourceField   // původní TextField / TextArea
