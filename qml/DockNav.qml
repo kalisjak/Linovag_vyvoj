@@ -8,7 +8,7 @@ Item {
     property real uiScale: 1.0
 
     width: parent ? parent.width : 800 * uiScale
-    height: 40 * uiScale
+    height: 60 * uiScale
 
     // API
     property int count: 3
@@ -27,7 +27,7 @@ Item {
         Repeater {
             model: dock.count
             delegate: Rectangle {
-                width: 16 * uiScale; height: 16 * uiScale; radius: 8 * uiScale
+                width: 24 * uiScale; height: 24 * uiScale; radius: 12 * uiScale
                 // anchors.topMargin: 3 * uiScale
                 color: (index === dock.currentIndex) ? "#EDEFF2" : "transparent"
                 border.color: "#c0c0c0c0"
@@ -43,14 +43,14 @@ Item {
         // domeček
         Item {
             // anchors.bottomMargin: 40 * uiScale
-            width: 28 * uiScale; height: 28 * uiScale;
+            width: 40 * uiScale; height: 40 * uiScale;
 
             Text {
                 anchors.centerIn: parent
                 anchors.verticalCenter: parent.verticalCenter
                 // anchors.bottomMargin: 10
                 text: "⌂"
-                font.pixelSize: 27* uiScale
+                font.pixelSize: 40* uiScale
                 color: "#EDEFF2"
             }
             MouseArea {

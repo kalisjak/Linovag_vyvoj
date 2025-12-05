@@ -1,4 +1,4 @@
-#include "WatchdogWorker.hpp"
+#include "watchdogWorker.hpp"
 
 #include <QDateTime>
 #include <QDebug>
@@ -18,7 +18,7 @@ void WatchdogWorker::stop() { timer_->stop(); }
 void WatchdogWorker::onHeartbeat(const QString& name) { lastBeat_[name].restart(); }
 
 void WatchdogWorker::check() {
-    for (auto it = lastBeat_.cbegin(); it != lastBeat_.cend(); ++it) {
+    for (auto it = lastBeat_.cbegin(); it != lastBeat_.cend(); ++it) { 
         const QString& name = it.key();
         qint64 elapsed = it.value().elapsed();
         if (elapsed > timeoutMs_) {

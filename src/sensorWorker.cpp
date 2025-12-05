@@ -1,4 +1,4 @@
-#include "SensorWorker.hpp"
+#include "sensorWorker.hpp"
 #include <QDebug>
 #include <fstream>
 

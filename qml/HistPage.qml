@@ -31,9 +31,9 @@ Page {
                 anchors.horizontalCenter: parent.horizontalCenter
                 // posunout QR trochu níž
                 anchors.bottom: parent.bottom
-                // anchors.bottomMargin: parent.height * 0.12
-                anchors.topMargin: 10 * uiScale
-                anchors.bottomMargin: 70 * uiScale
+                anchors.bottomMargin: parent.height * 0.05
+                // anchors.topMargin: 10 * uiScale
+                // anchors.bottomMargin: 70 * uiScale
                 spacing: 16
 
                 Image {
@@ -41,10 +41,10 @@ Page {
                     source: "qrc:/qml/qr_hist.png"
                     fillMode: Image.PreserveAspectFit
                     // velikost relativně k menšímu rozměru
-                    // sourceSize.width: Math.min(histP.width, histP.height) * 0.5
-                    // sourceSize.height: Math.min(histP.width, histP.height) * 0.5
-                    sourceSize.width: 320 * uiScale
-                    sourceSize.height: 320 * uiScale
+                    sourceSize.width: Math.min(histP.width, histP.height) * 0.6
+                    sourceSize.height: Math.min(histP.width, histP.height) * 0.6
+                    // sourceSize.width: 320 * uiScale
+                    // sourceSize.height: 320 * uiScale
                     cache: true
                 }
 
@@ -52,7 +52,7 @@ Page {
                     text: "Otevřít webový přehled historie"
                     color: "#EDEFF2"
                     // font.pixelSize: Math.min(histP.width, histP.height) * 0.05
-                    font.pixelSize: 32 * uiScale
+                    font.pixelSize: 36 * uiScale
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.WordWrap
                     width: parent.width * 0.9
@@ -79,35 +79,25 @@ Page {
                 left: divider.right
                 right: parent.right
                 // odsazení od středové čáry
-                leftMargin: 20 * uiScale //Math.min(parent.width, parent.height) * 0.03
-                topMargin: 35 * uiScale // Math.min(parent.width, parent.height) * 0.06
-                bottomMargin: 30 * uiScale
+                leftMargin: 18 * uiScale //Math.min(parent.width, parent.height) * 0.03
+                topMargin: Math.min(parent.width, parent.height) * 0.05
+                bottomMargin: 18 * uiScale
             }
             color: "transparent"
 
-            // TODO: tmavší průhledné pozadí přes celou pravou část
-            // Rectangle {
-            //     anchors.fill: parent
-            //     radius: 24
-            //     // z: 20
-            //     color: "transparent"      // tmavší, ale pořád průhledné
-            //     border.color: "#FFFFFF22"
-            //     border.width: 0
-            // }
-
             ColumnLayout {
                 anchors.fill: parent
-                anchors.margins: 20 * uiScale // Math.min(parent.width, parent.height) * 0.03
-                spacing: 6 * uiScale // Math.min(parent.width, parent.height) * 0.01
+                anchors.margins: Math.min(parent.width, parent.height) * 0.02
+                spacing: Math.min(parent.width, parent.height) * 0.01
 
                 Text {
                     text: "Log teplot"
                     color: "#EDEFF2"
-                    font.pixelSize: 45 * uiScale // Math.min(histP.width, histP.height) * 0.07
+                    font.pixelSize: Math.min(histP.width, histP.height) * 0.08
                     font.bold: true
                     Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
                     // odsazení nadpisu od středové čáry
-                    Layout.leftMargin: 20 * uiScale // Math.min(parent.width, parent.height) * 0.03
+                    Layout.leftMargin: Math.min(parent.width, parent.height) * 0.03
                 }
 
                 Rectangle {
@@ -122,7 +112,7 @@ Page {
                     ListView {
                         id: logView
                         anchors.fill: parent
-                        anchors.margins: 20 * uiScale // Math.min(histP.width, histP.height) * 0.03
+                        anchors.margins: Math.min(histP.width, histP.height) * 0.03
                         spacing: 4
                         clip: true
 
@@ -134,7 +124,7 @@ Page {
                         delegate: Text {
                             text: modelData
                             color: "#EDEFF2"
-                            font.pixelSize: 30 * uiScale // Math.min(histP.width, histP.height) * 0.045
+                            font.pixelSize: Math.min(histP.width, histP.height) * 0.052
                             font.family: "monospace"
                             elide: Text.ElideRight
                         }

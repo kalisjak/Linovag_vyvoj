@@ -1,7 +1,8 @@
 #pragma once
+
 #include <QObject>
-#include <QHash>
 #include <QElapsedTimer>
+#include <QHash>
 
 class QTimer;
 
@@ -10,13 +11,13 @@ class WatchdogWorker : public QObject {
 public:
     explicit WatchdogWorker(QObject* parent = nullptr);
 
-signals:
-    void restartRequested(const QString& name);
-
 public slots:
     void start();
     void stop();
     void onHeartbeat(const QString& name);
+
+signals:
+    void restartRequested(const QString& name);
 
 private slots:
     void check();
@@ -24,5 +25,5 @@ private slots:
 private:
     QTimer* timer_ = nullptr;
     QHash<QString, QElapsedTimer> lastBeat_;
-    int timeoutMs_ = 15000; // 15 s bez hearbeatu = mrtvo
+    const qint64 timeoutMs_ = 25000;  // 20 s bez heartbeat → považujeme za zaseklé
 };

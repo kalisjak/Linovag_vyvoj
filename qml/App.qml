@@ -17,8 +17,9 @@ ApplicationWindow {
     readonly property int designHeight: 720
 
     // jednotný scale (1.0 = původní vzhled pro 1280x720)
-    property real uiScale: Math.min(width / designWidth,
-                                    height / designHeight)
+    property real uiScale: 2.0
+    // property real uiScale: Math.min(width / designWidth,
+    //                                 height / designHeight)
 
     // Bootstrap Icons font
     FontLoader {
@@ -78,7 +79,7 @@ ApplicationWindow {
 
         TopBar {
             id: topbar
-            uiScale: win.uiScale
+            uiScale: 1.3
             z: 10
             width: parent.width
             anchors.top: parent.top
