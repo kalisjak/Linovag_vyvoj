@@ -96,9 +96,9 @@ void MqttWorker::publish(const QByteArray& data)
     flush();
 }
 
-void MqttWorker::onStateChanged(int s)
+void MqttWorker::onStateChanged(int state)
 {
-    const auto st = static_cast<QMqttClient::ClientState>(s);
+    const auto st = static_cast<QMqttClient::ClientState>(state);
     const bool connected = (st == QMqttClient::Connected);
 
     emit connectedChanged(connected);

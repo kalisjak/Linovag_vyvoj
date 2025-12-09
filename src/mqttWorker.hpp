@@ -5,6 +5,8 @@
 #include <QByteArray>
 #include <QString>
 
+#include "config.hpp"
+
 class QMqttClient;
 
 class MqttWorker : public QObject {
@@ -24,7 +26,7 @@ public slots:
     void publish(const QByteArray& data);   // backend → přidá do fronty a případně flushne
 
 private slots:
-    void onStateChanged(int s);    // připojeno/odpojeno
+    void onStateChanged(int state);    // připojeno/odpojeno
     void onErrorChanged();
     void onDisconnected();
 
@@ -36,11 +38,12 @@ private:
     QMqttClient* mqtt_ = nullptr;
     QQueue<QByteArray> buffer_;
 
-    // konfigurace brokeru – uprav podle sebe, pokud máš jiné hodnoty
-    const QString brokerHost_ = QStringLiteral("192.168.3.101");
-    const quint16 brokerPort_ = 8883;
-    const QString brokerUser_ = QStringLiteral("device1");
-    const QString brokerPass_ = QStringLiteral("pass1");
-    const QString topic_      = QStringLiteral("devices/device1/telemetry");
-    const QString ca_file_    = QStringLiteral("/usr/local/share/ca-certificates/rootCA.pem");
+    // konfigurace brokeru – centralizovaná v AppConfig
+    const QString brokerHost_ = AppConfig::MQTT_BROKER_HOST;
+    const quint16 brokerPort_ = AppConfig::MQTT_BROKER_PORT;
+    const QString brokerUser_ = AppConfig::MQTT_USERNAME;
+    const QString brokerPass_ = AppConfig::MQTT_PASSWORD;
+    const QString topic_      = AppConfig::MQTT_TOPIC_TELEMETRY;
+    const QString ca_file_    = AppConfig::MQTT_CA_FILE;
+
 };

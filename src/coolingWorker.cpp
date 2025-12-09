@@ -1,10 +1,12 @@
-#include "CoolingWorker.hpp"
+#include "coolingWorker.hpp"
 
 #include <QDebug>
 
+#ifdef LNVG_USE_PIGPIO
 extern "C" {
 #include <pigpio.h>
 }
+#endif
 
 CoolingWorker::CoolingWorker(QObject* parent)
     : QObject(parent)
@@ -12,18 +14,15 @@ CoolingWorker::CoolingWorker(QObject* parent)
     timer_ = new QTimer(this);
     connect(timer_, &QTimer::timeout,
             this, &CoolingWorker::controlStep);
+
+    // načti poslední stav inverzní logiky z runtime configu
+    invertLogic_ = RuntimeConfig::coolingInvertLogic();
 }
 
 CoolingWorker::~CoolingWorker()
 {
     stop();
-    if (hwInitialized_) {
-        // vypneme výstupy
-        setFanDuty(0.0);
-        setCompressor(false);
-        gpioTerminate();
-        hwInitialized_ = false;
-    }
+    shutdownGpio();
 }
 
 void CoolingWorker::start()
@@ -31,18 +30,19 @@ void CoolingWorker::start()
     qInfo() << "[CoolingWorker] start()";
 
     startupDelayActive_ = true;
-    startupTimer_.start();
+    startupTimer_.restart();
 
     initGpio();
 
-    // perioda logiky – stačí např. 1s
-    timer_->start(1000);
+    // perioda řídicí smyčky z configu
+    timer_->start(AppConfig::COOLING_CONTROL_INTERVAL_MS);
 }
 
 void CoolingWorker::stop()
 {
-    if (timer_) timer_->stop();
-    // výstupy se vypnou v destruktoru / při restartu
+    if (timer_) {
+        timer_->stop();
+    }
 }
 
 void CoolingWorker::onTempSensors(double t1, double t2)
@@ -63,110 +63,174 @@ void CoolingWorker::onTargetTempChanged(double t)
 
 void CoolingWorker::setInvertLogic(bool invert)
 {
+    if (invertLogic_ == invert)
+        return;
+
     invertLogic_ = invert;
-    qInfo() << "[CoolingWorker] invertLogic =" << invertLogic_;
+    RuntimeConfig::setCoolingInvertLogic(invertLogic_);
+
+    qInfo() << "[CoolingWorker] invertLogic set to" << invertLogic_;
+
+    // hned aplikujeme "vypnutý" stav podle nové logiky
+    if (hwInitialized_) {
+        setCompressor(compressorOn_);
+    }
 }
 
 void CoolingWorker::initGpio()
 {
-    if (hwInitialized_) return;
+    if (hwInitialized_)
+        return;
 
+#ifdef LNVG_USE_PIGPIO
     if (gpioInitialise() < 0) {
         qWarning() << "[CoolingWorker] pigpio init failed!";
         return;
     }
 
-    gpioSetMode(kGpioPin, PI_OUTPUT);
+    gpioSetMode(AppConfig::FAN_PWM_PIN, PI_OUTPUT);
+    gpioSetPWMfrequency(AppConfig::FAN_PWM_PIN, AppConfig::FAN_PWM_FREQUENCY);
+    gpioPWM(AppConfig::FAN_PWM_PIN, 255); // 100 % (při startu stáhlé přes pull-up) = netočí se
 
-    // nastavit PWM
-    gpioSetPWMfrequency(kGpioPin, kPwmFrequency);
-    gpioPWM(kGpioPin, 0);
+    gpioSetMode(AppConfig::COMPRESSOR_PIN, PI_OUTPUT);
+    bool offLevel = invertLogic_ ? 1 : 0;
+    gpioWrite(AppConfig::COMPRESSOR_PIN, offLevel);
+
+    qInfo() << "[CoolingWorker] GPIO fanPWM =" << AppConfig::FAN_PWM_PIN
+            << "compressor =" << AppConfig::COMPRESSOR_PIN
+            << "PWM freq =" << AppConfig::FAN_PWM_FREQUENCY << "Hz";
+#else
+    // simulace – otevřeme log soubor
+    if (!simFile_.isOpen()) {
+        simFile_.setFileName("cooling_sim.log");
+        if (!simFile_.open(QIODevice::Append | QIODevice::Text)) {
+            qWarning() << "[CoolingWorker] Cannot open cooling_sim.log for simulation";
+        } else {
+            simStream_.setDevice(&simFile_);
+            simStream_ << "=== Cooling simulation started ===\n";
+            simStream_.flush();
+        }
+    }
+    qInfo() << "[CoolingWorker] Simulation mode (no GPIO)";
+#endif
 
     hwInitialized_ = true;
+}
 
-    qInfo() << "[CoolingWorker] GPIO" << kGpioPin
-            << "initialized, PWM freq =" << kPwmFrequency << "Hz";
+
+void CoolingWorker::shutdownGpio()
+{
+    if (!hwInitialized_)
+        return;
+
+#ifdef LNVG_USE_PIGPIO
+    setFanDuty(1.0);
+    setCompressor(false);
+    gpioTerminate();
+#else
+    if (simFile_.isOpen()) {
+        simStream_ << "=== Cooling simulation ended ===\n";
+        simStream_.flush();
+        simFile_.close();
+    }
+#endif
+
+    hwInitialized_ = false;
 }
 
 void CoolingWorker::setFanDuty(double duty)
 {
-    if (!hwInitialized_) return;
+    if (!hwInitialized_)
+        return;
 
     if (duty < 0.0) duty = 0.0;
     if (duty > 1.0) duty = 1.0;
 
-    // pigpio: 0-255
+#ifdef LNVG_USE_PIGPIO
     int pwm = static_cast<int>(duty * 255.0 + 0.5);
-
-    // větráky jsou PWM, kompresor je ON/OFF.
-    // Předpoklad: PWM řídí vstup 4-pin ventilátorů, kompresor je spínán paralelně
-    // přes stejný pin (tvůj HW si případně uprav).
-    gpioPWM(kGpioPin, pwm);
+    gpioPWM(AppConfig::FAN_PWM_PIN, pwm);
+#else
+    if (simFile_.isOpen()) {
+        simStream_ << "Fan duty set to " << duty << "\n";
+        simStream_.flush();
+    } else {
+        qDebug() << "[CoolingWorker][SIM] Fan duty =" << duty;
+    }
+#endif
 }
 
 void CoolingWorker::setCompressor(bool on)
 {
-    if (!hwInitialized_) return;
+    if (!hwInitialized_)
+        return;
 
-    bool level = on;
-    if (invertLogic_) {
-        level = !level;
+#ifdef LNVG_USE_PIGPIO
+    gpioWrite(AppConfig::COMPRESSOR_PIN, on ? 1 : 0);
+#else
+    if (simFile_.isOpen()) {
+        simStream_ << "Compressor " << (on ? "ON" : "OFF") << "\n";
+        simStream_.flush();
+    } else {
+        qDebug() << "[CoolingWorker][SIM] Compressor" << (on ? "ON" : "OFF");
     }
-
-    gpioWrite(kGpioPin, level ? 1 : 0);
+#endif
 }
+
 
 void CoolingWorker::controlStep()
 {
-    emit heartbeat("cooling");
+    emit heartbeat(QStringLiteral("cooling"));
 
-    // 30s delay po startu – kompresor a větráky OFF
+    // start delay – prvních X ms vůbec nic nezapínat
     if (startupDelayActive_) {
-        if (startupTimer_.elapsed() < kStartupDelayMs) {
-            setFanDuty(0.0);
+        if (startupTimer_.elapsed() < AppConfig::COOLING_STARTUP_DELAY_MS) {
+            setFanDuty(1.0);
             setCompressor(false);
             return;
         }
         startupDelayActive_ = false;
-        qInfo() << "[CoolingWorker] Startup delay finished, enabling control";
+        qInfo() << "[CoolingWorker] startup delay finished, enabling control";
     }
 
-    // 1) průměr ze senzoru 1 a 2
+    // průměr ze senzoru 1 a 2
     const double avg = (t1_ + t2_) / 2.0;
 
-    // 3) defrost logika z čidla výparníku
+    // --- DEFROST logika podle výparníku (senzor 3) ---
+
     if (!defrostMode_) {
         // vstup do defrostu
-        if (tevap_ <= kDefrostStartTemp) {
+        if (tevap_ <= AppConfig::COOLING_DEFROST_START_TEMP) {
             defrostMode_ = true;
             qInfo() << "[CoolingWorker] DEFROST START, tevap =" << tevap_;
         }
     } else {
         // výstup z defrostu
-        if (tevap_ >= kDefrostStartTemp + kDefrostStopDelta) {
+        if (tevap_ >= AppConfig::COOLING_DEFROST_START_TEMP +
+                       AppConfig::COOLING_DEFROST_STOP_DELTA) {
             defrostMode_ = false;
             qInfo() << "[CoolingWorker] DEFROST STOP, tevap =" << tevap_;
         }
     }
 
     if (defrostMode_) {
-        // defrost: kompresor vždy OFF, větráky 80%
+        // defrost režim: kompresor OFF, větráky na 80 %
         compressorOn_ = false;
         setCompressor(false);
-        setFanDuty(kFanDutyDefrost);
+        setFanDuty(AppConfig::COOLING_FAN_DUTY_DEFROST);
         return;
     }
 
-    // 2) běžná hysteréze pro kompresor podle průměru vnitřních teplot
+    // --- Běžná hysteréze kompresoru podle vnitřní teploty ---
+
     if (compressorOn_) {
-        // vypínáme při X °C (targetTemp_)
+        // vypnout při X °C
         if (avg <= targetTemp_) {
             compressorOn_ = false;
             qInfo() << "[CoolingWorker] Compressor OFF, avg =" << avg;
         }
     } else {
-        // zapínáme při X + 2 °C
-        if (avg >= targetTemp_ + kHysteresisDelta) {
+        // zapnout při X + 2 °C (delta z configu)
+        if (avg >= targetTemp_ + AppConfig::COOLING_HYSTERESIS_DELTA) {
             compressorOn_ = true;
             qInfo() << "[CoolingWorker] Compressor ON, avg =" << avg;
         }
@@ -174,5 +238,5 @@ void CoolingWorker::controlStep()
 
     // běžný režim: kompresor podle hysteréze, větráky 40 %
     setCompressor(compressorOn_);
-    setFanDuty(kFanDutyNormal);
+    setFanDuty(AppConfig::COOLING_FAN_DUTY_NORMAL);
 }

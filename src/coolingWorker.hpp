@@ -1,76 +1,68 @@
 #pragma once
 
-#include <QObject>
-#include <QTimer>
-#include <QElapsedTimer>
+#ifndef LNVG_USE_PIGPIO
+#include <QFile>
+#include <QTextStream>
+#endif
 
-// POZNÁMKA: používám pigpio pro PWM na 20 kHz.
-// V CMakeLists.txt pak budeš muset přilinkovat -lpigpio (nebo podle tvého buildu).
-// Pokud používáš něco jiného než pigpio, stačí v .cpp přepsat initGpio/applyOutputs.
+#include <QElapsedTimer>
+#include <QObject>
+#include <QString>
+#include <QTimer>
+
+#include "config.hpp"
+#include "runtimeConfig.hpp"
 
 class CoolingWorker : public QObject {
     Q_OBJECT
-public:
+   public:
     explicit CoolingWorker(QObject* parent = nullptr);
     ~CoolingWorker();
 
-signals:
-    void heartbeat(const QString& name);    // pro watchdog ("cooling")
+   signals:
+    // pro watchdog
+    void heartbeat(const QString& name);
 
-public slots:
+   public slots:
+    // start/stop vlákna
     void start();
     void stop();
 
     // vstupy z ostatních vláken
-    void onTempSensors(double t1, double t2);  // senzor 1 a 2
-    void onEvapTemp(double tevap);            // senzor 3 (výparník)
-    void onTargetTempChanged(double t);       // požadovaná vnitřní teplota
+    void onTempSensors(double t1, double t2);  // senzor 1 a 2 – průměr pro kompresor
+    void onEvapTemp(double tevap);             // senzor 3 – výparník (defrost)
+    void onTargetTempChanged(double t);        // cílová vnitřní teplota X°C
 
-    // jednoduchý přepínač logiky výstupu (true = aktivní HIGH, false = aktivní LOW)
+    // přepínač inverzní logiky kompresoru (uloží se do RuntimeConfig)
     void setInvertLogic(bool invert);
+    bool invertLogic() const { return invertLogic_; }
 
-private slots:
-    void controlStep();   // periodická logika
+   private slots:
+    void controlStep();  // periodická regulační logika
 
-private:
-    // HW konfigurace
-    static constexpr int kGpioPin = 13;          // PWM + kompresor (podle tvého HW)
-    static constexpr int kPwmFrequency = 20000;  // 20 kHz
-
-    // logika teplot
-    // vnitřní hysteréze: vypnout při X, zapnout při X+2
-    static constexpr double kHysteresisDelta = 2.0;
-
-    // defrost (výparník, senzor 3)
-    static constexpr double kDefrostStartTemp = -20.0; // při -20°C začni odmrazovat
-    static constexpr double kDefrostStopDelta = 3.0;   // končit X+3 => -17 °C
-
-    // PWM pro větráky
-    static constexpr double kFanDutyNormal = 0.40;  // 40 % při běžném provozu
-    static constexpr double kFanDutyDefrost = 0.80; // 80 % při odmrazování
-
-    // start delay po spuštění programu
-    static constexpr int kStartupDelayMs = 30000;   // 30 s
-
+   private:
     QTimer* timer_ = nullptr;
+    QElapsedTimer startupTimer_;
 
     double t1_ = 0.0;
     double t2_ = 0.0;
     double tevap_ = 0.0;
-    double targetTemp_ = 4.0;     // default, Backend ti to přepíše
+    double targetTemp_ = 4.0;  // default, backend ti ho přepíše
 
     bool compressorOn_ = false;
     bool defrostMode_ = false;
     bool hwInitialized_ = false;
-
-    bool invertLogic_ = false;    // false = aktivní HIGH (současný stav)
-                                  // true  = aktivní LOW (budoucí inverzní logika)
-
-    QElapsedTimer startupTimer_;
     bool startupDelayActive_ = true;
+    bool invertLogic_ = false;  // false = aktivní HIGH, true = aktivní LOW
+
+#ifndef LNVG_USE_PIGPIO
+    QFile simFile_;
+    QTextStream simStream_;
+#endif
 
     void initGpio();
-    void applyOutputs();
-    void setFanDuty(double duty);     // 0.0 - 1.0
-    void setCompressor(bool on);      // logický stav (před inverzí)
+    void shutdownGpio();
+
+    void setFanDuty(double duty);  // 0.0–1.0
+    void setCompressor(bool on);   // logický stav (před inverzí)
 };

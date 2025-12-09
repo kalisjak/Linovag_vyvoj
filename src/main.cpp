@@ -5,173 +5,167 @@
 #include <QQmlContext>
 #include <QThread>
 
+#include "backend.hpp"
 #include "mqttWorker.hpp"
 #include "sensorWorker.hpp"
+#include "coolingWorker.hpp"
 #include "watchdogWorker.hpp"
-#include "backend.hpp"
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[])
+{
+
+    QGuiApplication::setAttribute(Qt::AA_DisableHighDpiScaling); // disable high-DPI scaling
     QGuiApplication app(argc, argv);
 
+    // ----------------- Backend + QML engine -----------------
     Backend backend;
 
-    // --- ukazatele na vlákna / workery (budeme je restartovat) -------------
-    QThread* sensorThread = nullptr;
-    SensorWorker* sensorWorker = nullptr;
-
-    QThread* mqttThread = nullptr;
-    MqttWorker* mqttWorker = nullptr;
-
-    QThread* watchdogThread = new QThread();
-    WatchdogWorker* watchdog = new WatchdogWorker();
-
-    // watchdog do vlastního vlákna
-    watchdog->moveToThread(watchdogThread);
-    QObject::connect(watchdogThread, &QThread::started, watchdog, &WatchdogWorker::start);
-
-    // --- helper: zastavení a zničení senzorového vlákna --------------------
-    auto stopSensor = [&]() {
-        if (!sensorThread || !sensorWorker) return;
-
-        qWarning() << "[Main] Stopping sensor worker/thread";
-
-        // stop musí do jeho vlákna
-        QMetaObject::invokeMethod(sensorWorker, "stop", Qt::QueuedConnection);
-
-        sensorThread->quit();
-        if (!sensorThread->wait(3000)) {
-            qWarning() << "[Main] Sensor thread did not quit in time, terminating";
-            sensorThread->terminate();  // poslední záchrana – ne moc hezká, ale lepší než zombie
-            sensorThread->wait();
-        }
-
-        delete sensorWorker;
-        delete sensorThread;
-
-        sensorWorker = nullptr;
-        sensorThread = nullptr;
-    };
-
-    // --- helper: zastavení a zničení mqtt vlákna ---------------------------
-    auto stopMqtt = [&]() {
-        if (!mqttThread) return;
-
-        qWarning() << "[Main] Stopping MQTT worker/thread";
-
-        if (mqttWorker) {
-            // zavolá MqttWorker::stop() v jeho vlákně
-            QMetaObject::invokeMethod(mqttWorker, "stop", Qt::BlockingQueuedConnection);
-        }
-
-        mqttThread->quit();
-
-        if (!mqttThread->wait(3000)) {
-            qWarning() << "[Main] MQTT thread did not quit in time, terminating";
-            mqttThread->terminate();  // poslední záchrana
-            mqttThread->wait();
-        }
-
-        // worker se smaže přes deleteLater napojený na finished
-        mqttWorker = nullptr;
-
-        delete mqttThread;
-        mqttThread = nullptr;
-    };
-
-    // --- helper: vytvoření a nastartování senzorového vlákna --------------
-    auto startSensor = [&]() {
-        qWarning() << "[Main] Starting sensor worker/thread";
-
-        sensorThread = new QThread();
-        sensorWorker = new SensorWorker();
-
-        sensorWorker->moveToThread(sensorThread);
-
-        // start/stop
-        QObject::connect(sensorThread, &QThread::started, sensorWorker, &SensorWorker::start);
-
-        // senzory → backend
-        QObject::connect(sensorWorker, &SensorWorker::sensorValues, &backend, &Backend::onSensorValues);
-
-        // heartbeat → watchdog (jméno "sensors")
-        QObject::connect(sensorWorker, &SensorWorker::heartbeat, watchdog, &WatchdogWorker::onHeartbeat);
-
-        sensorThread->start();
-    };
-
-    // --- helper: vytvoření a nastartování MQTT vlákna ----------------------
-    auto startMqtt = [&]() {
-        qWarning() << "[Main] Starting MQTT worker/thread";
-
-        mqttThread = new QThread();
-        mqttWorker = new MqttWorker();
-
-        mqttWorker->moveToThread(mqttThread);
-
-        // worker se smaže sám, AŽ thread skončí, a to ve "svém" vlákně
-        QObject::connect(mqttThread, &QThread::finished, mqttWorker, &QObject::deleteLater);
-
-        // start/stop
-        QObject::connect(mqttThread, &QThread::started, mqttWorker, &MqttWorker::start);
-
-        // backend → mqtt
-        QObject::connect(&backend, &Backend::publishMqtt, mqttWorker, &MqttWorker::publish);
-
-        // mqtt → backend (stav připojení)
-        QObject::connect(mqttWorker, &MqttWorker::connectedChanged, &backend, &Backend::onMqttConnectedChanged);
-
-        // heartbeat → watchdog
-        QObject::connect(mqttWorker, &MqttWorker::heartbeat, watchdog, &WatchdogWorker::onHeartbeat);
-
-        mqttThread->start();
-    };
-
-    // --- watchdog → restart konkrétního jádra ------------------------------
-    QObject::connect(watchdog, &WatchdogWorker::restartRequested, [&](const QString& name) {
-        qWarning() << "[Main] Restart requested for" << name;
-
-        if (name == QLatin1String("sensors")) {
-            stopSensor();
-            startSensor();
-        } else if (name == QLatin1String("mqtt")) {
-            stopMqtt();
-            startMqtt();
-        } else {
-            qWarning() << "[Main] Unknown worker name in watchdog:" << name;
-        }
-    });
-
-    // --- QML engine --------------------------------------------------------
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("backend", &backend);
     engine.load(QUrl(QStringLiteral("qrc:/qml/App.qml")));
+    if (engine.rootObjects().isEmpty()) {
+        qCritical() << "[Main] Failed to load QML";
+        return -1;
+    }
 
-    // --- start všech vláken ------------------------------------------------
-    watchdogThread->start();
-    startSensor();
-    startMqtt();
+    // ----------------- MQTT worker + thread -----------------
+    QThread* mqttThread = new QThread(&app);
+    MqttWorker* mqttWorker = new MqttWorker;
 
-    // --- korektní shutdown aplikace ----------------------------------------
+    mqttWorker->moveToThread(mqttThread);
+
+    QObject::connect(mqttThread, &QThread::started,
+                     mqttWorker, &MqttWorker::start);
+
+    // Backend → MQTT (odesílání JSON payloadu)
+    QObject::connect(&backend, &Backend::publishMqtt,
+                     mqttWorker, &MqttWorker::publish,
+                     Qt::QueuedConnection);
+
+    // MQTT → Backend (info o připojení)
+    QObject::connect(mqttWorker, &MqttWorker::connectedChanged,
+                     &backend, &Backend::onMqttConnectedChanged,
+                     Qt::QueuedConnection);
+
+    // Heartbeat MQTT → watchdog (přidáme níže, až budeme mít watchdog)
+
+    // ----------------- Sensor worker + thread -----------------
+    QThread* sensorThread = new QThread(&app);
+    SensorWorker* sensorWorker = new SensorWorker;
+
+    sensorWorker->moveToThread(sensorThread);
+
+    QObject::connect(sensorThread, &QThread::started,
+                     sensorWorker, &SensorWorker::start);
+
+    // senzory → backend (vnitřní teploty)
+    QObject::connect(sensorWorker, &SensorWorker::sensorValues,
+                     &backend, &Backend::onSensorValues,
+                     Qt::QueuedConnection);
+
+    // ----------------- Cooling worker + thread -----------------
+    QThread* coolingThread = new QThread(&app);
+    CoolingWorker* coolingWorker = new CoolingWorker;
+
+    coolingWorker->moveToThread(coolingThread);
+
+    QObject::connect(coolingThread, &QThread::started,
+                     coolingWorker, &CoolingWorker::start);
+
+    // senzory → cooling (průměr vnitřních teplot)
+    QObject::connect(sensorWorker, &SensorWorker::sensorValues,
+                     coolingWorker, &CoolingWorker::onTempSensors,
+                     Qt::QueuedConnection);
+
+    // výparník → cooling (defrost logika)
+    QObject::connect(sensorWorker, &SensorWorker::evapValue,
+                     coolingWorker, &CoolingWorker::onEvapTemp,
+                     Qt::QueuedConnection);
+
+    // targetTemp z backendu → cooling (přes lambda, protože signal nemá parametr)
+    QObject::connect(&backend, &Backend::targetTempChanged,
+                     [&backend, coolingWorker]() {
+                         QMetaObject::invokeMethod(
+                             coolingWorker,
+                             "onTargetTempChanged",
+                             Qt::QueuedConnection,
+                             Q_ARG(double, backend.targetTemp()));
+                     });
+
+    // ----------------- Watchdog worker + thread -----------------
+    QThread* watchdogThread = new QThread(&app);
+    WatchdogWorker* watchdog = new WatchdogWorker;
+
+    watchdog->moveToThread(watchdogThread);
+
+    QObject::connect(watchdogThread, &QThread::started,
+                     watchdog, &WatchdogWorker::start);
+
+    // heartbeaty do watchdogu
+    QObject::connect(sensorWorker, &SensorWorker::heartbeat,
+                     watchdog, &WatchdogWorker::onHeartbeat,
+                     Qt::QueuedConnection);
+
+    QObject::connect(coolingWorker, &CoolingWorker::heartbeat,
+                     watchdog, &WatchdogWorker::onHeartbeat,
+                     Qt::QueuedConnection);
+
+    QObject::connect(mqttWorker, &MqttWorker::heartbeat,
+                     watchdog, &WatchdogWorker::onHeartbeat,
+                     Qt::QueuedConnection);
+
+    // watchdog zatím jen loguje, co chce restartovat
+    QObject::connect(watchdog, &WatchdogWorker::restartRequested,
+                     [](const QString& name) {
+                         qWarning() << "[Main] Watchdog requested restart of worker" << name
+                                    << "(restart logic not implemented yet)";
+                     });
+
+    // ----------------- Korektní ukončení při exit -----------------
     QObject::connect(&app, &QCoreApplication::aboutToQuit, [&]() {
-        // nejdřív periferie
-        stopSensor();
-        stopMqtt();
+        qInfo() << "[Main] aboutToQuit – stopping workers";
 
-        // watchdog
-        if (watchdog && watchdogThread) {
-            QMetaObject::invokeMethod(watchdog, "stop", Qt::QueuedConnection);
-            watchdogThread->quit();
-            if (!watchdogThread->wait(3000)) {
-                qWarning() << "[Main] Watchdog thread did not quit in time, terminating";
-                watchdogThread->terminate();
-                watchdogThread->wait();
+        auto stopWorker = [](QObject* worker, QThread* thread,
+                             const char* stopSlot, const char* name) {
+            if (!thread) return;
+
+            qInfo() << "[Main] Stopping" << name;
+
+            if (worker) {
+                QMetaObject::invokeMethod(worker, stopSlot, Qt::QueuedConnection);
             }
-            delete watchdog;
-            delete watchdogThread;
-            watchdog = nullptr;
-            watchdogThread = nullptr;
-        }
+
+            thread->quit();
+            if (!thread->wait(3000)) {
+                qWarning() << "[Main]" << name << "thread did not quit in time, terminating";
+                thread->terminate();
+                thread->wait();
+            }
+
+            delete worker;
+            delete thread;
+        };
+
+        stopWorker(mqttWorker,    mqttThread,    "stop", "MQTT");
+        stopWorker(sensorWorker,  sensorThread,  "stop", "Sensor");
+        stopWorker(coolingWorker, coolingThread, "stop", "Cooling");
+        stopWorker(watchdog,      watchdogThread,"stop", "Watchdog");
+
+        mqttWorker    = nullptr;
+        sensorWorker  = nullptr;
+        coolingWorker = nullptr;
+        watchdog      = nullptr;
+        mqttThread    = nullptr;
+        sensorThread  = nullptr;
+        coolingThread = nullptr;
+        watchdogThread= nullptr;
     });
+
+    // ----------------- Spuštění vláken -----------------
+    mqttThread->start();
+    sensorThread->start();
+    coolingThread->start();
+    watchdogThread->start();
 
     return app.exec();
 }

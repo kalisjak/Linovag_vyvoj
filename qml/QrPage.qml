@@ -31,22 +31,22 @@ Page {
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.bottom: parent.bottom
                 // anchors.topMargin: 100 * uiScale
-                anchors.bottomMargin: 120 * uiScale
+                anchors.bottomMargin: parent.height * 0.05
                 spacing: 16
 
                 Image {
                     id: qrWeb
                     source: "qrc:/qml/qr_web.png"
                     fillMode: Image.PreserveAspectFit
-                    sourceSize.width: 320 * uiScale
-                    sourceSize.height: 320 * uiScale
+                    sourceSize.width: Math.min(qrP.width, qrP.height) * 0.6
+                    sourceSize.height: Math.min(qrP.width, qrP.height) * 0.6
                     cache: true
                 }
 
                 Text {
                     text: "Otevřít webové stránky"
                     color: "#EDEFF2"
-                    font.pixelSize: 32 * uiScale
+                    font.pixelSize: 30 * uiScale
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.WordWrap
                     width: parent.width * 0.9
@@ -80,22 +80,22 @@ Page {
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.bottom: parent.bottom
                 // anchors.topMargin: 100 * uiScale
-                anchors.bottomMargin: 120 * uiScale
+                anchors.bottomMargin: parent.height * 0.05
                 spacing: 16
 
                 Image {
                     id: qrApp
                     source: "qrc:/qml/qr_tutor.png"
                     fillMode: Image.PreserveAspectFit
-                    sourceSize.width: 320 * uiScale
-                    sourceSize.height: 320 * uiScale
+                    sourceSize.width: Math.min(qrP.width, qrP.height) * 0.6
+                    sourceSize.height: Math.min(qrP.width, qrP.height) * 0.6
                     cache: true
                 }
 
                 Text {
                     text: "Tutorial k udržbě"
                     color: "#EDEFF2"
-                    font.pixelSize: 32 * uiScale
+                    font.pixelSize: 30 * uiScale
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.WordWrap
                     width: parent.width * 0.9

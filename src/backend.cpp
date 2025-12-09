@@ -1,4 +1,5 @@
 #include "backend.hpp"
+#include "runtimeConfig.hpp"
 
 #include <QCoreApplication>
 #include <QDateTime>
@@ -262,4 +263,5 @@ void Backend::cleanupOldLogFiles() {
 
 QString Backend::serialNumber() const {
     return QStringLiteral("SN-65468");
+    //return RuntimeConfig::deviceSerial();
 }

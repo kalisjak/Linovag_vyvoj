@@ -38,7 +38,7 @@ Page {
                     // text: Number(setTP.currentTemp).toLocaleString(Qt.locale(), "f", 1)
                     text: Number(setTP.currentTemp).toFixed(1)
                     color: setTP.diff > 2.5 ? "orange" : "#00ff00"
-                    font.pixelSize: 300 * uiScale
+                    font.pixelSize: 320 * uiScale
                     font.bold: true
                 }
 
