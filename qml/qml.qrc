@@ -6,6 +6,7 @@
     <file>HistPage.qml</file>
     <file>TempPage.qml</file>
     <file>QrPage.qml</file>
+    <file>ReclaimPage.qml</file>
     <file>TopBar.qml</file>
     <file>DockNav.qml</file>
     <file>OverlayPage.qml</file>
@@ -19,6 +20,7 @@
     <file alias="qr_web.png">../assets/qr_web_bila2.png</file>
     <file alias="qr_hist.png">../assets/qr_web_bila2.png</file>
     <file alias="qr_tutor.png">../assets/qr_web_bila2.png</file>
+    <file alias="qr_reklam.png">../assets/qr_web_bila2.png</file>
     <file alias="plocha_tmava.png">../assets/pozadi_velke02.png</file>
     <!-- <file alias="plocha_tmava.png">../assets/tmave.png</file> -->
     <file alias="logo.png">../assets/gastro_uvod.png</file>

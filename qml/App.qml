@@ -17,9 +17,9 @@ ApplicationWindow {
     readonly property int designHeight: 720
 
     // jednotný scale (1.0 = původní vzhled pro 1280x720)
-    property real uiScale: 2.0
-    // property real uiScale: Math.min(width / designWidth,
-    //                                 height / designHeight)
+    // property real uiScale: 2.0
+    property real uiScale: Math.min(width / designWidth,
+                                    height / designHeight)
 
     // Bootstrap Icons font
     FontLoader {
@@ -79,7 +79,7 @@ ApplicationWindow {
 
         TopBar {
             id: topbar
-            uiScale: 1.3
+            uiScale: win.uiScale
             z: 10
             width: parent.width
             anchors.top: parent.top
@@ -107,7 +107,8 @@ ApplicationWindow {
             SetTempPage { uiScale: win.uiScale }  // index 1
             HistPage { uiScale: win.uiScale }     // index 2
             QrPage   { uiScale: win.uiScale }     // index 3
-            TempPage {  }     // index 4
+            ReclaimPage { uiScale: win.uiScale }  // index 4
+            TempPage {  }     // index 5
         }
 
         // Spodní "dock" s tečkami a domečkem

@@ -29,17 +29,18 @@ Page {
                 id: qrCol01
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.horizontalCenter: parent.horizontalCenter
-                anchors.bottom: parent.bottom
-                // anchors.topMargin: 100 * uiScale
-                anchors.bottomMargin: parent.height * 0.05
+                // anchors.bottom: parent.bottom
+                anchors.top: parent.top
+                anchors.topMargin: 100 * uiScale
+                // anchors.bottomMargin: parent.height * 0.05
                 spacing: 16
 
                 Image {
                     id: qrWeb
                     source: "qrc:/qml/qr_web.png"
                     fillMode: Image.PreserveAspectFit
-                    sourceSize.width: Math.min(qrP.width, qrP.height) * 0.6
-                    sourceSize.height: Math.min(qrP.width, qrP.height) * 0.6
+                    sourceSize.width: 340 * uiScale
+                    sourceSize.height: 340 * uiScale
                     cache: true
                 }
 
@@ -78,17 +79,16 @@ Page {
                 id: qrCol02
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.verticalCenter: parent.verticalCenter
-                anchors.bottom: parent.bottom
-                // anchors.topMargin: 100 * uiScale
-                anchors.bottomMargin: parent.height * 0.05
+                anchors.top: parent.top
+                anchors.topMargin: 100 * uiScale
                 spacing: 16
 
                 Image {
                     id: qrApp
                     source: "qrc:/qml/qr_tutor.png"
                     fillMode: Image.PreserveAspectFit
-                    sourceSize.width: Math.min(qrP.width, qrP.height) * 0.6
-                    sourceSize.height: Math.min(qrP.width, qrP.height) * 0.6
+                    sourceSize.width: 340 * uiScale
+                    sourceSize.height: 340 * uiScale
                     cache: true
                 }
 
