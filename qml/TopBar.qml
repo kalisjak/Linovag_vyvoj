@@ -7,10 +7,14 @@ Rectangle {
     property real uiScale: 1.0
 
     // stavové příznaky pro ikonky vpravo
-    property bool errorActive: true      // TODO: napojit na backend
-    property bool coolingActive: true    // TODO: napojit na backend
-    property bool defrostActive: false    // TODO: napojit na backend
-    property bool compressorOn: true      // TODO: napojit na backend
+    property bool errorActive: backend.errorActive
+    property bool coolingActive: backend.coolingActive
+    property bool defrostActive: backend.defrostActive
+    property bool compressorOn: backend.compressorOn
+    // property bool errorActive: true
+    // property bool coolingActive: true
+    // property bool defrostActive: false
+    // property bool compressorOn: true
 
     implicitHeight: 70 * uiScale
     height: implicitHeight

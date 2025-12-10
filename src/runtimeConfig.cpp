@@ -2,7 +2,7 @@
 #include <QSettings>
 
 // Můžeš si změnit org/app názvy – ovlivní cestu config souboru
-// Linux: ~/.config/kubalinovag/lnvg_app.conf
+// Linux: ~/.config/gastroConf/lnvg_app.conf
 static constexpr const char* ORG_NAME = "gastroConf";
 static constexpr const char* APP_NAME = "lnvg_app";
 
@@ -83,6 +83,32 @@ void setCoolingInvertLogic(bool invert)
 {
     QSettings s = makeSettings();
     s.setValue("cooling/invert_logic", invert);
+}
+
+QString reclaimOrderNumber()
+{
+    QSettings s = makeSettings();
+    // např. [reclaim] order_number = "xx-123456-abcd"
+    return s.value("reclaim/order_number", "xx-123456-abcd").toString();
+}
+
+void setReclaimOrderNumber(const QString& number)
+{
+    QSettings s = makeSettings();
+    s.setValue("reclaim/order_number", number);
+}
+
+QString reclaimEmail()
+{
+    QSettings s = makeSettings();
+    // default, pokud není v configu
+    return s.value("reclaim/email", "reklamace@gastro.cz").toString();
+}
+
+void setReclaimEmail(const QString& email)
+{
+    QSettings s = makeSettings();
+    s.setValue("reclaim/email", email);
 }
 
 } // namespace RuntimeConfig

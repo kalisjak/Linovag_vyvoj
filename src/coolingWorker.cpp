@@ -159,6 +159,17 @@ void CoolingWorker::setFanDuty(double duty)
 #endif
 }
 
+void CoolingWorker::emitCoolingState()
+{
+    const bool cooling = compressorOn_ && !defrostMode_; // moje definice
+    if (coolingActive_ != cooling) {
+        coolingActive_ = cooling;
+    }
+
+    emit coolingStateChanged(coolingActive_, defrostMode_, compressorOn_);
+}
+
+
 void CoolingWorker::setCompressor(bool on)
 {
     if (!hwInitialized_)
@@ -202,6 +213,7 @@ void CoolingWorker::controlStep()
         if (tevap_ <= AppConfig::COOLING_DEFROST_START_TEMP) {
             defrostMode_ = true;
             qInfo() << "[CoolingWorker] DEFROST START, tevap =" << tevap_;
+            emitCoolingState();
         }
     } else {
         // výstup z defrostu
@@ -209,6 +221,7 @@ void CoolingWorker::controlStep()
                        AppConfig::COOLING_DEFROST_STOP_DELTA) {
             defrostMode_ = false;
             qInfo() << "[CoolingWorker] DEFROST STOP, tevap =" << tevap_;
+            emitCoolingState();
         }
     }
 
@@ -227,12 +240,14 @@ void CoolingWorker::controlStep()
         if (avg <= targetTemp_) {
             compressorOn_ = false;
             qInfo() << "[CoolingWorker] Compressor OFF, avg =" << avg;
+            emitCoolingState();
         }
     } else {
         // zapnout při X + 2 °C (delta z configu)
         if (avg >= targetTemp_ + AppConfig::COOLING_HYSTERESIS_DELTA) {
             compressorOn_ = true;
             qInfo() << "[CoolingWorker] Compressor ON, avg =" << avg;
+            emitCoolingState();
         }
     }
 

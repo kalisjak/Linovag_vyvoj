@@ -22,4 +22,10 @@ void setSensor3Id(const QString& id);
 bool  coolingInvertLogic();
 void  setCoolingInvertLogic(bool invert);
 
+QString reclaimOrderNumber();
+void setReclaimOrderNumber(const QString& number);
+
+QString reclaimEmail();
+void setReclaimEmail(const QString& email);
+
 } // namespace RuntimeConfig

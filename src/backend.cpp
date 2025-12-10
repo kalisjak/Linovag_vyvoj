@@ -67,6 +67,59 @@ void Backend::onMqttConnectedChanged(bool ok) {
     emit mqttConnectedChanged();
 }
 
+// --- Aktualizace stavů chlazení ---------------------------------------------
+QString Backend::reclaimOrderNumber() const
+{
+    return RuntimeConfig::reclaimOrderNumber();
+}
+
+QString Backend::reclaimEmail() const
+{
+    return RuntimeConfig::reclaimEmail();
+}
+
+void Backend::setReclaimOrderNumber(const QString& number)
+{
+    RuntimeConfig::setReclaimOrderNumber(number);
+    emit reclaimInfoChanged();
+}
+
+void Backend::setReclaimEmail(const QString& email)
+{
+    RuntimeConfig::setReclaimEmail(email);
+    emit reclaimInfoChanged();
+}
+
+void Backend::updateCoolingState(bool coolingActive,
+                                 bool defrostActive,
+                                 bool compressorOn)
+{
+    if (coolingActive_ != coolingActive) {
+        coolingActive_ = coolingActive;
+        emit coolingActiveChanged();
+    }
+
+    if (defrostActive_ != defrostActive) {
+        defrostActive_ = defrostActive;
+        emit defrostActiveChanged();
+    }
+
+    if (compressorOn_ != compressorOn) {
+        compressorOn_ = compressorOn;
+        emit compressorOnChanged();
+    }
+}
+
+void Backend::setErrorActive(bool active)
+{
+    if (errorActive_ == active)
+        return;
+
+    errorActive_ = active;
+    emit errorActiveChanged();
+}
+
+
 // --- Odesílání MQTT zpráv (přes MqttWorker) --------------------------------
 
 void Backend::sendMessage(const QString& msg) {

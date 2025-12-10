@@ -58,7 +58,7 @@ double SensorWorker::readDS18B20(const std::string& deviceId) {
     std::ifstream file(path);
     if (!file.is_open()) {
         // qWarning() << "[SensorWorker] Cannot open" << QString::fromStdString(path);
-        return -99.0;
+        return 5.0;
     }
 
     std::string line;

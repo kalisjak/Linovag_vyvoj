@@ -92,6 +92,11 @@ int main(int argc, char* argv[])
                              Q_ARG(double, backend.targetTemp()));
                      });
 
+    // cooling → backend (aktualizace stavu chlazení)
+    QObject::connect(coolingWorker, &CoolingWorker::coolingStateChanged,
+                     &backend,       &Backend::updateCoolingState,
+                     Qt::QueuedConnection);
+
     // ----------------- Watchdog worker + thread -----------------
     QThread* watchdogThread = new QThread(&app);
     WatchdogWorker* watchdog = new WatchdogWorker;

@@ -17,11 +17,19 @@ class CoolingWorker : public QObject {
     Q_OBJECT
    public:
     explicit CoolingWorker(QObject* parent = nullptr);
+    bool coolingActive() const { return coolingActive_; }
+    bool defrostActive() const { return defrostMode_; }
+    bool compressorOn()  const { return compressorOn_; }
+
     ~CoolingWorker();
 
    signals:
     // pro watchdog
     void heartbeat(const QString& name);
+
+    void coolingStateChanged(bool coolingActive,
+                             bool defrostActive,
+                             bool compressorOn);
 
    public slots:
     // start/stop vlákna
@@ -54,6 +62,7 @@ class CoolingWorker : public QObject {
     bool hwInitialized_ = false;
     bool startupDelayActive_ = true;
     bool invertLogic_ = false;  // false = aktivní HIGH, true = aktivní LOW
+    bool coolingActive_ = false;
 
 #ifndef LNVG_USE_PIGPIO
     QFile simFile_;
@@ -65,4 +74,6 @@ class CoolingWorker : public QObject {
 
     void setFanDuty(double duty);  // 0.0–1.0
     void setCompressor(bool on);   // logický stav (před inverzí)
+
+    void emitCoolingState();
 };

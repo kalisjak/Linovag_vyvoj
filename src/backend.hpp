@@ -21,6 +21,14 @@ class Backend : public QObject {
     Q_PROPERTY(double targetTemp READ targetTemp WRITE setTargetTemp NOTIFY targetTempChanged)
     Q_PROPERTY(QStringList historyLog READ historyLog NOTIFY historyLogChanged)
 
+    Q_PROPERTY(bool   errorActive        READ errorActive        NOTIFY errorActiveChanged)
+    Q_PROPERTY(bool   coolingActive      READ coolingActive      NOTIFY coolingActiveChanged)
+    Q_PROPERTY(bool   defrostActive      READ defrostActive      NOTIFY defrostActiveChanged)
+    Q_PROPERTY(bool   compressorOn       READ compressorOn       NOTIFY compressorOnChanged)
+
+    Q_PROPERTY(QString reclaimOrderNumber READ reclaimOrderNumber NOTIFY reclaimInfoChanged)
+    Q_PROPERTY(QString reclaimEmail       READ reclaimEmail       NOTIFY reclaimInfoChanged)
+
 public:
     explicit Backend(QObject* parent = nullptr);
 
@@ -31,6 +39,14 @@ public:
     QString serialNumber() const;
     QStringList historyLog() const { return historyLog_; }
 
+    bool errorActive()   const { return errorActive_; }
+    bool coolingActive() const { return coolingActive_; }
+    bool defrostActive() const { return defrostActive_; }
+    bool compressorOn()  const { return compressorOn_; }
+
+    QString reclaimOrderNumber() const;
+    QString reclaimEmail() const;
+
     Q_INVOKABLE void sendMessage(const QString& msg);
 
 public slots:
@@ -40,6 +56,15 @@ public slots:
     // sloty, které budou volat worker vlákna:
     void onSensorValues(double v1, double v2);
     void onMqttConnectedChanged(bool ok);
+
+    void updateCoolingState(bool coolingActive,
+                            bool defrostActive,
+                            bool compressorOn);
+
+    void setErrorActive(bool active); // pro pozdější použití odjinud
+
+    void setReclaimOrderNumber(const QString& number);
+    void setReclaimEmail(const QString& email);
 
 signals:
     void value1Changed();
@@ -52,18 +77,31 @@ signals:
     // signály směrem k workerům
     void publishMqtt(const QByteArray& payload);
 
+    void errorActiveChanged();
+    void coolingActiveChanged();
+    void defrostActiveChanged();
+    void compressorOnChanged();
+
+    void reclaimInfoChanged();
+
 private:
     double value1_ = 0.0;
     double value2_ = 0.0;
     double targetTemp_ = 5.0;
     std::mt19937 rng_;
     bool   mqttConnected_ = false;
+    bool errorActive_   = false;
+    bool coolingActive_ = false;
+    bool defrostActive_ = false;
+    bool compressorOn_  = false;
+
     QTimer* mqttTimer_ = nullptr;   // nový timer na MQTT payload
 
     QStringList historyLog_;
     QString logsDirPath_;
     QString currentLogFilePath_;
     int currentLogIndex_ = 0;
+
 
     static constexpr int kMaxHistoryLines = 500;
     static constexpr int kMaxLogFiles = 30;
