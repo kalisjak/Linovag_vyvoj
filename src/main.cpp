@@ -63,6 +63,25 @@ int main(int argc, char* argv[])
                      &backend, &Backend::onSensorValues,
                      Qt::QueuedConnection);
 
+    // sensor -> backend (to co jde do aplikace)
+    QObject::connect(sensorWorker, &SensorWorker::sensorValues,
+                     &backend,     &Backend::updateSensorValues,
+                     Qt::QueuedConnection);
+    
+    QObject::connect(sensorWorker, &SensorWorker::evapValue,
+                     &backend,     &Backend::updateEvapValue,
+                     Qt::QueuedConnection);
+    
+    // backend -> sensor (forced ovládání)
+    QObject::connect(&backend,     &Backend::requestForcedEnabled,
+                     sensorWorker, &SensorWorker::setForcedEnabled,
+                     Qt::QueuedConnection);
+    
+    QObject::connect(&backend,     &Backend::requestForcedTemps,
+                     sensorWorker, &SensorWorker::setForcedTemps,
+                     Qt::QueuedConnection);
+    
+
     // ----------------- Cooling worker + thread -----------------
     QThread* coolingThread = new QThread(&app);
     CoolingWorker* coolingWorker = new CoolingWorker;

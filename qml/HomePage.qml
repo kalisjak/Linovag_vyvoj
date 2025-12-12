@@ -274,8 +274,9 @@ Page {
                 }
                 MouseArea {
                     anchors.fill: parent
+                    hoverEnabled: true
                     onClicked: {
-                        // TODO: později třeba otevřít stránku logů / alarmů
+                        dock.dotClicked(4)
                         console.log("HomePage repair icon clicked")
                     }
                 }

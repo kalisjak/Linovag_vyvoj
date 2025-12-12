@@ -34,6 +34,40 @@ void Backend::setTargetTemp(double t) {
     emit targetTempChanged();
 }
 
+// --- Forced setters ------------------------------------------
+
+void Backend::setForcedSensors(bool en)
+{
+    if (forcedSensors_ == en) return;
+    forcedSensors_ = en;
+    emit forcedSensorsChanged();
+    emit requestForcedEnabled(forcedSensors_);
+}
+
+void Backend::setForcedTemp1(double v)
+{
+    if (qFuzzyCompare(forcedT1_, v)) return;
+    forcedT1_ = v;
+    emit forcedTempsChanged();
+    emit requestForcedTemps(forcedT1_, forcedT2_, forcedT3_);
+}
+
+void Backend::setForcedTemp2(double v)
+{
+    if (qFuzzyCompare(forcedT2_, v)) return;
+    forcedT2_ = v;
+    emit forcedTempsChanged();
+    emit requestForcedTemps(forcedT1_, forcedT2_, forcedT3_);
+}
+
+void Backend::setForcedTemp3(double v)
+{
+    if (qFuzzyCompare(forcedT3_, v)) return;
+    forcedT3_ = v;
+    emit forcedTempsChanged();
+    emit requestForcedTemps(forcedT1_, forcedT2_, forcedT3_);
+}
+
 // --- Sloty volané z worker vláken -----------------------------------------
 
 void Backend::onSensorValues(double v1, double v2) {
@@ -59,6 +93,20 @@ void Backend::onSensorValues(double v1, double v2) {
 
     appendLogLine(line);
 }
+
+void Backend::updateSensorValues(double v1, double v2)
+{
+    if (!qFuzzyCompare(value1_, v1)) { value1_ = v1; emit value1Changed(); }
+    if (!qFuzzyCompare(value2_, v2)) { value2_ = v2; emit value2Changed(); }
+}
+
+void Backend::updateEvapValue(double v3)
+{
+    if (qFuzzyCompare(value3_, v3)) return;
+    value3_ = v3;
+    emit value3Changed();
+}
+
 
 void Backend::onMqttConnectedChanged(bool ok) {
     if (mqttConnected_ == ok) return;

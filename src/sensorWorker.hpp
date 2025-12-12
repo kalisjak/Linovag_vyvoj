@@ -20,6 +20,9 @@ public slots:
     void start();   // spustí timer
     void stop();    // zastaví timer
 
+    void setForcedEnabled(bool en);
+    void setForcedTemps(double t1, double t2, double t3);
+
     // --- runtime nastavení ID senzorů (bez rekompilace) ---
 
     void setSensor1Id(const QString& id);
@@ -42,4 +45,9 @@ private:
     std::string s3_;
 
     double readDS18B20(const std::string& deviceId);
+
+    bool forcedEnabled_ = false;
+    double forcedT1_ = 5.0;
+    double forcedT2_ = 5.0;
+    double forcedT3_ = -10.0;
 };

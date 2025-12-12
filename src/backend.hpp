@@ -1,12 +1,12 @@
 #pragma once
+#include <QByteArray>
 #include <QObject>
-#include <random>
-#include <fstream>
-#include <string>
-#include <QtGlobal>
 #include <QString>
 #include <QStringList>
-#include <QByteArray>
+#include <QtGlobal>
+#include <fstream>
+#include <random>
+#include <string>
 
 QT_BEGIN_NAMESPACE
 class QTimer;
@@ -16,59 +16,82 @@ class Backend : public QObject {
     Q_OBJECT
     Q_PROPERTY(double value1 READ value1 NOTIFY value1Changed)
     Q_PROPERTY(double value2 READ value2 NOTIFY value2Changed)
-    Q_PROPERTY(bool   mqttConnected READ mqttConnected NOTIFY mqttConnectedChanged)
+    Q_PROPERTY(double value3 READ value3 NOTIFY value3Changed)
+    Q_PROPERTY(bool mqttConnected READ mqttConnected NOTIFY mqttConnectedChanged)
     Q_PROPERTY(QString serialNumber READ serialNumber NOTIFY serialNumberChanged)
     Q_PROPERTY(double targetTemp READ targetTemp WRITE setTargetTemp NOTIFY targetTempChanged)
     Q_PROPERTY(QStringList historyLog READ historyLog NOTIFY historyLogChanged)
 
-    Q_PROPERTY(bool   errorActive        READ errorActive        NOTIFY errorActiveChanged)
-    Q_PROPERTY(bool   coolingActive      READ coolingActive      NOTIFY coolingActiveChanged)
-    Q_PROPERTY(bool   defrostActive      READ defrostActive      NOTIFY defrostActiveChanged)
-    Q_PROPERTY(bool   compressorOn       READ compressorOn       NOTIFY compressorOnChanged)
+    Q_PROPERTY(bool errorActive READ errorActive NOTIFY errorActiveChanged)
+    Q_PROPERTY(bool coolingActive READ coolingActive NOTIFY coolingActiveChanged)
+    Q_PROPERTY(bool defrostActive READ defrostActive NOTIFY defrostActiveChanged)
+    Q_PROPERTY(bool compressorOn READ compressorOn NOTIFY compressorOnChanged)
 
     Q_PROPERTY(QString reclaimOrderNumber READ reclaimOrderNumber NOTIFY reclaimInfoChanged)
-    Q_PROPERTY(QString reclaimEmail       READ reclaimEmail       NOTIFY reclaimInfoChanged)
+    Q_PROPERTY(QString reclaimEmail READ reclaimEmail NOTIFY reclaimInfoChanged)
+    // forced sensors for testing
+    Q_PROPERTY(bool forcedSensors READ forcedSensors WRITE setForcedSensors NOTIFY forcedSensorsChanged)
+    Q_PROPERTY(double forcedTemp1 READ forcedTemp1 WRITE setForcedTemp1 NOTIFY forcedTempsChanged)
+    Q_PROPERTY(double forcedTemp2 READ forcedTemp2 WRITE setForcedTemp2 NOTIFY forcedTempsChanged)
+    Q_PROPERTY(double forcedTemp3 READ forcedTemp3 WRITE setForcedTemp3 NOTIFY forcedTempsChanged)
 
-public:
+   public:
     explicit Backend(QObject* parent = nullptr);
 
     double value1() const { return value1_; }
     double value2() const { return value2_; }
+    double value3() const { return value3_; }
+
     double targetTemp() const { return targetTemp_; }
-    bool   mqttConnected() const { return mqttConnected_; }
+    bool mqttConnected() const { return mqttConnected_; }
     QString serialNumber() const;
     QStringList historyLog() const { return historyLog_; }
 
-    bool errorActive()   const { return errorActive_; }
+    bool errorActive() const { return errorActive_; }
     bool coolingActive() const { return coolingActive_; }
     bool defrostActive() const { return defrostActive_; }
-    bool compressorOn()  const { return compressorOn_; }
+    bool compressorOn() const { return compressorOn_; }
 
     QString reclaimOrderNumber() const;
     QString reclaimEmail() const;
 
+    // forced sensors for testing
+    bool forcedSensors() const { return forcedSensors_; }
+    void setForcedSensors(bool en);
+
+    double forcedTemp1() const { return forcedT1_; }
+    double forcedTemp2() const { return forcedT2_; }
+    double forcedTemp3() const { return forcedT3_; }
+
     Q_INVOKABLE void sendMessage(const QString& msg);
 
-public slots:
+   public slots:
     void setTargetTemp(double t);
-     void onMqttTimerTick();
+    void onMqttTimerTick();
 
     // sloty, které budou volat worker vlákna:
     void onSensorValues(double v1, double v2);
     void onMqttConnectedChanged(bool ok);
 
-    void updateCoolingState(bool coolingActive,
-                            bool defrostActive,
-                            bool compressorOn);
+    void updateCoolingState(bool coolingActive, bool defrostActive, bool compressorOn);
 
-    void setErrorActive(bool active); // pro pozdější použití odjinud
+    void setErrorActive(bool active);  // pro pozdější použití odjinud
 
     void setReclaimOrderNumber(const QString& number);
     void setReclaimEmail(const QString& email);
 
-signals:
+    // forced sensors for testing
+    void setForcedTemp1(double v);
+    void setForcedTemp2(double v);
+    void setForcedTemp3(double v);
+
+    void updateSensorValues(double v1, double v2);
+    void updateEvapValue(double v3);
+
+   signals:
     void value1Changed();
     void value2Changed();
+    void value3Changed();
     void targetTempChanged();
     void mqttConnectedChanged();
     void serialNumberChanged();
@@ -84,28 +107,42 @@ signals:
 
     void reclaimInfoChanged();
 
-private:
+    // forced sensors for testing
+    void forcedSensorsChanged();
+    void forcedTempsChanged();
+
+    // requesty do SensorWorkeru (napojíš v main.cpp)
+    void requestForcedEnabled(bool en);
+    void requestForcedTemps(double t1, double t2, double t3);
+
+   private:
     double value1_ = 0.0;
     double value2_ = 0.0;
+    double value3_ = 0.0;
     double targetTemp_ = 5.0;
     std::mt19937 rng_;
-    bool   mqttConnected_ = false;
-    bool errorActive_   = false;
+    bool mqttConnected_ = false;
+    bool errorActive_ = false;
     bool coolingActive_ = false;
     bool defrostActive_ = false;
-    bool compressorOn_  = false;
+    bool compressorOn_ = false;
 
-    QTimer* mqttTimer_ = nullptr;   // nový timer na MQTT payload
+    // forced sensors for testing
+    bool forcedSensors_ = false;
+    double forcedT1_ = 5.0;
+    double forcedT2_ = 5.0;
+    double forcedT3_ = -10.0;
+
+    QTimer* mqttTimer_ = nullptr;  // nový timer na MQTT payload
 
     QStringList historyLog_;
     QString logsDirPath_;
     QString currentLogFilePath_;
     int currentLogIndex_ = 0;
 
-
     static constexpr int kMaxHistoryLines = 500;
     static constexpr int kMaxLogFiles = 30;
-    static constexpr long long kMaxLogFileSizeBytes = 200 * 1024; // 200 kB
+    static constexpr long long kMaxLogFileSizeBytes = 200 * 1024;  // 200 kB
 
     void initLogs();
     void appendLogLine(const QString& line);

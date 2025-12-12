@@ -58,7 +58,7 @@ double SensorWorker::readDS18B20(const std::string& deviceId) {
     std::ifstream file(path);
     if (!file.is_open()) {
         // qWarning() << "[SensorWorker] Cannot open" << QString::fromStdString(path);
-        return 5.0;
+        return -99.0;
     }
 
     std::string line;
@@ -72,13 +72,32 @@ double SensorWorker::readDS18B20(const std::string& deviceId) {
     return temp_milli / 1000.0;
 }
 
-void SensorWorker::pollSensors() {
-    // používáme lokální kopie ID, nečteme config při každém pollu
-    double v1 = readDS18B20(s1_);
-    double v2 = readDS18B20(s2_);
-    double v3 = readDS18B20(s3_);
+void SensorWorker::pollSensors()
+{
+    double v1 = 0.0, v2 = 0.0, v3 = 0.0;
+
+    if (forcedEnabled_) {
+        v1 = forcedT1_;
+        v2 = forcedT2_;
+        v3 = forcedT3_;
+    } else {
+        v1 = readDS18B20(s1_);
+        v2 = readDS18B20(s2_);
+        v3 = readDS18B20(s3_);
+    }
 
     emit sensorValues(v1, v2);
     emit evapValue(v3);
-    emit heartbeat("sensors");
+}
+
+void SensorWorker::setForcedEnabled(bool en)
+{
+    forcedEnabled_ = en;
+}
+
+void SensorWorker::setForcedTemps(double t1, double t2, double t3)
+{
+    forcedT1_ = t1;
+    forcedT2_ = t2;
+    forcedT3_ = t3;
 }

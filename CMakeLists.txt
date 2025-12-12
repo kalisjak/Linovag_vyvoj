@@ -11,45 +11,38 @@ set(CMAKE_AUTOUIC ON)
 # Qt5 + MQTT
 find_package(Qt5 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Mqtt)
 
-option(LNVG_USE_PIGPIO "Use pigpio GPIO control (on Raspberry Pi)" ON)
-
-if(LNVG_USE_PIGPIO)
-    target_compile_definitions(lnvg_app PRIVATE LNVG_USE_PIGPIO)
-    target_link_libraries(lnvg_app pigpio)
-endif()
-# cmake -DLNVG_USE_PIGPIO=OFF ..
 
 add_executable(lnvg_app
     src/main.cpp
 
     src/backend.cpp
     src/backend.hpp
-
+    
     src/mqttWorker.cpp
     src/mqttWorker.hpp
-
+    
     src/sensorWorker.cpp
     src/sensorWorker.hpp
-
+    
     src/coolingWorker.cpp
     src/coolingWorker.hpp
-
+    
     src/watchdogWorker.cpp
     src/watchdogWorker.hpp
-
+    
     src/runtimeConfig.cpp
     src/runtimeConfig.hpp
     src/config.hpp
-
+    
     qml/qml.qrc
-)
-
-# include path – aby bylo možné psát #include "xxx.hpp"
+    )
+    
+    # include path – aby bylo možné psát #include "xxx.hpp"
 target_include_directories(lnvg_app
     PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
-)
-
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
+    
 target_link_libraries(lnvg_app
     Qt5::Core
     Qt5::Gui
@@ -58,7 +51,15 @@ target_link_libraries(lnvg_app
     Qt5::QuickControls2
     Qt5::Mqtt
     # pigpio           # pro PWM/GPIO
-)
+    )
+    
+option(LNVG_USE_PIGPIO "Use pigpio GPIO control (on Raspberry Pi)" ON)
+    
+if(LNVG_USE_PIGPIO)
+    target_compile_definitions(lnvg_app PRIVATE LNVG_USE_PIGPIO)
+    target_link_libraries(lnvg_app pigpio)
+endif()
+# cmake -DLNVG_USE_PIGPIO=OFF ..
 
 # kopie QML do build adresáře
 add_custom_target(copy_qml ALL
