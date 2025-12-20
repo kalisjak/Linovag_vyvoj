@@ -34,6 +34,8 @@ class Backend : public QObject {
     Q_PROPERTY(double forcedTemp1 READ forcedTemp1 WRITE setForcedTemp1 NOTIFY forcedTempsChanged)
     Q_PROPERTY(double forcedTemp2 READ forcedTemp2 WRITE setForcedTemp2 NOTIFY forcedTempsChanged)
     Q_PROPERTY(double forcedTemp3 READ forcedTemp3 WRITE setForcedTemp3 NOTIFY forcedTempsChanged)
+    Q_PROPERTY(double value4 READ value4 NOTIFY value4Changed)
+    Q_PROPERTY(double value5 READ value5 NOTIFY value5Changed)
 
    public:
     explicit Backend(QObject* parent = nullptr);
@@ -41,6 +43,8 @@ class Backend : public QObject {
     double value1() const { return value1_; }
     double value2() const { return value2_; }
     double value3() const { return value3_; }
+    double value4() const { return value4_; }
+    double value5() const { return value5_; }
 
     double targetTemp() const { return targetTemp_; }
     bool mqttConnected() const { return mqttConnected_; }
@@ -87,11 +91,15 @@ class Backend : public QObject {
 
     void updateSensorValues(double v1, double v2);
     void updateEvapValue(double v3);
+    void onSensorValues45(double v4, double v5);
 
    signals:
     void value1Changed();
     void value2Changed();
     void value3Changed();
+    void value4Changed();
+    void value5Changed();
+
     void targetTempChanged();
     void mqttConnectedChanged();
     void serialNumberChanged();
@@ -119,6 +127,9 @@ class Backend : public QObject {
     double value1_ = 0.0;
     double value2_ = 0.0;
     double value3_ = 0.0;
+    double value4_ = -99.0;
+    double value5_ = -99.0;
+
     double targetTemp_ = 5.0;
     std::mt19937 rng_;
     bool mqttConnected_ = false;
@@ -148,5 +159,7 @@ class Backend : public QObject {
     void appendLogLine(const QString& line);
     void rotateLogFileIfNeeded();
     void cleanupOldLogFiles();
+    void updateSensorValues45(double v4, double v5);
+
     QStringList loadLastLines(const QString& filePath, int maxLines) const;
 };

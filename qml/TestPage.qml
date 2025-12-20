@@ -156,6 +156,18 @@ Page {
                                 font.pixelSize: 22 * uiScale
                                 font.bold: true
                             }
+                             Text {
+                                 text: "T4: " + Number(backend.value4).toFixed(1) + "°C"
+                                 color: "#EDEFF2"
+                                 font.pixelSize: 22 * uiScale
+                                 font.bold: true
+                             }
+                             Text {
+                                 text: "T5: " + Number(backend.value5).toFixed(1) + "°C"
+                                 color: "#EDEFF2"
+                                 font.pixelSize: 22 * uiScale
+                                 font.bold: true
+                             }
                         }
                     }
                 }

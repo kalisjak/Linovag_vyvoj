@@ -13,6 +13,7 @@ public:
 
 signals:
     void sensorValues(double v1, double v2);   // pro Backend (GUI)
+    void sensorValues45(double v4, double v5); // další 2 senzory (t4,t5)
     void evapValue(double v3);                // výparník (senzor 3)
     void heartbeat(const QString& name);      // pro watchdog ("sensors")
 
@@ -43,6 +44,8 @@ private:
     std::string s1_;
     std::string s2_;
     std::string s3_;
+    std::string s4_;
+    std::string s5_;
 
     double readDS18B20(const std::string& deviceId);
 

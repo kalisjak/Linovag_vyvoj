@@ -94,10 +94,21 @@ void Backend::onSensorValues(double v1, double v2) {
     appendLogLine(line);
 }
 
+void Backend::onSensorValues45(double v4, double v5)
+{
+    updateSensorValues45(v4, v5);
+}
+
 void Backend::updateSensorValues(double v1, double v2)
 {
     if (!qFuzzyCompare(value1_, v1)) { value1_ = v1; emit value1Changed(); }
     if (!qFuzzyCompare(value2_, v2)) { value2_ = v2; emit value2Changed(); }
+}
+
+void Backend::updateSensorValues45(double v4, double v5)
+{
+    if (!qFuzzyCompare(value4_, v4)) { value4_ = v4; emit value4Changed(); }
+    if (!qFuzzyCompare(value5_, v5)) { value5_ = v5; emit value5Changed(); }
 }
 
 void Backend::updateEvapValue(double v3)

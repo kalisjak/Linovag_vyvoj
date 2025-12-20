@@ -206,28 +206,74 @@ void CoolingWorker::controlStep()
     // průměr ze senzoru 1 a 2
     const double avg = (t1_ + t2_) / 2.0;
 
+    // --- Post-defrost pauza (odkapání): 2 min kompresor i větráky OFF ---
+    // Požadavek: bezprostředně po ukončení odmražování držet vše vypnuté 2 min,
+    // poté se vrátit do normálního cyklu (hystereze + případný restart chlazení).
+    static bool postDefrostHold_ = false;
+    static QElapsedTimer postDefrostHoldTimer_;
+
+    if (postDefrostHold_) {
+        constexpr qint64 POST_DEFROST_HOLD_MS = 2 * 60 * 1000;
+        if (!postDefrostHoldTimer_.isValid()) {
+            postDefrostHoldTimer_.start();
+        }
+
+        if (postDefrostHoldTimer_.elapsed() < POST_DEFROST_HOLD_MS) {
+            // během pauzy: vše OFF
+            compressorOn_ = false;
+            setCompressor(false);
+            setFanDuty(0.0);
+            return;
+        }
+
+        postDefrostHold_ = false;
+        qInfo() << "[CoolingWorker] post-defrost hold finished, resuming normal cycle";
+    }
+
+
     // --- DEFROST logika podle výparníku (senzor 3) ---
+    // Požadavek: odmrazování startuje při tevap <= -20 °C (viz config),
+    // ale pouze pokud právě běží chlazení (kompresor je ON).
+    // Odmrazování končí při tevap >= +6 °C (pevná hodnota).
+    constexpr double DEFROST_STOP_TEMP = 6.0;
 
     if (!defrostMode_) {
         // vstup do defrostu
-        if (tevap_ <= AppConfig::COOLING_DEFROST_START_TEMP) {
+        if (compressorOn_ && (tevap_ <= AppConfig::COOLING_DEFROST_START_TEMP)) {
             defrostMode_ = true;
+
+            // DŮLEŽITÉ: okamžitě srovnat SW stav kompresoru s HW stavem,
+            // aby TopBar správně ukázal "OFF" během odmražování.
+            compressorOn_ = false;
+
             qInfo() << "[CoolingWorker] DEFROST START, tevap =" << tevap_;
             emitCoolingState();
         }
     } else {
-        // výstup z defrostu
-        if (tevap_ >= AppConfig::COOLING_DEFROST_START_TEMP +
-                       AppConfig::COOLING_DEFROST_STOP_DELTA) {
+        // výstup z defrostu (pevná teplota na výparníku)
+        if (tevap_ >= DEFROST_STOP_TEMP) {
             defrostMode_ = false;
+            // po odmrazu drž 2 min vše vypnuté (odkapání)
+            postDefrostHold_ = true;
+            postDefrostHoldTimer_.restart();
+            compressorOn_ = false;
             qInfo() << "[CoolingWorker] DEFROST STOP, tevap =" << tevap_;
             emitCoolingState();
+            // okamžitě po odmrazu vypnout HW a přejít do post-defrost pauzy
+            setCompressor(false);
+            setFanDuty(0.0);
+            return;
         }
     }
 
     if (defrostMode_) {
         // defrost režim: kompresor OFF, větráky na 80 %
+        const bool wasOn = compressorOn_;
         compressorOn_ = false;
+        if (wasOn) {
+            emitCoolingState();
+        }
+
         setCompressor(false);
         setFanDuty(AppConfig::COOLING_FAN_DUTY_DEFROST);
         return;

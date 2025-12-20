@@ -276,7 +276,7 @@ Page {
                     anchors.fill: parent
                     hoverEnabled: true
                     onClicked: {
-                        dock.dotClicked(4)
+                        dock.dotClicked(5)
                         console.log("HomePage repair icon clicked")
                     }
                 }

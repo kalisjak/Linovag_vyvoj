@@ -1,6 +1,7 @@
 #include "sensorWorker.hpp"
 
 #include <QDebug>
+#include <QDir>
 #include <fstream>
 
 SensorWorker::SensorWorker(QObject* parent) : QObject(parent) {
@@ -12,6 +13,22 @@ SensorWorker::SensorWorker(QObject* parent) : QObject(parent) {
     s1_ = RuntimeConfig::sensor1Id();
     s2_ = RuntimeConfig::sensor2Id();
     s3_ = RuntimeConfig::sensor3Id();
+
+    // --- auto-detekce dalších 2 DS18B20 (t4,t5) ---
+    // Pokud máš na druhém 1-Wire (GPIO17) další čidla, v sysfs se objeví stejně v /sys/bus/w1/devices/.
+    // Vezmeme první dvě "28-xxxx" které nejsou s1_/s2_/s3_ (seřazeno podle ID).
+    {
+        QDir dir(QStringLiteral("/sys/bus/w1/devices"));
+        const QStringList all = dir.entryList(QStringList() << QStringLiteral("28-*"), QDir::Dirs, QDir::Name);
+        QStringList rest;
+        for (const QString& id : all) {
+            const std::string sid = id.toStdString();
+            if (sid != s1_ && sid != s2_ && sid != s3_) rest << id;
+        }
+        if (rest.size() > 0) s4_ = rest.at(0).toStdString();
+        if (rest.size() > 1) s5_ = rest.at(1).toStdString();
+        qInfo() << "[SensorWorker] Detected extra sensors:" << QString::fromStdString(s4_) << QString::fromStdString(s5_);
+    }
 }
 
 void SensorWorker::start() {
@@ -74,19 +91,28 @@ double SensorWorker::readDS18B20(const std::string& deviceId) {
 
 void SensorWorker::pollSensors()
 {
-    double v1 = 0.0, v2 = 0.0, v3 = 0.0;
+    emit heartbeat(QStringLiteral("sensors"));
+
+    double v1 = -99.0, v2 = -99.0, v3 = -99.0, v4 = -99.0, v5 = -99.0;
 
     if (forcedEnabled_) {
         v1 = forcedT1_;
         v2 = forcedT2_;
         v3 = forcedT3_;
-    } else {
+        // t4/t5 nenechávám "forced" (zatím) – zůstane reálné čtení pokud jsou ID dostupná
+    }
+
+    if (!forcedEnabled_) {
         v1 = readDS18B20(s1_);
         v2 = readDS18B20(s2_);
         v3 = readDS18B20(s3_);
     }
 
+    if (!s4_.empty()) v4 = readDS18B20(s4_);
+    if (!s5_.empty()) v5 = readDS18B20(s5_);
+
     emit sensorValues(v1, v2);
+    emit sensorValues45(v4, v5);
     emit evapValue(v3);
 }
 
