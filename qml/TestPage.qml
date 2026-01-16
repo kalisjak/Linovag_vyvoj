@@ -329,9 +329,109 @@ Page {
                             }
                         }
                     }
+                    // T4
+                    Rectangle {
+                        width: parent.width
+                        height: 92 * uiScale
+                        radius: 22 * uiScale
+                        color: "#00000066"
+                        border.width: 1 * uiScale
+                        border.color: "#c6c5df"
+                        opacity: backend.forcedSensors ? 1.0 : 0.55
+
+                        Row {
+                            anchors.fill: parent
+                            anchors.margins: 14 * uiScale
+                            spacing: 16 * uiScale
+
+                            Text {
+                                text: "FORCED T4"
+                                width: 170 * uiScale
+                                color: "#EDEFF2"
+                                font.pixelSize: 22 * uiScale
+                                font.bold: true
+                                verticalAlignment: Text.AlignVCenter
+                            }
+
+                            Rectangle {
+                                width: 90 * uiScale; height: 64 * uiScale
+                                radius: 18 * uiScale
+                                color: minus4.pressed ? "#5a5a5ac4" : "#00000099"
+                                Text { anchors.centerIn: parent; text: "-1"; color: "#EDEFF2"; font.pixelSize: 22 * uiScale; font.bold: true }
+                                MouseArea { id: minus4; anchors.fill: parent; onClicked: backend.forcedTemp4 = backend.forcedTemp4 - 1.0 }
+                            }
+
+                            Text {
+                                text: Number(backend.forcedTemp4).toFixed(0) + "°C"
+                                color: "#EDEFF2"
+                                font.pixelSize: 34 * uiScale
+                                font.bold: true
+                                verticalAlignment: Text.AlignVCenter
+                            }
+
+                            Rectangle {
+                                width: 90 * uiScale; height: 64 * uiScale
+                                radius: 18 * uiScale
+                                color: plus4.pressed ? "#5a5a5ac4" : "#00000099"
+                                Text { anchors.centerIn: parent; text: "+1"; color: "#EDEFF2"; font.pixelSize: 22 * uiScale; font.bold: true }
+                                MouseArea { id: plus4; anchors.fill: parent; onClicked: backend.forcedTemp4 = backend.forcedTemp4 + 1.0 }
+                            }
+                        }
+                    }                
+
+                    // // T5
+                    // Rectangle {
+                    //     width: parent.width
+                    //     height: 92 * uiScale
+                    //     radius: 22 * uiScale
+                    //     color: "#00000066"
+                    //     border.width: 1 * uiScale
+                    //     border.color: "#c6c5df"
+                    //     opacity: backend.forcedSensors ? 1.0 : 0.55
+
+                    //     Row {
+                    //         anchors.fill: parent
+                    //         anchors.margins: 14 * uiScale
+                    //         spacing: 16 * uiScale
+
+                    //         Text {
+                    //             text: "FORCED T5"
+                    //             width: 170 * uiScale
+                    //             color: "#EDEFF2"
+                    //             font.pixelSize: 22 * uiScale
+                    //             font.bold: true
+                    //             verticalAlignment: Text.AlignVCenter
+                    //         }
+
+                    //         Rectangle {
+                    //             width: 90 * uiScale; height: 64 * uiScale
+                    //             radius: 18 * uiScale
+                    //             color: minus5.pressed ? "#5a5a5ac4" : "#00000099"
+                    //             Text { anchors.centerIn: parent; text: "-1"; color: "#EDEFF2"; font.pixelSize: 22 * uiScale; font.bold: true }
+                    //             MouseArea { id: minus5; anchors.fill: parent; onClicked: backend.forcedTemp5 = backend.forcedTemp5 - 1.0 }
+                    //         }
+
+                    //         Text {
+                    //             text: Number(backend.forcedTemp5).toFixed(0) + "°C"
+                    //             color: "#EDEFF2"
+                    //             font.pixelSize: 34 * uiScale
+                    //             font.bold: true
+                    //             verticalAlignment: Text.AlignVCenter
+                    //         }
+
+                    //         Rectangle {
+                    //             width: 90 * uiScale; height: 64 * uiScale
+                    //             radius: 18 * uiScale
+                    //             color: plus5.pressed ? "#5a5a5ac4" : "#00000099"
+                    //             Text { anchors.centerIn: parent; text: "+1"; color: "#EDEFF2"; font.pixelSize: 22 * uiScale; font.bold: true }
+                    //             MouseArea { id: plus5; anchors.fill: parent; onClicked: backend.forcedTemp5 = backend.forcedTemp5 + 1.0 }
+                    //         }
+                    //     }
+                    // }
                 }
 
-                Text {
+                
+Text {
                     width: parent.width
                     wrapMode: Text.WordWrap
                     text: "Když je FORCED zapnutý, SensorWorker místo čtení DS18B20 posílá do aplikace tyto ručně nastavené hodnoty."

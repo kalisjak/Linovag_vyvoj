@@ -16,7 +16,7 @@
 
 Backend::Backend(QObject* parent) : QObject(parent), rng_(std::random_device{}()) {
     mqttTimer_ = new QTimer(this);
-    mqttTimer_->setInterval(20000);  // 20 s
+    mqttTimer_->setInterval(mqtt_push_time);  // 60 s
     connect(mqttTimer_, &QTimer::timeout,
             this, &Backend::onMqttTimerTick);
     mqttTimer_->start();
@@ -49,7 +49,7 @@ void Backend::setForcedTemp1(double v)
     if (qFuzzyCompare(forcedT1_, v)) return;
     forcedT1_ = v;
     emit forcedTempsChanged();
-    emit requestForcedTemps(forcedT1_, forcedT2_, forcedT3_);
+    emit requestForcedTemps(forcedT1_, forcedT2_, forcedT3_, forcedT4_, forcedT5_);
 }
 
 void Backend::setForcedTemp2(double v)
@@ -57,7 +57,7 @@ void Backend::setForcedTemp2(double v)
     if (qFuzzyCompare(forcedT2_, v)) return;
     forcedT2_ = v;
     emit forcedTempsChanged();
-    emit requestForcedTemps(forcedT1_, forcedT2_, forcedT3_);
+    emit requestForcedTemps(forcedT1_, forcedT2_, forcedT3_, forcedT4_, forcedT5_);
 }
 
 void Backend::setForcedTemp3(double v)
@@ -65,9 +65,24 @@ void Backend::setForcedTemp3(double v)
     if (qFuzzyCompare(forcedT3_, v)) return;
     forcedT3_ = v;
     emit forcedTempsChanged();
-    emit requestForcedTemps(forcedT1_, forcedT2_, forcedT3_);
+    emit requestForcedTemps(forcedT1_, forcedT2_, forcedT3_, forcedT4_, forcedT5_);
 }
 
+void Backend::setForcedTemp4(double v)
+{
+    if (qFuzzyCompare(forcedT4_, v)) return;
+    forcedT4_ = v;
+    emit forcedTempsChanged();
+    emit requestForcedTemps(forcedT1_, forcedT2_, forcedT3_, forcedT4_, forcedT5_);
+}
+
+void Backend::setForcedTemp5(double v)
+{
+    if (qFuzzyCompare(forcedT5_, v)) return;
+    forcedT5_ = v;
+    emit forcedTempsChanged();
+    emit requestForcedTemps(forcedT1_, forcedT2_, forcedT3_, forcedT4_, forcedT5_);
+}
 // --- Sloty volané z worker vláken -----------------------------------------
 
 void Backend::onSensorValues(double v1, double v2) {
@@ -89,9 +104,10 @@ void Backend::onSensorValues(double v1, double v2) {
     QDateTime now = QDateTime::currentDateTime();
     // formát: "16:00 03.11.25 - Internal temp 3.4°C"
     const QString line =
-        QStringLiteral("%1 - Internal temp %2%3C").arg(now.toString("HH:mm dd.MM.yy"), QString::number(v1, 'f', 1), QString::fromUtf8("°"));
+        QStringLiteral("%1 - Internal temp %2%3C").arg(now.toString("HH:mm dd.MM.yy"), QString::number(v2, 'f', 1), QString::fromUtf8("°"));
 
     appendLogLine(line);
+    appendAllTempsSnapshot();
 }
 
 void Backend::onSensorValues45(double v4, double v5)
@@ -109,6 +125,7 @@ void Backend::updateSensorValues45(double v4, double v5)
 {
     if (!qFuzzyCompare(value4_, v4)) { value4_ = v4; emit value4Changed(); }
     if (!qFuzzyCompare(value5_, v5)) { value5_ = v5; emit value5Changed(); }
+    appendAllTempsSnapshot();
 }
 
 void Backend::updateEvapValue(double v3)
@@ -116,6 +133,7 @@ void Backend::updateEvapValue(double v3)
     if (qFuzzyCompare(value3_, v3)) return;
     value3_ = v3;
     emit value3Changed();
+    appendAllTempsSnapshot();
 }
 
 
@@ -215,7 +233,7 @@ void Backend::sendMessage(const QString& msg) {
 
 void Backend::onMqttTimerTick() 
 {
-    sendMessage(QString::number(value1_));
+    sendMessage(QString::number(value2_));
 }
 
 // --- Logování teplot do souborů + bufferu ----------------------------------
@@ -279,6 +297,121 @@ void Backend::initLogs() {
         historyLog_.clear();
         emit historyLogChanged();
     }
+    initTempsLogs();
+}
+void Backend::initTempsLogs() {
+    if (logsDirPath_.isEmpty()) return;
+
+    QDir dir(logsDirPath_);
+    const QString pattern = QStringLiteral("alltemps_log_*.txt");
+    const QString prefix  = QStringLiteral("alltemps_log_");
+    const QString suffix  = QStringLiteral(".txt");
+
+    QStringList files = dir.entryList(QStringList() << pattern, QDir::Files, QDir::Name);
+    QMap<int, QString> indexToFile;
+    for (const QString& fileName : files) {
+        if (!fileName.startsWith(prefix) || !fileName.endsWith(suffix)) continue;
+
+        const QString numberPart = fileName.mid(prefix.size(), fileName.size() - prefix.size() - suffix.size());
+        bool ok = false;
+        int idx = numberPart.toInt(&ok);
+        if (!ok) continue;
+
+        indexToFile[idx] = fileName;
+    }
+
+    if (!indexToFile.isEmpty()) {
+        currentTempsLogIndex_ = indexToFile.lastKey();
+        currentTempsLogFilePath_ = dir.absoluteFilePath(indexToFile.last());
+    } else {
+        currentTempsLogIndex_ = 1;
+        const QString fileName = QStringLiteral("alltemps_log_%1.txt").arg(currentTempsLogIndex_, 3, 10, QChar('0'));
+        currentTempsLogFilePath_ = dir.absoluteFilePath(fileName);
+    }
+
+    cleanupOldTempsLogFiles();
+}
+
+void Backend::appendTempsLogLine(const QString& line) {
+    if (logsDirPath_.isEmpty()) {
+        initLogs();
+    }
+    if (currentTempsLogFilePath_.isEmpty()) return;
+
+    QFile file(currentTempsLogFilePath_);
+    if (file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
+        QTextStream out(&file);
+        out.setCodec("UTF-8");
+        out << line << QLatin1Char('\n');
+    }
+
+    rotateTempsLogFileIfNeeded();
+}
+
+void Backend::rotateTempsLogFileIfNeeded() {
+    if (currentTempsLogFilePath_.isEmpty()) return;
+
+    QFileInfo info(currentTempsLogFilePath_);
+    if (!info.exists()) return;
+
+    if (info.size() < kMaxLogFileSizeBytes) return;
+
+    QDir dir(logsDirPath_);
+    ++currentTempsLogIndex_;
+
+    const QString fileName = QStringLiteral("alltemps_log_%1.txt").arg(currentTempsLogIndex_, 3, 10, QChar('0'));
+    currentTempsLogFilePath_ = dir.absoluteFilePath(fileName);
+
+    cleanupOldTempsLogFiles();
+}
+
+void Backend::cleanupOldTempsLogFiles() {
+    if (logsDirPath_.isEmpty()) return;
+
+    QDir dir(logsDirPath_);
+    const QString pattern = QStringLiteral("alltemps_log_*.txt");
+    const QString prefix  = QStringLiteral("alltemps_log_");
+    const QString suffix  = QStringLiteral(".txt");
+
+    QStringList files = dir.entryList(QStringList() << pattern, QDir::Files, QDir::Name);
+    QMap<int, QString> indexToFile;
+    for (const QString& fileName : files) {
+        if (!fileName.startsWith(prefix) || !fileName.endsWith(suffix)) continue;
+
+        const QString numberPart = fileName.mid(prefix.size(), fileName.size() - prefix.size() - suffix.size());
+        bool ok = false;
+        int idx = numberPart.toInt(&ok);
+        if (!ok) continue;
+
+        indexToFile[idx] = fileName;
+    }
+
+    while (indexToFile.size() > kMaxLogFiles) {
+        const int firstKey = indexToFile.firstKey();
+        const QString oldFile = dir.absoluteFilePath(indexToFile[firstKey]);
+        QFile::remove(oldFile);
+        indexToFile.remove(firstKey);
+    }
+}
+
+void Backend::appendAllTempsSnapshot()
+{
+    // formát: "16:00 03.11.25 - target: x, vana-t1: x, vana-t2: x, vypar: x, t4: x, t5: x"
+    const QDateTime now = QDateTime::currentDateTime();
+
+    const QString line = QStringLiteral(
+        "%1 - target: %2, vana-t1: %3, vana-t2: %4, vypar: %5, kondenz: %6, nasavani: %7")
+        .arg(
+            now.toString(QStringLiteral("HH:mm dd.MM.yy")),
+            QString::number(targetTemp_, 'f', 1),
+            QString::number(value1_, 'f', 1),
+            QString::number(value2_, 'f', 1),
+            QString::number(value3_, 'f', 1),
+            QString::number(value4_, 'f', 1),
+            QString::number(value5_, 'f', 1)
+        );
+
+    appendTempsLogLine(line);
 }
 
 QStringList Backend::loadLastLines(const QString& filePath, int maxLines) const {

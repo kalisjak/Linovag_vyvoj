@@ -99,7 +99,8 @@ void SensorWorker::pollSensors()
         v1 = forcedT1_;
         v2 = forcedT2_;
         v3 = forcedT3_;
-        // t4/t5 nenechávám "forced" (zatím) – zůstane reálné čtení pokud jsou ID dostupná
+        v4 = forcedT4_;
+        v5 = forcedT5_;
     }
 
     if (!forcedEnabled_) {
@@ -108,8 +109,10 @@ void SensorWorker::pollSensors()
         v3 = readDS18B20(s3_);
     }
 
-    if (!s4_.empty()) v4 = readDS18B20(s4_);
-    if (!s5_.empty()) v5 = readDS18B20(s5_);
+    if (!forcedEnabled_) {
+        if (!s4_.empty()) v4 = readDS18B20(s4_);
+        if (!s5_.empty()) v5 = readDS18B20(s5_);
+    }
 
     emit sensorValues(v1, v2);
     emit sensorValues45(v4, v5);
@@ -121,9 +124,11 @@ void SensorWorker::setForcedEnabled(bool en)
     forcedEnabled_ = en;
 }
 
-void SensorWorker::setForcedTemps(double t1, double t2, double t3)
+void SensorWorker::setForcedTemps(double t1, double t2, double t3, double t4, double t5)
 {
     forcedT1_ = t1;
     forcedT2_ = t2;
     forcedT3_ = t3;
+    forcedT4_ = t4;
+    forcedT5_ = t5;
 }

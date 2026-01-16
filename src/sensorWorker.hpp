@@ -22,7 +22,7 @@ public slots:
     void stop();    // zastaví timer
 
     void setForcedEnabled(bool en);
-    void setForcedTemps(double t1, double t2, double t3);
+    void setForcedTemps(double t1, double t2, double t3, double t4, double t5);
 
     // --- runtime nastavení ID senzorů (bez rekompilace) ---
 
@@ -53,4 +53,6 @@ private:
     double forcedT1_ = 5.0;
     double forcedT2_ = 5.0;
     double forcedT3_ = -10.0;
+    double forcedT4_ = 22.2;
+    double forcedT5_ = 22.2;
 };

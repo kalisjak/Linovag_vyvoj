@@ -8,6 +8,8 @@
 #include <random>
 #include <string>
 
+#include "config.hpp"
+
 QT_BEGIN_NAMESPACE
 class QTimer;
 QT_END_NAMESPACE
@@ -34,6 +36,8 @@ class Backend : public QObject {
     Q_PROPERTY(double forcedTemp1 READ forcedTemp1 WRITE setForcedTemp1 NOTIFY forcedTempsChanged)
     Q_PROPERTY(double forcedTemp2 READ forcedTemp2 WRITE setForcedTemp2 NOTIFY forcedTempsChanged)
     Q_PROPERTY(double forcedTemp3 READ forcedTemp3 WRITE setForcedTemp3 NOTIFY forcedTempsChanged)
+    Q_PROPERTY(double forcedTemp4 READ forcedTemp4 WRITE setForcedTemp4 NOTIFY forcedTempsChanged)
+    Q_PROPERTY(double forcedTemp5 READ forcedTemp5 WRITE setForcedTemp5 NOTIFY forcedTempsChanged)
     Q_PROPERTY(double value4 READ value4 NOTIFY value4Changed)
     Q_PROPERTY(double value5 READ value5 NOTIFY value5Changed)
 
@@ -66,6 +70,8 @@ class Backend : public QObject {
     double forcedTemp1() const { return forcedT1_; }
     double forcedTemp2() const { return forcedT2_; }
     double forcedTemp3() const { return forcedT3_; }
+    double forcedTemp4() const { return forcedT4_; }
+    double forcedTemp5() const { return forcedT5_; }
 
     Q_INVOKABLE void sendMessage(const QString& msg);
 
@@ -88,6 +94,8 @@ class Backend : public QObject {
     void setForcedTemp1(double v);
     void setForcedTemp2(double v);
     void setForcedTemp3(double v);
+    void setForcedTemp4(double v);
+    void setForcedTemp5(double v);
 
     void updateSensorValues(double v1, double v2);
     void updateEvapValue(double v3);
@@ -121,7 +129,7 @@ class Backend : public QObject {
 
     // requesty do SensorWorkeru (napojíš v main.cpp)
     void requestForcedEnabled(bool en);
-    void requestForcedTemps(double t1, double t2, double t3);
+    void requestForcedTemps(double t1, double t2, double t3, double t4, double t5);
 
    private:
     double value1_ = 0.0;
@@ -143,6 +151,8 @@ class Backend : public QObject {
     double forcedT1_ = 5.0;
     double forcedT2_ = 5.0;
     double forcedT3_ = -10.0;
+    double forcedT4_ = 22.2;
+    double forcedT5_ = 22.2;
 
     QTimer* mqttTimer_ = nullptr;  // nový timer na MQTT payload
 
@@ -151,14 +161,25 @@ class Backend : public QObject {
     QString currentLogFilePath_;
     int currentLogIndex_ = 0;
 
-    static constexpr int kMaxHistoryLines = 500;
-    static constexpr int kMaxLogFiles = 30;
-    static constexpr long long kMaxLogFileSizeBytes = 200 * 1024;  // 200 kB
+    // separátní log všech teplot (T1,T2,EVAP,T4,T5)
+    QString currentTempsLogFilePath_;
+    int currentTempsLogIndex_ = 0;
 
+    static constexpr int kMaxHistoryLines = AppConfig::LOG_MAX_HISTORY_LINES;
+    static constexpr int kMaxLogFiles = AppConfig::LOG_MAX_FILES;
+    static constexpr long long kMaxLogFileSizeBytes = AppConfig::LOG_MAX_FILE_SIZE_BYTES;  // 200 kB
+    
+    static constexpr int mqtt_push_time = AppConfig::MQTT_POLL_INTERVAL_MS;
+    
     void initLogs();
+    void initTempsLogs();
     void appendLogLine(const QString& line);
+    void appendTempsLogLine(const QString& line);
     void rotateLogFileIfNeeded();
+    void rotateTempsLogFileIfNeeded();
     void cleanupOldLogFiles();
+    void cleanupOldTempsLogFiles();
+    void appendAllTempsSnapshot();
     void updateSensorValues45(double v4, double v5);
 
     QStringList loadLastLines(const QString& filePath, int maxLines) const;
