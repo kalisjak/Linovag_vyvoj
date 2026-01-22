@@ -58,10 +58,10 @@ void CoolingWorker::initGpio() {
     gpioSetPWMfrequency(AppConfig::FAN_PWM_PIN, AppConfig::FAN_PWM_FREQUENCY);
     gpioPWM(AppConfig::FAN_PWM_PIN, 255);  // 100 % (při startu stáhlé přes pull-up) = netočí se
 
-    gpioSetMode(AppConfig::COMPRESSOR_PIN, PI_OUTPUT);
-    gpioWrite(AppConfig::COMPRESSOR_PIN, 0);
+    gpioSetMode(AppConfig::COMPRESSOR1_PIN, PI_OUTPUT);
+    gpioWrite(AppConfig::COMPRESSOR1_PIN, 0);
 
-    qInfo() << "[CoolingWorker] GPIO fanPWM =" << AppConfig::FAN_PWM_PIN << "compressor =" << AppConfig::COMPRESSOR_PIN
+    qInfo() << "[CoolingWorker] GPIO fanPWM =" << AppConfig::FAN_PWM_PIN << "compressor =" << AppConfig::COMPRESSOR1_PIN
             << "PWM freq =" << AppConfig::FAN_PWM_FREQUENCY << "Hz";
 #else
     // simulace – otevřeme log soubor
@@ -131,7 +131,7 @@ void CoolingWorker::setCompressor(bool on) {
     if (!hwInitialized_) return;
 
 #ifdef LNVG_USE_PIGPIO
-    gpioWrite(AppConfig::COMPRESSOR_PIN, on ? 1 : 0);
+    gpioWrite(AppConfig::COMPRESSOR1_PIN, on ? 1 : 0);
 #else
     if (simFile_.isOpen()) {
         simStream_ << "Compressor " << (on ? "ON" : "OFF") << "\n";

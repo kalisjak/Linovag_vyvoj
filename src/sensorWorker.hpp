@@ -12,10 +12,10 @@ public:
     explicit SensorWorker(QObject* parent = nullptr);
 
 signals:
-    void sensorValues(double v1, double v2);   // pro Backend (GUI)
-    void sensorValues45(double v4, double v5); // další 2 senzory (t4,t5)
-    void evapValue(double v3);                // výparník (senzor 3)
-    void heartbeat(const QString& name);      // pro watchdog ("sensors")
+    void sensorValWell(double v1, double v2);   // pro Backend (GUI)
+    void sensorValEvap(double v3, double v4);   // vyparnik
+    void sensorValCond(double v5);              // kondenzator
+    void heartbeat(const QString& name);        // pro watchdog ("sensors")
 
 public slots:
     void start();   // spustí timer
@@ -29,10 +29,14 @@ public slots:
     void setSensor1Id(const QString& id);
     void setSensor2Id(const QString& id);
     void setSensor3Id(const QString& id);
+    void setSensor4Id(const QString& id);
+    void setSensor5Id(const QString& id);
 
     QString sensor1Id() const;
     QString sensor2Id() const;
     QString sensor3Id() const;
+    QString sensor4Id() const;
+    QString sensor5Id() const;
 
 private slots:
     void pollSensors();
@@ -53,6 +57,6 @@ private:
     double forcedT1_ = 5.0;
     double forcedT2_ = 5.0;
     double forcedT3_ = -10.0;
-    double forcedT4_ = 22.2;
+    double forcedT4_ = -10.0;
     double forcedT5_ = 22.2;
 };

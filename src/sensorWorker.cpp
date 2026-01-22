@@ -13,26 +13,11 @@ SensorWorker::SensorWorker(QObject* parent) : QObject(parent) {
     s1_ = RuntimeConfig::sensor1Id();
     s2_ = RuntimeConfig::sensor2Id();
     s3_ = RuntimeConfig::sensor3Id();
-
-    // --- auto-detekce dalších 2 DS18B20 (t4,t5) ---
-    // Pokud máš na druhém 1-Wire (GPIO17) další čidla, v sysfs se objeví stejně v /sys/bus/w1/devices/.
-    // Vezmeme první dvě "28-xxxx" které nejsou s1_/s2_/s3_ (seřazeno podle ID).
-    {
-        QDir dir(QStringLiteral("/sys/bus/w1/devices"));
-        const QStringList all = dir.entryList(QStringList() << QStringLiteral("28-*"), QDir::Dirs, QDir::Name);
-        QStringList rest;
-        for (const QString& id : all) {
-            const std::string sid = id.toStdString();
-            if (sid != s1_ && sid != s2_ && sid != s3_) rest << id;
-        }
-        if (rest.size() > 0) s4_ = rest.at(0).toStdString();
-        if (rest.size() > 1) s5_ = rest.at(1).toStdString();
-        qInfo() << "[SensorWorker] Detected extra sensors:" << QString::fromStdString(s4_) << QString::fromStdString(s5_);
-    }
+    s4_ = RuntimeConfig::sensor4Id();
+    s5_ = RuntimeConfig::sensor5Id();
 }
 
 void SensorWorker::start() {
-    // místo natvrdo 5000 ms použíj centrální konstantu
     timer_->start(AppConfig::SENSOR_POLL_INTERVAL_MS);
 }
 
@@ -61,12 +46,26 @@ void SensorWorker::setSensor3Id(const QString& id) {
     s3_ = RuntimeConfig::sensor3Id();
     qInfo() << "[SensorWorker] Sensor3 ID changed to" << id;
 }
+void SensorWorker::setSensor4Id(const QString& id) {
+    RuntimeConfig::setSensor4Id(id);
+    s4_ = RuntimeConfig::sensor4Id();
+    qInfo() << "[SensorWorker] Sensor4 ID changed to" << id;
+}
+void SensorWorker::setSensor5Id(const QString& id) {
+    RuntimeConfig::setSensor5Id(id);
+    s5_ = RuntimeConfig::sensor5Id();
+    qInfo() << "[SensorWorker] Sensor5 ID changed to" << id;
+}
 
 QString SensorWorker::sensor1Id() const { return QString::fromStdString(s1_); }
 
 QString SensorWorker::sensor2Id() const { return QString::fromStdString(s2_); }
 
 QString SensorWorker::sensor3Id() const { return QString::fromStdString(s3_); }
+
+QString SensorWorker::sensor4Id() const { return QString::fromStdString(s4_); }
+
+QString SensorWorker::sensor5Id() const { return QString::fromStdString(s5_); }
 
 // ========== čtení DS18B20 ==========
 
@@ -107,16 +106,13 @@ void SensorWorker::pollSensors()
         v1 = readDS18B20(s1_);
         v2 = readDS18B20(s2_);
         v3 = readDS18B20(s3_);
+        v4 = readDS18B20(s4_);
+        v5 = readDS18B20(s5_);
     }
 
-    if (!forcedEnabled_) {
-        if (!s4_.empty()) v4 = readDS18B20(s4_);
-        if (!s5_.empty()) v5 = readDS18B20(s5_);
-    }
-
-    emit sensorValues(v1, v2);
-    emit sensorValues45(v4, v5);
-    emit evapValue(v3);
+    emit sensorValWell(v1, v2);
+    emit sensorValEvap(v3, v4);
+    emit sensorValCond(v5);
 }
 
 void SensorWorker::setForcedEnabled(bool en)
