@@ -4,6 +4,8 @@
 #include <QElapsedTimer>
 #include <QHash>
 
+#include "config.hpp"
+
 class QTimer;
 
 class WatchdogWorker : public QObject {
@@ -25,5 +27,6 @@ private slots:
 private:
     QTimer* timer_ = nullptr;
     QHash<QString, QElapsedTimer> lastBeat_;
-    const qint64 timeoutMs_ = 25000;  // 20 s bez heartbeat → považujeme za zaseklé
+    const qint64 checkTimeMs_ = AppConfig::WATCHDOG_CHECK_INTERVAL_MS;
+    const qint64 timeoutMs_ = AppConfig::WATCHDOG_TIMEOUT_MS;
 };

@@ -19,9 +19,6 @@ void setSensor2Id(const QString& id);
 std::string sensor3Id();
 void setSensor3Id(const QString& id);
 
-bool  coolingInvertLogic();
-void  setCoolingInvertLogic(bool invert);
-
 QString reclaimOrderNumber();
 void setReclaimOrderNumber(const QString& number);
 

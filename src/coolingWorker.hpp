@@ -41,10 +41,6 @@ class CoolingWorker : public QObject {
     void onEvapTemp(double tevap);             // senzor 3 – výparník (defrost)
     void onTargetTempChanged(double t);        // cílová vnitřní teplota X°C
 
-    // přepínač inverzní logiky kompresoru (uloží se do RuntimeConfig)
-    void setInvertLogic(bool invert);
-    bool invertLogic() const { return invertLogic_; }
-
    private slots:
     void controlStep();  // periodická regulační logika
 
@@ -61,7 +57,6 @@ class CoolingWorker : public QObject {
     bool defrostMode_ = false;
     bool hwInitialized_ = false;
     bool startupDelayActive_ = true;
-    bool invertLogic_ = false;  // false = aktivní HIGH, true = aktivní LOW
     bool coolingActive_ = false;
 
 #ifndef LNVG_USE_PIGPIO

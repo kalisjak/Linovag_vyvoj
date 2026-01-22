@@ -1,9 +1,9 @@
+#include <QCursor>
 #include <QDebug>
 #include <QGuiApplication>
 #include <QMetaObject>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
-#include <QScreen>
 #include <QThread>
 
 #include "backend.hpp"
@@ -13,14 +13,13 @@
 #include "watchdogWorker.hpp"
 
 int main(int argc, char* argv[]) {
-    qputenv("QT_SCALE_FACTOR", "1");
-    qputenv("QT_AUTO_SCREEN_SCALE_FACTOR", "0");  // vypnout automatické měnění
-
-    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-    QCoreApplication::setAttribute(Qt::AA_Use96Dpi);
-
-    // QGuiApplication::setAttribute(Qt::AA_DisableHighDpiScaling); // disable high-DPI scaling
     QGuiApplication app(argc, argv);
+
+#ifdef LNVG_USE_PIGPIO
+    app.setOverrideCursor(Qt::BlankCursor);
+#else
+    // simulace – s kurzorem
+#endif
 
     // ----------------- Backend + QML engine -----------------
     Backend backend;
@@ -31,11 +30,6 @@ int main(int argc, char* argv[]) {
     if (engine.rootObjects().isEmpty()) {
         qCritical() << "[Main] Failed to load QML";
         return -1;
-    }
-
-    for (QScreen* s : QGuiApplication::screens()) {
-        qDebug() << "Screen:" << s->name() << "DPR:" << s->devicePixelRatio() << "logicalDPI:" << s->logicalDotsPerInch()
-                 << "physicalDPI:" << s->physicalDotsPerInch();
     }
 
     // ----------------- MQTT worker + thread -----------------

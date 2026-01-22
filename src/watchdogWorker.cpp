@@ -10,7 +10,7 @@ WatchdogWorker::WatchdogWorker(QObject* parent) : QObject(parent) {
 }
 
 void WatchdogWorker::start() {
-    timer_->start(5000);  // každých 5 s kontrola
+    timer_->start(checkTimeMs_);  // každých 5 s kontrola
 }
 
 void WatchdogWorker::stop() { timer_->stop(); }

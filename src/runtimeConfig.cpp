@@ -71,19 +71,6 @@ void setSensor3Id(const QString& id)
     QSettings s = makeSettings();
     s.setValue("sensors/sensor3_id", id);
 }
-// ===== Cooling settings =====
-
-bool coolingInvertLogic()
-{
-    QSettings s = makeSettings();
-    return s.value("cooling/invert_logic", false).toBool();
-}
-
-void setCoolingInvertLogic(bool invert)
-{
-    QSettings s = makeSettings();
-    s.setValue("cooling/invert_logic", invert);
-}
 
 QString reclaimOrderNumber()
 {
