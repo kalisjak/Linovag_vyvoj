@@ -5,13 +5,13 @@
 
 class TelemetryBuilder {
 public:
-    // Builds schema v1 payload:
-    // {"ts": "<UTC ISO>", "schema":"v1", "serial":"...", "data": {t1..t6, hum}}
-    // Invalid values (NaN or <= -98) are mapped to "--".
-    static QByteArray buildV1(const QString& serial,
-                             double t1, double t2, double t3,
-                             double t4, double t5, double t6,
-                             double hum);
+    // {"ts": "<UTC ISO>", "schema":"v1", "serial":"...", "data": {...}}
+    static QByteArray buildPayload(const QString& serial,
+                              double v1, double v2, double v3,
+                              double v4, double v5, double v6,
+                              double hum, double targetTemp1,
+                              double targetTemp2,
+                              int swType);
 
 private:
     static bool isInvalid(double v);

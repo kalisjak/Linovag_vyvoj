@@ -1,5 +1,4 @@
 #include "backend.hpp"
-#include "runtimeConfig.hpp"
 
 #include <QCoreApplication>
 #include <QDateTime>
@@ -15,236 +14,233 @@
 #include <QTimer>
 
 Backend::Backend(QObject* parent) : QObject(parent), rng_(std::random_device{}()) {
+    swType_ = RuntimeConfig::softwareType();
+    targetTemp_ = 5.0;
+    targetTemp2_ = 5.0;
+
     mqttTimer_ = new QTimer(this);
-    mqttTimer_->setInterval(mqtt_push_time);  // 60 s
-    connect(mqttTimer_, &QTimer::timeout,
-            this, &Backend::onMqttTimerTick);
+    mqttTimer_->setInterval(mqtt_push_time);
+    connect(mqttTimer_, &QTimer::timeout, this, &Backend::onMqttTimerTick);
     mqttTimer_->start();
 
     initLogs();
 }
 
-// --- Slot pro změnu požadované teploty z QML -------------------------------
+// =========== Setters ===========
+
+void Backend::setSoftwareType(int type) {
+    if (swType_ == type) return;
+    swType_ = type;
+    RuntimeConfig::setSoftwareType(type);
+    emit softwareTypeChanged();
+}
 
 void Backend::setTargetTemp(double t) {
-    if (targetTemp_ == t) return;
-
+    if (qFuzzyCompare(targetTemp_, t)) return;
     targetTemp_ = t;
-    // qInfo() << "[Backend] Target temperature set to" << targetTemp_ << "°C";
     emit targetTempChanged();
 }
 
-// --- Forced setters ------------------------------------------
-
-void Backend::setForcedSensors(bool en)
-{
-    if (forcedSensors_ == en) return;
-    forcedSensors_ = en;
-    emit forcedSensorsChanged();
-    emit requestForcedEnabled(forcedSensors_);
+void Backend::setTargetTemp2(double t) {
+    if (qFuzzyCompare(targetTemp2_, t)) return;
+    targetTemp2_ = t;
+    emit targetTemp2Changed();
 }
 
-void Backend::setForcedTemp1(double v)
-{
+void Backend::setErrorActive(bool active) {
+    if (errorActive_ == active) return;
+    errorActive_ = active;
+    emit errorActiveChanged();
+}
+
+void Backend::setReclaimOrderNumber(const QString& number) {
+    RuntimeConfig::setReclaimOrderNumber(number);
+    emit reclaimInfoChanged();
+}
+
+void Backend::setReclaimEmail(const QString& email) {
+    RuntimeConfig::setReclaimEmail(email);
+    emit reclaimInfoChanged();
+}
+
+void Backend::setPower1On(bool on) {
+    if (power1On_ == on) return;
+    power1On_ = on;
+    emit power1OnChanged();
+    emit requestPower1(on);
+}
+
+void Backend::setPower2On(bool on) {
+    if (power2On_ == on) return;
+    power2On_ = on;
+    emit power2OnChanged();
+    emit requestPower2(on);
+}
+
+//
+// =========== Forced setters ===========
+
+void Backend::setForcedSensors(bool en) {
+    if (forcedSensors_ == en) return;
+    forcedSensors_ = en;
+
+    if (forcedSensors_) {
+        if (!std::isfinite(forcedT1_)) forcedT1_ = targetTemp_;
+        if (!std::isfinite(forcedT3_)) forcedT3_ = -5.0;
+        if (!std::isfinite(forcedT5_)) forcedT5_ = 20.0;
+
+        if (swType_ == 22) {
+            if (!std::isfinite(forcedT2_)) forcedT2_ = targetTemp2_;
+            if (!std::isfinite(forcedT4_)) forcedT4_ = -5.0;
+        }
+        emit forcedTempsChanged();
+    }
+    emit forcedSensorsChanged();
+    emit requestForcedEnabled(forcedSensors_);
+    emit requestForcedTemps(forcedT1_, forcedT2_, forcedT3_, forcedT4_, forcedT5_);
+}
+
+void Backend::setForcedTemp1(double v) {
     if (qFuzzyCompare(forcedT1_, v)) return;
     forcedT1_ = v;
     emit forcedTempsChanged();
     emit requestForcedTemps(forcedT1_, forcedT2_, forcedT3_, forcedT4_, forcedT5_);
 }
 
-void Backend::setForcedTemp2(double v)
-{
+void Backend::setForcedTemp2(double v) {
     if (qFuzzyCompare(forcedT2_, v)) return;
     forcedT2_ = v;
     emit forcedTempsChanged();
     emit requestForcedTemps(forcedT1_, forcedT2_, forcedT3_, forcedT4_, forcedT5_);
 }
 
-void Backend::setForcedTemp3(double v)
-{
+void Backend::setForcedTemp3(double v) {
     if (qFuzzyCompare(forcedT3_, v)) return;
     forcedT3_ = v;
     emit forcedTempsChanged();
     emit requestForcedTemps(forcedT1_, forcedT2_, forcedT3_, forcedT4_, forcedT5_);
 }
 
-void Backend::setForcedTemp4(double v)
-{
+void Backend::setForcedTemp4(double v) {
     if (qFuzzyCompare(forcedT4_, v)) return;
     forcedT4_ = v;
     emit forcedTempsChanged();
     emit requestForcedTemps(forcedT1_, forcedT2_, forcedT3_, forcedT4_, forcedT5_);
 }
 
-void Backend::setForcedTemp5(double v)
-{
+void Backend::setForcedTemp5(double v) {
     if (qFuzzyCompare(forcedT5_, v)) return;
     forcedT5_ = v;
     emit forcedTempsChanged();
     emit requestForcedTemps(forcedT1_, forcedT2_, forcedT3_, forcedT4_, forcedT5_);
 }
-// --- Sloty volané z worker vláken -----------------------------------------
 
-void Backend::onSensorValues(double v1, double v2) {
-    bool changed1 = false;
-    bool changed2 = false;
+//
+// =========== Slots for worker threads ===========
 
-    if (value1_ != v1) {
+void Backend::updateTempValue(double v1, double v2, double v3, double v4, double v5) {
+    if (!qFuzzyCompare(value1_, v1)) {
         value1_ = v1;
-        changed1 = true;
         emit value1Changed();
     }
-
-    if (value2_ != v2) {
+    if (!qFuzzyCompare(value2_, v2)) {
         value2_ = v2;
-        changed2 = true;
         emit value2Changed();
+    }
+    if (!qFuzzyCompare(value3_, v3)) {
+        value3_ = v3;
+        emit value3Changed();
+    }
+    if (!qFuzzyCompare(value4_, v4)) {
+        value4_ = v4;
+        emit value4Changed();
+    }
+    if (!qFuzzyCompare(value5_, v5)) {
+        value5_ = v5;
+        emit value5Changed();
     }
 
     QDateTime now = QDateTime::currentDateTime();
     // formát: "16:00 03.11.25 - Internal temp 3.4°C"
-    const QString line =
-        QStringLiteral("%1 - Internal temp %2%3C").arg(now.toString("HH:mm dd.MM.yy"), QString::number(v2, 'f', 1), QString::fromUtf8("°"));
-
+    QString line;
+    if (swType_ == 3) {
+        line = QStringLiteral("%1 - Internal temp %2%3C")
+                   .arg(now.toString("HH:mm dd.MM.yy"), QString::number(v1, 'f', 1), QString::fromUtf8("°"));
+    } else {
+        line = QStringLiteral("%1 - Temp1 %2%3C ; Temp2 %4%3C")
+                   .arg(now.toString("HH:mm dd.MM."), QString::number(v1, 'f', 1), QString::fromUtf8("°"), QString::number(v2, 'f', 1));
+    }
     appendLogLine(line);
     appendAllTempsSnapshot();
 }
 
-void Backend::onSensorValues45(double v4, double v5)
-{
-    updateSensorValues45(v4, v5);
+void Backend::updateIntakeValue(double v6, double hum) {
+    if (!qFuzzyCompare(value6_, v6)) {
+        value6_ = v6;
+        emit value6Changed();
+    }
+    if (!qFuzzyCompare(humidity_, hum)) {
+        humidity_ = hum;
+        emit humidityChanged();
+    }
 }
 
-void Backend::updateSensorValues(double v1, double v2)
-{
-    if (!qFuzzyCompare(value1_, v1)) { value1_ = v1; emit value1Changed(); }
-    if (!qFuzzyCompare(value2_, v2)) { value2_ = v2; emit value2Changed(); }
-}
-
-void Backend::updateSensorValues45(double v4, double v5)
-{
-    if (!qFuzzyCompare(value4_, v4)) { value4_ = v4; emit value4Changed(); }
-    if (!qFuzzyCompare(value5_, v5)) { value5_ = v5; emit value5Changed(); }
-    appendAllTempsSnapshot();
-}
-
-void Backend::updateEvapValue(double v3)
-{
-    if (qFuzzyCompare(value3_, v3)) return;
-    value3_ = v3;
-    emit value3Changed();
-    appendAllTempsSnapshot();
-}
-
-
-void Backend::onMqttConnectedChanged(bool ok) {
+void Backend::updateMqttConnected(bool ok) {
     if (mqttConnected_ == ok) return;
 
     mqttConnected_ = ok;
     emit mqttConnectedChanged();
 }
 
-// --- Aktualizace stavů chlazení ---------------------------------------------
-QString Backend::reclaimOrderNumber() const
-{
-    return RuntimeConfig::reclaimOrderNumber();
-}
-
-QString Backend::reclaimEmail() const
-{
-    return RuntimeConfig::reclaimEmail();
-}
-
-void Backend::setReclaimOrderNumber(const QString& number)
-{
-    RuntimeConfig::setReclaimOrderNumber(number);
-    emit reclaimInfoChanged();
-}
-
-void Backend::setReclaimEmail(const QString& email)
-{
-    RuntimeConfig::setReclaimEmail(email);
-    emit reclaimInfoChanged();
-}
-
-void Backend::updateCoolingState(bool coolingActive,
-                                 bool defrostActive,
-                                 bool compressorOn)
-{
+void Backend::updateCoolingState(bool coolingActive, bool defrostActive, bool compressorOn) {
     if (coolingActive_ != coolingActive) {
         coolingActive_ = coolingActive;
         emit coolingActiveChanged();
     }
-
     if (defrostActive_ != defrostActive) {
         defrostActive_ = defrostActive;
         emit defrostActiveChanged();
     }
-
     if (compressorOn_ != compressorOn) {
         compressorOn_ = compressorOn;
         emit compressorOnChanged();
     }
 }
 
-void Backend::setErrorActive(bool active)
-{
-    if (errorActive_ == active)
-        return;
-
-    errorActive_ = active;
-    emit errorActiveChanged();
+void Backend::updateCoolingState2(bool coolingActive, bool defrostActive, bool compressorOn) {
+    if (cooling2Active_ != coolingActive) {
+        cooling2Active_ = coolingActive;
+        emit cooling2ActiveChanged();
+    }
+    if (defrost2Active_ != defrostActive) {
+        defrost2Active_ = defrostActive;
+        emit defrost2ActiveChanged();
+    }
+    if (compressor2On_ != compressorOn) {
+        compressor2On_ = compressorOn;
+        emit compressor2OnChanged();
+    }
 }
 
+//
+// ============= Sender MQTT =============
 
-// --- Odesílání MQTT zpráv (přes MqttWorker) --------------------------------
-
-void Backend::sendMessage(const QString& msg) {
-    bool ok = false;
-    const double temp = msg.toDouble(&ok);
-    if (!ok) {
-        qWarning() << "[Backend] sendMessage: invalid temperature value:" << msg;
-        return;
-    }
-
-    const QString ts = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
-
-    const QString payloadStr = QString::fromLatin1(
-                                   "{"
-                                   "\"ts\":\"%1\","
-                                   "\"schema\":\"v1\","
-                                   "\"data\":{"
-                                   "\"temp1\":%2,"
-                                   "\"temp2\":2.3,"
-                                   "\"ok\":1,"
-                                   "\"status\":\"online\""
-                                   "}"
-                                   "}")
-                                   .arg(ts)
-                                   .arg(temp, 0, 'f', 2);
-
-    const QByteArray payload = payloadStr.toUtf8();
-
-    qInfo().noquote() << "[Backend] Prepared payload"; // << payload;
-
-    // Reálné odesílání necháváme na MqttWorkeru v jiném vlákně
+void Backend::sendMessage(const QString&) {
+    const QByteArray payload = TelemetryBuilder::buildPayload(serialNumber(), value1_, value2_, value3_, value4_, value5_, value6_,
+                                                              humidity_, targetTemp_, targetTemp2_, swType_);
     emit publishMqtt(payload);
 }
 
-void Backend::onMqttTimerTick() 
-{
-    sendMessage(QString::number(value2_));
-}
+void Backend::onMqttTimerTick() { sendMessage(QString()); }
 
+//
+// Logy budou v logManager.hpp/cpp v další verzi
+//
 // --- Logování teplot do souborů + bufferu ----------------------------------
 
 void Backend::initLogs() {
     // Základní adresář pro logy je adresář aplikace + "/logs".
-    QString basePath = ""; //QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    if (basePath.isEmpty()) {
-        basePath = QCoreApplication::applicationDirPath() + QStringLiteral("/..");
-        // qInfo() << "[Backend] Logs is in " << basePath << "hej tady to hledej";
-    }
+    QString basePath = QCoreApplication::applicationDirPath() + QStringLiteral("/..");
 
     QDir dir(basePath);
     if (!dir.exists()) {
@@ -299,13 +295,14 @@ void Backend::initLogs() {
     }
     initTempsLogs();
 }
+
 void Backend::initTempsLogs() {
     if (logsDirPath_.isEmpty()) return;
 
     QDir dir(logsDirPath_);
     const QString pattern = QStringLiteral("alltemps_log_*.txt");
-    const QString prefix  = QStringLiteral("alltemps_log_");
-    const QString suffix  = QStringLiteral(".txt");
+    const QString prefix = QStringLiteral("alltemps_log_");
+    const QString suffix = QStringLiteral(".txt");
 
     QStringList files = dir.entryList(QStringList() << pattern, QDir::Files, QDir::Name);
     QMap<int, QString> indexToFile;
@@ -370,8 +367,8 @@ void Backend::cleanupOldTempsLogFiles() {
 
     QDir dir(logsDirPath_);
     const QString pattern = QStringLiteral("alltemps_log_*.txt");
-    const QString prefix  = QStringLiteral("alltemps_log_");
-    const QString suffix  = QStringLiteral(".txt");
+    const QString prefix = QStringLiteral("alltemps_log_");
+    const QString suffix = QStringLiteral(".txt");
 
     QStringList files = dir.entryList(QStringList() << pattern, QDir::Files, QDir::Name);
     QMap<int, QString> indexToFile;
@@ -394,23 +391,23 @@ void Backend::cleanupOldTempsLogFiles() {
     }
 }
 
-void Backend::appendAllTempsSnapshot()
-{
-    // formát: "16:00 03.11.25 - target: x, vana-t1: x, vana-t2: x, vypar: x, t4: x, t5: x"
+void Backend::appendAllTempsSnapshot() {
     const QDateTime now = QDateTime::currentDateTime();
 
-    const QString line = QStringLiteral(
-        "%1 - target: %2, vana-t1: %3, vana-t2: %4, vypar: %5, kondenz: %6, nasavani: %7")
-        .arg(
-            now.toString(QStringLiteral("HH:mm dd.MM.yy")),
-            QString::number(targetTemp_, 'f', 1),
-            QString::number(value1_, 'f', 1),
-            QString::number(value2_, 'f', 1),
-            QString::number(value3_, 'f', 1),
-            QString::number(value4_, 'f', 1),
-            QString::number(value5_, 'f', 1)
-        );
-
+    QString line;
+    if (swType_ == 22) {
+        line = QStringLiteral(
+                   "%1 - target1: %2, target2: %3, vana-t1: %4, vana-t2: %5, vypar1: %6, vypar2: %7, kondenz: %8, nasavani: %9, hum: %10")
+                   .arg(now.toString(QStringLiteral("HH:mm dd.MM.yy")), QString::number(targetTemp_, 'f', 1),
+                        QString::number(targetTemp2_, 'f', 1), QString::number(value1_, 'f', 1), QString::number(value2_, 'f', 1),
+                        QString::number(value3_, 'f', 1), QString::number(value4_, 'f', 1), QString::number(value5_, 'f', 1),
+                        QString::number(value6_, 'f', 1), QString::number(humidity_, 'f', 1));
+    } else {
+        line = QStringLiteral("%1 - target: %2, vana-t1: %3, vypar: %4, kondenz: %5, nasavani: %6, hum: %7")
+                   .arg(now.toString(QStringLiteral("HH:mm dd.MM.yy")), QString::number(targetTemp_, 'f', 1),
+                        QString::number(value1_, 'f', 1), QString::number(value3_, 'f', 1), QString::number(value5_, 'f', 1),
+                        QString::number(value6_, 'f', 1), QString::number(humidity_, 'f', 1));
+    }
     appendTempsLogLine(line);
 }
 
@@ -504,9 +501,4 @@ void Backend::cleanupOldLogFiles() {
         QFile::remove(oldFile);
         indexToFile.remove(firstKey);
     }
-}
-
-QString Backend::serialNumber() const {
-    return QStringLiteral("SN-65468");
-    //return RuntimeConfig::deviceSerial();
 }

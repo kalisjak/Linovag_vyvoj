@@ -28,9 +28,6 @@ inline constexpr int        LOG_MAX_HISTORY_LINES   = 500;
 inline constexpr int        LOG_MAX_FILES           = 100;
 inline constexpr long long  LOG_MAX_FILE_SIZE_BYTES = 200 * 1024; // 200 kB
 
-// ========== Zařízení ==========
-inline const QString DEVICE_SERIAL = QStringLiteral("SN-65468");
-
 // ========== Chlazení ==========
 
 // GPIO piny (kompresory)
@@ -42,7 +39,7 @@ inline constexpr int POWER_1_PIN      = 16;
 inline constexpr int POWER_2_PIN      = 26;
 
 // PWM ventilátoru (společné řízení; duty je už správně nastavené v konstantách)
-inline constexpr int FAN_PWM_PIN        = 13;
+inline constexpr int FAN_PWM1_PIN        = 13;
 inline constexpr int FAN_PWM2_PIN      = 19;
 inline constexpr int FAN_PWM_FREQUENCY  = 15000;   // 15 kHz
 
@@ -70,7 +67,7 @@ inline constexpr int COOLING_POST_DEFROST_HOLD_MS = 2 * 60 * 1000;
 
 // ========== Vlhkost (DHT22/AM2302) ==========
 // GPIO pin pro DHT22 (lze přepsat v lnvg_app.conf)
-inline constexpr int DHT22_GPIO_DEFAULT = 17;
+inline constexpr int DHT22_GPIO = 10;
 
 // ========== Kontrola RPM ventilátorů ==========
 // 2 pulzy na otáčku

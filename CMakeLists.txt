@@ -27,6 +27,9 @@ add_executable(lnvg_app
     src/coolingWorker.cpp
     src/coolingWorker.hpp
     
+    src/telemetryBuilder.cpp
+    src/telemetryBuilder.hpp
+    
     src/watchdogWorker.cpp
     src/watchdogWorker.hpp
     
