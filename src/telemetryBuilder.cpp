@@ -9,7 +9,7 @@ static inline bool isInvalidValue(double v) { return qIsNaN(v) || v <= -30.0; }
 
 static inline QJsonValue jsonTempOrDash(double v) { return isInvalidValue(v) ? QJsonValue(QStringLiteral("--")) : QJsonValue(v); }
 
-QByteArray TelemetryBuilder::buildPayload(const QString& serial, double v1, double v2, double v3, double v4, double v5, double v6,
+QByteArray TelemetryBuilder::buildPayload(double v1, double v2, double v3, double v4, double v5, double v6,
                                           double hum, double targetTemp1, double targetTemp2, int swType) {
     const QString ts = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
 
@@ -43,7 +43,7 @@ QByteArray TelemetryBuilder::buildPayload(const QString& serial, double v1, doub
     QJsonObject root;
     root["ts"] = ts;
     root["schema"] = QStringLiteral("v1");
-    root["serial"] = serial;
+    // root["serial"] = serial;
     root["data"] = data;
 
     return QJsonDocument(root).toJson(QJsonDocument::Compact);

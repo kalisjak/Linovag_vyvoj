@@ -33,7 +33,9 @@ SensorWorker::SensorWorker(QObject* parent) : QObject(parent) {
 #endif
 }
 
-void SensorWorker::start() { timer_->start(AppConfig::SENSOR_POLL_INTERVAL_MS); }
+void SensorWorker::start() { 
+    qInfo() << "[SensorWorker] Starting sensor polling...";
+    timer_->start(AppConfig::SENSOR_POLL_INTERVAL_MS); }
 
 void SensorWorker::stop() {
     if (timer_) {
@@ -84,12 +86,14 @@ QString SensorWorker::sensor5Id() const { return QString::fromStdString(s5_); }
 
 // ========== čtení DS18B20 ==========
 double SensorWorker::readDS18B20(const std::string& deviceId) {
+    qDebug() << "[SensorWorker] Reading DS18B20 sensor" << QString::fromStdString(deviceId);
+
     if (deviceId.empty()) return nanVal();
 
     const std::string path = "/sys/bus/w1/devices/" + deviceId + "/w1_slave";
     std::ifstream file(path);
     if (!file.is_open()) {
-        // qWarning() << "[SensorWorker] Cannot open" << QString::fromStdString(path);
+        qWarning() << "[SensorWorker] Cannot open" << QString::fromStdString(path);
         return nanVal();
     }
 
@@ -204,6 +208,8 @@ bool SensorWorker::readDHT22(double& temperature, double& humidity) {
 
 void SensorWorker::pollSensors() {
     emit heartbeat(QStringLiteral("sensors"));
+
+    qDebug() << "[SensorWorker] Polling sensors...";
 
     double v1 = nanVal(), v2 = nanVal(), v3 = nanVal(), v4 = nanVal(), v5 = nanVal();
     double tempIntake = nanVal(), humIntake = nanVal();

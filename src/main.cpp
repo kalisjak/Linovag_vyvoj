@@ -37,7 +37,6 @@ int main(int argc, char* argv[]) {
     MqttWorker* mqttWorker = new MqttWorker;
 
     mqttWorker->moveToThread(mqttThread);
-
     QObject::connect(mqttThread, &QThread::started, mqttWorker, &MqttWorker::start);
 
     // Backend → MQTT (odesílání JSON payloadu)
@@ -46,69 +45,98 @@ int main(int argc, char* argv[]) {
     // MQTT → Backend (info o připojení)
     QObject::connect(mqttWorker, &MqttWorker::connectedChanged, &backend, &Backend::updateMqttConnected, Qt::QueuedConnection);
 
-    // Heartbeat MQTT → watchdog (přidáme níže, až budeme mít watchdog)
-
     // ==================== Sensor worker + thread ====================
     QThread* sensorThread = new QThread(&app);
     SensorWorker* sensorWorker = new SensorWorker;
 
     sensorWorker->moveToThread(sensorThread);
-
     QObject::connect(sensorThread, &QThread::started, sensorWorker, &SensorWorker::start);
 
     // sensor -> backend
-    QObject::connect(sensorWorker, &SensorWorker::sensorDS18, &backend, &Backend::updateTempValue, Qt::QueuedConnection);  // TODO
-    QObject::connect(sensorWorker, &SensorWorker::sensorDHT22Value, &backend, &Backend::updateIntakeValue, Qt::QueuedConnection);  // TODO
+    QObject::connect(sensorWorker, &SensorWorker::sensorDS18, &backend, &Backend::updateTempValue, Qt::QueuedConnection);
+    QObject::connect(sensorWorker, &SensorWorker::sensorDHT22Value, &backend, &Backend::updateIntakeValue, Qt::QueuedConnection);
 
     // backend -> sensor (forced ovládání)
     QObject::connect(&backend, &Backend::requestForcedEnabled, sensorWorker, &SensorWorker::setForcedEnabled, Qt::QueuedConnection);
-
     QObject::connect(&backend, &Backend::requestForcedTemps, sensorWorker, &SensorWorker::setForcedTemps, Qt::QueuedConnection);
 
+    // ==================== Cooling workers + threads ====================
+    QThread* coolingThread1 = nullptr;
+    QThread* coolingThread2 = nullptr;
+    CoolingWorker* coolingW1 = nullptr;
+    CoolingWorker* coolingW2 = nullptr;
 
+    const int swTypeNow = backend.softwareType();
 
-    // ==================== Cooling worker + thread ====================
-    // QThread* coolingThread = new QThread(&app);
+    if (swTypeNow == 3) {
+        coolingThread1 = new QThread(&app);
+        coolingW1 = new CoolingWorker(AppConfig::COMPRESSOR1_PIN,
+                                      AppConfig::FAN_PWM1_PIN,
+                                      1,
+                                      3,
+                                      QStringLiteral("cooling1"));
+        coolingW1->moveToThread(coolingThread1);
+        QObject::connect(coolingThread1, &QThread::started, coolingW1, &CoolingWorker::start);
 
-    // CoolingWorker* coolingW1 = new CoolingWorker(AppConfig::COMPRESSOR1_PIN, AppConfig::FAN_PWM1_PIN, QStringLiteral("coolingW1"));
+        // senzory → cooling1
+        QObject::connect(sensorWorker, &SensorWorker::sensorDS18, coolingW1, &CoolingWorker::onTempSensors, Qt::QueuedConnection);
 
-    // coolingW1->moveToThread(coolingThread);
+        // target1 → cooling1
+        QObject::connect(&backend, &Backend::targetTempChanged, [&backend, coolingW1]() {
+            QMetaObject::invokeMethod(coolingW1, "onTargetTempChanged", Qt::QueuedConnection, Q_ARG(double, backend.targetTemp()));
+        });
 
-    // QObject::connect(coolingThread, &QThread::started, coolingW1, &CoolingWorker::start);
+        // cooling1 → backend
+        QObject::connect(coolingW1, &CoolingWorker::coolingStateChanged, &backend, &Backend::updateCoolingState, Qt::QueuedConnection);
+    } else if (swTypeNow == 22) {
+        // Cooling 1
+        coolingThread1 = new QThread(&app);
+        coolingW1 = new CoolingWorker(AppConfig::COMPRESSOR1_PIN,
+                                      AppConfig::FAN_PWM1_PIN,
+                                      1,
+                                      3,
+                                      QStringLiteral("cooling1"));
+        coolingW1->moveToThread(coolingThread1);
+        QObject::connect(coolingThread1, &QThread::started, coolingW1, &CoolingWorker::start);
+        QObject::connect(sensorWorker, &SensorWorker::sensorDS18, coolingW1, &CoolingWorker::onTempSensors, Qt::QueuedConnection);
+        QObject::connect(&backend, &Backend::targetTempChanged, [&backend, coolingW1]() {
+            QMetaObject::invokeMethod(coolingW1, "onTargetTempChanged", Qt::QueuedConnection, Q_ARG(double, backend.targetTemp()));
+        });
+        QObject::connect(coolingW1, &CoolingWorker::coolingStateChanged, &backend, &Backend::updateCoolingState, Qt::QueuedConnection);
 
-    // // senzory → cooling (teperatures)
-    // QObject::connect(sensorWorker, &SensorWorker::sensorDS18, coolingW1, &CoolingWorker::onTempSensors, Qt::QueuedConnection);
-
-    // // targetTemp z backendu → cooling (přes lambda, protože signal nemá parametr)
-    // QObject::connect(&backend, &Backend::targetTempChanged, [&backend, coolingW1]() {
-    //     QMetaObject::invokeMethod(coolingW1, "onTargetTempChanged", Qt::QueuedConnection, Q_ARG(double, backend.targetTemp()));
-    // });
-    // // cooling → backend (aktualizace stavu chlazení)
-    // QObject::connect(coolingW1, &CoolingWorker::coolingStateChanged, &backend, &Backend::updateCoolingState, Qt::QueuedConnection);
-
-    // // Pro typ 2+2
-    // CoolingWorker* coolingW2 = new CoolingWorker(AppConfig::COMPRESSOR2_PIN, AppConfig::FAN_PWM2_PIN, QStringLiteral("coolingW2"));
-    // coolingW2->moveToThread(coolingThread);
-    // QObject::connect(coolingThread, &QThread::started, coolingW2, &CoolingWorker::start);
-
-    // TODO: napojeni coolingW2 (senzory, targetTemp, backend)
-
-    // TODO: napojení na watchdog
+        // Cooling 2 (independent thread)
+        coolingThread2 = new QThread(&app);
+        coolingW2 = new CoolingWorker(AppConfig::COMPRESSOR2_PIN,
+                                      AppConfig::FAN_PWM2_PIN,
+                                      2,
+                                      4,
+                                      QStringLiteral("cooling2"));
+        coolingW2->moveToThread(coolingThread2);
+        QObject::connect(coolingThread2, &QThread::started, coolingW2, &CoolingWorker::start);
+        QObject::connect(sensorWorker, &SensorWorker::sensorDS18, coolingW2, &CoolingWorker::onTempSensors, Qt::QueuedConnection);
+        QObject::connect(&backend, &Backend::targetTemp2Changed, [&backend, coolingW2]() {
+            QMetaObject::invokeMethod(coolingW2, "onTargetTempChanged", Qt::QueuedConnection, Q_ARG(double, backend.targetTemp2()));
+        });
+        QObject::connect(coolingW2, &CoolingWorker::coolingStateChanged, &backend, &Backend::updateCoolingState2, Qt::QueuedConnection);
+    }
 
     // ==================== Watchdog worker + thread ====================
     QThread* watchdogThread = new QThread(&app);
     WatchdogWorker* watchdog = new WatchdogWorker;
 
     watchdog->moveToThread(watchdogThread);
-
     QObject::connect(watchdogThread, &QThread::started, watchdog, &WatchdogWorker::start);
 
     // heartbeaty do watchdogu
     QObject::connect(sensorWorker, &SensorWorker::heartbeat, watchdog, &WatchdogWorker::onHeartbeat, Qt::QueuedConnection);
-
-    // QObject::connect(coolingW1, &CoolingWorker::heartbeat, watchdog, &WatchdogWorker::onHeartbeat, Qt::QueuedConnection);
-
     QObject::connect(mqttWorker, &MqttWorker::heartbeat, watchdog, &WatchdogWorker::onHeartbeat, Qt::QueuedConnection);
+
+    if (coolingW1) {
+        QObject::connect(coolingW1, &CoolingWorker::heartbeat, watchdog, &WatchdogWorker::onHeartbeat, Qt::QueuedConnection);
+    }
+    if (coolingW2) {
+        QObject::connect(coolingW2, &CoolingWorker::heartbeat, watchdog, &WatchdogWorker::onHeartbeat, Qt::QueuedConnection);
+    }
 
     // watchdog zatím jen loguje, co chce restartovat
     QObject::connect(watchdog, &WatchdogWorker::restartRequested, [](const QString& name) {
@@ -141,25 +169,28 @@ int main(int argc, char* argv[]) {
 
         stopWorker(mqttWorker, mqttThread, "stop", "MQTT");
         stopWorker(sensorWorker, sensorThread, "stop", "Sensor");
-        // stopWorker(coolingW1, coolingThread, "stop", "Cooling");
-        // stopWorker(coolingW2, coolingThread, "stop", "Cooling");
+        stopWorker(coolingW1, coolingThread1, "stop", "Cooling1");
+        stopWorker(coolingW2, coolingThread2, "stop", "Cooling2");
         stopWorker(watchdog, watchdogThread, "stop", "Watchdog");
 
         mqttWorker = nullptr;
         sensorWorker = nullptr;
-        // coolingW1 = nullptr;
-        // coolingW1 = nullptr;
+        coolingW1 = nullptr;
+        coolingW2 = nullptr;
         watchdog = nullptr;
+
         mqttThread = nullptr;
         sensorThread = nullptr;
-        // coolingThread = nullptr;
+        coolingThread1 = nullptr;
+        coolingThread2 = nullptr;
         watchdogThread = nullptr;
     });
 
     // ----------------- Spuštění vláken -----------------
     mqttThread->start();
     sensorThread->start();
-    // coolingThread->start();
+    if (coolingThread1) coolingThread1->start();
+    if (coolingThread2) coolingThread2->start();
     watchdogThread->start();
 
     return app.exec();

@@ -4,6 +4,6 @@ backend01.*
 main01.cpp
 logs/
 zk_fan.cpp
-old_scrpts/
+zalohy_verze/
 comp.svg
 app/

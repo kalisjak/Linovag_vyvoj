@@ -1,442 +1,362 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15
 
 Page {
-    id: stp
+    id: page
     property real uiScale: 1.0
 
-    title: "Test vstupů senzorů"
+    title: "Test"
     background: Item {}
     visible: SwipeView.isCurrentItem
 
-    // pro levý velký výpis (stejně jako SetTempPage)
-    readonly property double avgTemp: (backend.value1 + backend.value2) / 2.0
+    readonly property real step: 0.5
+
+    // helper lists (live/forced) per mode
+    readonly property bool is22: backend.softwareType === 22
+
+    function liveModel() {
+        if (!is22) {
+            return [
+                { label: "VANA", val: backend.value1 },
+                { label: "VYPAR", val: backend.value3 },
+                { label: "KOND", val: backend.value5 },
+                { label: "NAS",  val: backend.value6 },
+                { label: "VLHK", val: backend.humidity }
+            ]
+        }
+        return [
+            { label: "VANA1", val: backend.value1 },
+            { label: "VANA2", val: backend.value2 },
+            { label: "VYP1",  val: backend.value3 },
+            { label: "VYP2",  val: backend.value4 },
+            { label: "KOND",  val: backend.value5 },
+            { label: "NAS",   val: backend.value6 },
+            { label: "VLHK",  val: backend.humidity }
+        ]
+    }
+
+    function forcedModel() {
+        if (!is22) {
+            return [
+                { idx: 1, label: "VANA", val: backend.forcedTemp1},
+                { idx: 3, label: "VYPAR", val: backend.forcedTemp3 },
+                { idx: 5, label: "KOND", val: backend.forcedTemp5 }
+            ]
+        }
+        return [
+            { idx: 1, label: "VANA1", val: backend.forcedTemp1 },
+            { idx: 2, label: "VANA2", val: backend.forcedTemp2 },
+            { idx: 3, label: "VYP1",  val: backend.forcedTemp3 },
+            { idx: 4, label: "VYP2",  val: backend.forcedTemp4 },
+            { idx: 5, label: "KOND",  val: backend.forcedTemp5 }
+        ]
+    }
+
+    // selected forced index (1..5, but in v-3 we use 1,3,5)
+    property int selectedIndex: is22 ? 1 : 1
+
+    function selectIdx(i) {
+        if (!backend.forcedSensors) return
+        selectedIndex = i
+    }
+
+    function adjust(delta) {
+        if (!backend.forcedSensors) return
+
+        switch (selectedIndex) {
+        case 1: backend.forcedTemp1 = backend.forcedTemp1 + delta; break
+        case 2: backend.forcedTemp2 = backend.forcedTemp2 + delta; break
+        case 3: backend.forcedTemp3 = backend.forcedTemp3 + delta; break
+        case 4: backend.forcedTemp4 = backend.forcedTemp4 + delta; break
+        case 5: backend.forcedTemp5 = backend.forcedTemp5 + delta; break
+        }
+    }
 
     contentItem: Item {
         anchors.fill: parent
 
-        // LEVÁ ČÁST (cca 1/3)
-        Rectangle {
-            id: leftPane
-            anchors.left: parent.left
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-            width: parent.width * 0.34
-            color: "transparent"
+        Row {
+            anchors.fill: parent
+            anchors.margins: 18 * uiScale
+            spacing: 18 * uiScale
 
-            Column {
-                anchors.centerIn: parent
-                spacing: 18 * uiScale
-
-                Text {
-                    text: "VSTUPY"
-                    color: "#EDEFF2"
-                    font.pixelSize: 38 * uiScale
-                    font.bold: true
-                }
-
-                Text {
-                    text: backend.forcedSensors ? "FORCED" : "SENZORY"
-                    color: backend.forcedSensors ? "orange" : "#00ff00"
-                    font.pixelSize: 36 * uiScale
-                    font.bold: true
-                }
+            // LEFT: LIVE / FORCED
+            Rectangle {
+                id: leftPane
+                width: parent.width * 0.52
+                height: parent.height
+                radius: 20 * uiScale
+                color: "#00000055"
+                border.width: 1 * uiScale
+                border.color: "#c6c5df"
 
                 Row {
-                    spacing: 6 * uiScale
-                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.fill: parent
+                    anchors.margins: 14 * uiScale
+                    spacing: 14 * uiScale
 
-                    Text {
-                        text: Number(stp.avgTemp).toFixed(1)
-                        color: "#EDEFF2"
-                        font.pixelSize: 120 * uiScale
-                        font.bold: true
-                    }
-                    Text {
-                        text: "°C"
-                        color: "#c6c5df"
-                        font.pixelSize: 60 * uiScale
-                        font.bold: true
-                    }
-                }
+                    // LIVE
+                    Rectangle {
+                        width: parent.width * 0.50
+                        height: parent.height
+                        radius: 18 * uiScale
+                        color: "#00000044"
+                        border.width: 1 * uiScale
+                        border.color: "#c6c5df"
 
-                Text {
-                    text: "Průměr (T1+T2)/2"
-                    color: "#c6c5df"
-                    font.pixelSize: 18 * uiScale
+                        Column {
+                            anchors.fill: parent
+                            anchors.margins: 12 * uiScale
+                            spacing: 10 * uiScale
+
+                            Text {
+                                text: "LIVE"
+                                color: "#EDEFF2"
+                                font.pixelSize: 24 * uiScale
+                                font.bold: true
+                            }
+
+                            Repeater {
+                                model: page.liveModel()
+
+                                delegate: Rectangle {
+                                    width: parent.width
+                                    height: 70 * uiScale
+                                    radius: 16 * uiScale
+                                    color: "#00000033"
+                                    border.width: 1 * uiScale
+                                    border.color: "#c6c5df"
+
+                                    Row {
+                                        anchors.fill: parent
+                                        anchors.margins: 12 * uiScale
+                                        spacing: 10 * uiScale
+
+                                        Text {
+                                            width: 120 * uiScale
+                                            text: modelData.label
+                                            color: "#EDEFF2"
+                                            font.pixelSize: 22 * uiScale
+                                            font.bold: true
+                                            verticalAlignment: Text.AlignVCenter
+                                        }
+
+                                        Text {
+                                            text: Number(modelData.val).toFixed(1) + (modelData.label === "VLHK" ? "%" : "°C")
+                                            color: "#EDEFF2"
+                                            font.pixelSize: 28 * uiScale
+                                            font.bold: true
+                                            verticalAlignment: Text.AlignVCenter
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // FORCED
+                    Rectangle {
+                        width: parent.width - (parent.width * 0.50) - (14 * uiScale)
+                        height: parent.height
+                        radius: 18 * uiScale
+                        color: "#00000044"
+                        border.width: 1 * uiScale
+                        border.color: "#c6c5df"
+
+                        Column {
+                            anchors.fill: parent
+                            anchors.margins: 12 * uiScale
+                            spacing: 10 * uiScale
+
+                            Row {
+                                spacing: 10 * uiScale
+                                Text {
+                                    text: "FORCED"
+                                    color: backend.forcedSensors ? "orange" : "#c6c5df"
+                                    font.pixelSize: 24 * uiScale
+                                    font.bold: true
+                                }
+                                Text {
+                                    text: backend.forcedSensors ? "ON" : "OFF"
+                                    color: backend.forcedSensors ? "orange" : "#c6c5df"
+                                    font.pixelSize: 20 * uiScale
+                                    font.bold: true
+                                }
+                            }
+
+                            Repeater {
+                                model: page.forcedModel()
+                                delegate: Rectangle {
+                                    readonly property int idx: modelData.idx
+                                    readonly property bool isSelected: backend.forcedSensors && (page.selectedIndex === idx)
+
+                                    width: parent.width
+                                    height: 70 * uiScale
+                                    radius: 16 * uiScale
+                                    color: isSelected ? "#1f1f1fcc" : "#00000033"
+                                    border.width: 2 * uiScale
+                                    border.color: isSelected ? "orange" : "#c6c5df"
+                                    opacity: backend.forcedSensors ? 1.0 : 0.45
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        enabled: backend.forcedSensors
+                                        onClicked: page.selectIdx(idx)
+                                    }
+
+                                    Row {
+                                        anchors.fill: parent
+                                        anchors.margins: 12 * uiScale
+                                        spacing: 10 * uiScale
+
+                                        Text {
+                                            width: 120 * uiScale
+                                            text: modelData.label
+                                            color: "#EDEFF2"
+                                            font.pixelSize: 22 * uiScale
+                                            font.bold: true
+                                            verticalAlignment: Text.AlignVCenter
+                                        }
+
+                                        Text {
+                                            text: Number(modelData.val).toFixed(1) + "°C"
+                                            color: "#EDEFF2"
+                                            font.pixelSize: 28 * uiScale
+                                            font.bold: true
+                                            verticalAlignment: Text.AlignVCenter
+                                        }
+
+                                        Item { width: 1; Layout.fillWidth: true }
+                                        Text {
+                                            text: isSelected ? "EDIT" : ""
+                                            color: "orange"
+                                            font.pixelSize: 16 * uiScale
+                                            font.bold: true
+                                        }
+                                    }
+                                }
+                            }
+
+                            Text {
+                                width: parent.width
+                                wrapMode: Text.WordWrap
+                                text: "Klikni na teplotu (FORCED) a upravuj šipkami. Krok " + Number(page.step).toFixed(1) + "°C. Mimo FORCED je vše zablokované."
+                                color: "#c6c5df"
+                                font.pixelSize: 14 * uiScale
+                            }
+                        }
+                    }
                 }
             }
-        }
 
-        // Svislá čára (stejně jako SetTempPage)
-        Rectangle {
-            id: divider
-            x: parent.width * 0.34
-            width: 2 * uiScale
-            height: parent.height * 0.82
-            anchors.verticalCenter: parent.verticalCenter
-            color: "#c6c5df"
-            opacity: 0.65
-        }
+            // MIDDLE: šipky
+            Rectangle {
+                id: midPane
+                width: parent.width * 0.18
+                height: parent.height
+                radius: 20 * uiScale
+                color: "#00000044"
+                border.width: 1 * uiScale
+                border.color: "#c6c5df"
 
-        // PRAVÁ ČÁST (cca 2/3)
-        Rectangle {
-            id: rightPane
-            anchors.left: divider.right
-            anchors.right: parent.right
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-            color: "transparent"
+                Column {
+                    anchors.centerIn: parent
+                    spacing: 18 * uiScale
 
-            Column {
-                anchors.centerIn: parent
-                spacing: 22 * uiScale
-                width: parent.width * 0.92
+                    Rectangle {
+                        width: 120 * uiScale
+                        height: 120 * uiScale
+                        radius: 26 * uiScale
+                        color: upArea.pressed ? "#5a5a5ac4" : "#00000099"
+                        opacity: backend.forcedSensors ? 1.0 : 0.35
+                        border.width: 2 * uiScale
+                        border.color: "#c6c5df"
 
-                // HORNÍ ŘÁDEK: Forced toggle vlevo + tři teploty vpravo
-                Row {
-                    width: parent.width
+                        Text { anchors.centerIn: parent; text: "▲"; color: "#EDEFF2"; font.pixelSize: 60 * uiScale; font.bold: true }
+
+                        MouseArea { id: upArea; anchors.fill: parent; enabled: backend.forcedSensors; onClicked: page.adjust(+page.step) }
+                    }
+
+                    Text {
+                        text: backend.forcedSensors ? ("krok " + Number(page.step).toFixed(1) + "°C") : "FORCED OFF"
+                        color: backend.forcedSensors ? "#c6c5df" : "#666666"
+                        font.pixelSize: 18 * uiScale
+                        horizontalAlignment: Text.AlignHCenter
+                        width: parent.width
+                    }
+
+                    Rectangle {
+                        width: 120 * uiScale
+                        height: 120 * uiScale
+                        radius: 26 * uiScale
+                        color: downArea.pressed ? "#5a5a5ac4" : "#00000099"
+                        opacity: backend.forcedSensors ? 1.0 : 0.35
+                        border.width: 2 * uiScale
+                        border.color: "#c6c5df"
+
+                        Text { anchors.centerIn: parent; text: "▼"; color: "#EDEFF2"; font.pixelSize: 60 * uiScale; font.bold: true }
+
+                        MouseArea { id: downArea; anchors.fill: parent; enabled: backend.forcedSensors; onClicked: page.adjust(-page.step) }
+                    }
+                }
+            }
+
+            // RIGHT: tlačítka
+            Rectangle {
+                id: rightPane
+                width: parent.width - leftPane.width - midPane.width - 2 * (18 * uiScale)
+                height: parent.height
+                radius: 20 * uiScale
+                color: "#00000044"
+                border.width: 1 * uiScale
+                border.color: "#c6c5df"
+
+                Column {
+                    anchors.centerIn: parent
                     spacing: 16 * uiScale
 
-                    // Forced toggle
+                    // 1) soft type
                     Rectangle {
-                        id: forcedBtn
-                        width: 220 * uiScale
-                        height: 74 * uiScale
-                        radius: 20 * uiScale
-                        color: forcedArea.pressed
-                               ? "#5a5a5ac4"
-                               : (backend.forcedSensors ? "#000000cc" : "#00000099")
+                        width: 280 * uiScale
+                        height: 82 * uiScale
+                        radius: 22 * uiScale
+                        color: softArea.pressed ? "#5a5a5ac4" : "#00000099"
+                        border.width: 2 * uiScale
+                        border.color: "#c6c5df"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: backend.softwareType == 22 ? "SOFT: TYP 2+2" : "SOFT: TYP 3"
+                            color: "#EDEFF2"
+                            font.pixelSize: 24 * uiScale
+                            font.bold: true
+                        }
+
+                        MouseArea { id: softArea; anchors.fill: parent; onClicked: backend.softwareType = (backend.softwareType == 22 ? 3 : 22) }
+                    }
+
+                    // 2) forced teploty
+                    Rectangle {
+                        width: 280 * uiScale
+                        height: 82 * uiScale
+                        radius: 22 * uiScale
+                        color: forcedArea.pressed ? "#5a5a5ac4" : (backend.forcedSensors ? "#000000cc" : "#00000099")
                         border.width: 2 * uiScale
                         border.color: backend.forcedSensors ? "orange" : "#c6c5df"
 
                         Text {
                             anchors.centerIn: parent
-                            text: "FORCED"
+                            text: backend.forcedSensors ? "FORCED TEPLOTY ON" : "FORCED TEPLOTY OFF"
                             color: backend.forcedSensors ? "orange" : "#EDEFF2"
-                            font.pixelSize: 26 * uiScale
+                            font.pixelSize: 22 * uiScale
                             font.bold: true
                         }
 
-                        MouseArea {
-                            id: forcedArea
-                            anchors.fill: parent
-                            onClicked: backend.forcedSensors = !backend.forcedSensors
-                        }
+                        MouseArea { id: forcedArea; anchors.fill: parent; onClicked: backend.forcedSensors = !backend.forcedSensors }
                     }
 
-                    // tři teploty aktuálně vstupující do aplikace (už přepnuté forced/senzory)
-                    Rectangle {
-                        width: parent.width - forcedBtn.width - (16 * uiScale)
-                        height: forcedBtn.height
-                        radius: 20 * uiScale
-                        color: "#00000066"
-                        border.width: 1 * uiScale
-                        border.color: "#c6c5df"
-                        
-                        Row {
-                            anchors.centerIn: parent
-                            spacing: 18 * uiScale
                     
-                            Text {
-                                text: "T1: " + Number(backend.value1).toFixed(1) + "°C"
-                                color: "#EDEFF2"
-                                font.pixelSize: 22 * uiScale
-                                font.bold: true
-                            }
-                            Text {
-                                text: "T2: " + Number(backend.value2).toFixed(1) + "°C"
-                                color: "#EDEFF2"
-                                font.pixelSize: 22 * uiScale
-                                font.bold: true
-                            }
-                            Text {
-                                text: "T3: " + Number(backend.value3).toFixed(1) + "°C"
-                                color: "#EDEFF2"
-                                font.pixelSize: 22 * uiScale
-                                font.bold: true
-                            }
-                             Text {
-                                 text: "T4: " + Number(backend.value4).toFixed(1) + "°C"
-                                 color: "#EDEFF2"
-                                 font.pixelSize: 22 * uiScale
-                                 font.bold: true
-                             }
-                             Text {
-                                 text: "T5: " + Number(backend.value5).toFixed(1) + "°C"
-                                 color: "#EDEFF2"
-                                 font.pixelSize: 22 * uiScale
-                                 font.bold: true
-                             }
-                        }
-                    }
-                }
-
-                // 3 nastavováky (po 1°C)
-                Column {
-                    width: parent.width
-                    spacing: 14 * uiScale
-
-                    // Pomocný “řádek nastavováku”
-                    function makeLabel(name) { return name }
-
-                    // T1
-                    Rectangle {
-                        width: parent.width
-                        height: 92 * uiScale
-                        radius: 22 * uiScale
-                        color: "#00000066"
-                        border.width: 1 * uiScale
-                        border.color: "#c6c5df"
-                        opacity: backend.forcedSensors ? 1.0 : 0.55
-
-                        Row {
-                            anchors.fill: parent
-                            anchors.margins: 14 * uiScale
-                            spacing: 16 * uiScale
-
-                            Text {
-                                text: "FORCED T1"
-                                width: 170 * uiScale
-                                color: "#EDEFF2"
-                                font.pixelSize: 22 * uiScale
-                                font.bold: true
-                                verticalAlignment: Text.AlignVCenter
-                            }
-
-                            Rectangle {
-                                width: 90 * uiScale; height: 64 * uiScale
-                                radius: 18 * uiScale
-                                color: minus1.pressed ? "#5a5a5ac4" : "#00000099"
-                                Text { anchors.centerIn: parent; text: "-1"; color: "#EDEFF2"; font.pixelSize: 22 * uiScale; font.bold: true }
-                                MouseArea { id: minus1; anchors.fill: parent; onClicked: backend.forcedTemp1 = backend.forcedTemp1 - 1.0 }
-                            }
-
-                            Text {
-                                text: Number(backend.forcedTemp1).toFixed(0) + "°C"
-                                color: "#EDEFF2"
-                                font.pixelSize: 34 * uiScale
-                                font.bold: true
-                                verticalAlignment: Text.AlignVCenter
-                            }
-
-                            Rectangle {
-                                width: 90 * uiScale; height: 64 * uiScale
-                                radius: 18 * uiScale
-                                color: plus1.pressed ? "#5a5a5ac4" : "#00000099"
-                                Text { anchors.centerIn: parent; text: "+1"; color: "#EDEFF2"; font.pixelSize: 22 * uiScale; font.bold: true }
-                                MouseArea { id: plus1; anchors.fill: parent; onClicked: backend.forcedTemp1 = backend.forcedTemp1 + 1.0 }
-                            }
-                        }
-                    }
-
-                    // T2
-                    Rectangle {
-                        width: parent.width
-                        height: 92 * uiScale
-                        radius: 22 * uiScale
-                        color: "#00000066"
-                        border.width: 1 * uiScale
-                        border.color: "#c6c5df"
-                        opacity: backend.forcedSensors ? 1.0 : 0.55
-
-                        Row {
-                            anchors.fill: parent
-                            anchors.margins: 14 * uiScale
-                            spacing: 16 * uiScale
-
-                            Text {
-                                text: "FORCED T2"
-                                width: 170 * uiScale
-                                color: "#EDEFF2"
-                                font.pixelSize: 22 * uiScale
-                                font.bold: true
-                                verticalAlignment: Text.AlignVCenter
-                            }
-
-                            Rectangle {
-                                width: 90 * uiScale; height: 64 * uiScale
-                                radius: 18 * uiScale
-                                color: minus2.pressed ? "#5a5a5ac4" : "#00000099"
-                                Text { anchors.centerIn: parent; text: "-1"; color: "#EDEFF2"; font.pixelSize: 22 * uiScale; font.bold: true }
-                                MouseArea { id: minus2; anchors.fill: parent; onClicked: backend.forcedTemp2 = backend.forcedTemp2 - 1.0 }
-                            }
-
-                            Text {
-                                text: Number(backend.forcedTemp2).toFixed(0) + "°C"
-                                color: "#EDEFF2"
-                                font.pixelSize: 34 * uiScale
-                                font.bold: true
-                                verticalAlignment: Text.AlignVCenter
-                            }
-
-                            Rectangle {
-                                width: 90 * uiScale; height: 64 * uiScale
-                                radius: 18 * uiScale
-                                color: plus2.pressed ? "#5a5a5ac4" : "#00000099"
-                                Text { anchors.centerIn: parent; text: "+1"; color: "#EDEFF2"; font.pixelSize: 22 * uiScale; font.bold: true }
-                                MouseArea { id: plus2; anchors.fill: parent; onClicked: backend.forcedTemp2 = backend.forcedTemp2 + 1.0 }
-                            }
-                        }
-                    }
-
-                    // T3
-                    Rectangle {
-                        width: parent.width
-                        height: 92 * uiScale
-                        radius: 22 * uiScale
-                        color: "#00000066"
-                        border.width: 1 * uiScale
-                        border.color: "#c6c5df"
-                        opacity: backend.forcedSensors ? 1.0 : 0.55
-
-                        Row {
-                            anchors.fill: parent
-                            anchors.margins: 14 * uiScale
-                            spacing: 16 * uiScale
-
-                            Text {
-                                text: "FORCED T3"
-                                width: 170 * uiScale
-                                color: "#EDEFF2"
-                                font.pixelSize: 22 * uiScale
-                                font.bold: true
-                                verticalAlignment: Text.AlignVCenter
-                            }
-
-                            Rectangle {
-                                width: 90 * uiScale; height: 64 * uiScale
-                                radius: 18 * uiScale
-                                color: minus3.pressed ? "#5a5a5ac4" : "#00000099"
-                                Text { anchors.centerIn: parent; text: "-1"; color: "#EDEFF2"; font.pixelSize: 22 * uiScale; font.bold: true }
-                                MouseArea { id: minus3; anchors.fill: parent; onClicked: backend.forcedTemp3 = backend.forcedTemp3 - 1.0 }
-                            }
-
-                            Text {
-                                text: Number(backend.forcedTemp3).toFixed(0) + "°C"
-                                color: "#EDEFF2"
-                                font.pixelSize: 34 * uiScale
-                                font.bold: true
-                                verticalAlignment: Text.AlignVCenter
-                            }
-
-                            Rectangle {
-                                width: 90 * uiScale; height: 64 * uiScale
-                                radius: 18 * uiScale
-                                color: plus3.pressed ? "#5a5a5ac4" : "#00000099"
-                                Text { anchors.centerIn: parent; text: "+1"; color: "#EDEFF2"; font.pixelSize: 22 * uiScale; font.bold: true }
-                                MouseArea { id: plus3; anchors.fill: parent; onClicked: backend.forcedTemp3 = backend.forcedTemp3 + 1.0 }
-                            }
-                        }
-                    }
-                    // T4
-                    Rectangle {
-                        width: parent.width
-                        height: 92 * uiScale
-                        radius: 22 * uiScale
-                        color: "#00000066"
-                        border.width: 1 * uiScale
-                        border.color: "#c6c5df"
-                        opacity: backend.forcedSensors ? 1.0 : 0.55
-
-                        Row {
-                            anchors.fill: parent
-                            anchors.margins: 14 * uiScale
-                            spacing: 16 * uiScale
-
-                            Text {
-                                text: "FORCED T4"
-                                width: 170 * uiScale
-                                color: "#EDEFF2"
-                                font.pixelSize: 22 * uiScale
-                                font.bold: true
-                                verticalAlignment: Text.AlignVCenter
-                            }
-
-                            Rectangle {
-                                width: 90 * uiScale; height: 64 * uiScale
-                                radius: 18 * uiScale
-                                color: minus4.pressed ? "#5a5a5ac4" : "#00000099"
-                                Text { anchors.centerIn: parent; text: "-1"; color: "#EDEFF2"; font.pixelSize: 22 * uiScale; font.bold: true }
-                                MouseArea { id: minus4; anchors.fill: parent; onClicked: backend.forcedTemp4 = backend.forcedTemp4 - 1.0 }
-                            }
-
-                            Text {
-                                text: Number(backend.forcedTemp4).toFixed(0) + "°C"
-                                color: "#EDEFF2"
-                                font.pixelSize: 34 * uiScale
-                                font.bold: true
-                                verticalAlignment: Text.AlignVCenter
-                            }
-
-                            Rectangle {
-                                width: 90 * uiScale; height: 64 * uiScale
-                                radius: 18 * uiScale
-                                color: plus4.pressed ? "#5a5a5ac4" : "#00000099"
-                                Text { anchors.centerIn: parent; text: "+1"; color: "#EDEFF2"; font.pixelSize: 22 * uiScale; font.bold: true }
-                                MouseArea { id: plus4; anchors.fill: parent; onClicked: backend.forcedTemp4 = backend.forcedTemp4 + 1.0 }
-                            }
-                        }
-                    }                
-
-                    // // T5
-                    // Rectangle {
-                    //     width: parent.width
-                    //     height: 92 * uiScale
-                    //     radius: 22 * uiScale
-                    //     color: "#00000066"
-                    //     border.width: 1 * uiScale
-                    //     border.color: "#c6c5df"
-                    //     opacity: backend.forcedSensors ? 1.0 : 0.55
-
-                    //     Row {
-                    //         anchors.fill: parent
-                    //         anchors.margins: 14 * uiScale
-                    //         spacing: 16 * uiScale
-
-                    //         Text {
-                    //             text: "FORCED T5"
-                    //             width: 170 * uiScale
-                    //             color: "#EDEFF2"
-                    //             font.pixelSize: 22 * uiScale
-                    //             font.bold: true
-                    //             verticalAlignment: Text.AlignVCenter
-                    //         }
-
-                    //         Rectangle {
-                    //             width: 90 * uiScale; height: 64 * uiScale
-                    //             radius: 18 * uiScale
-                    //             color: minus5.pressed ? "#5a5a5ac4" : "#00000099"
-                    //             Text { anchors.centerIn: parent; text: "-1"; color: "#EDEFF2"; font.pixelSize: 22 * uiScale; font.bold: true }
-                    //             MouseArea { id: minus5; anchors.fill: parent; onClicked: backend.forcedTemp5 = backend.forcedTemp5 - 1.0 }
-                    //         }
-
-                    //         Text {
-                    //             text: Number(backend.forcedTemp5).toFixed(0) + "°C"
-                    //             color: "#EDEFF2"
-                    //             font.pixelSize: 34 * uiScale
-                    //             font.bold: true
-                    //             verticalAlignment: Text.AlignVCenter
-                    //         }
-
-                    //         Rectangle {
-                    //             width: 90 * uiScale; height: 64 * uiScale
-                    //             radius: 18 * uiScale
-                    //             color: plus5.pressed ? "#5a5a5ac4" : "#00000099"
-                    //             Text { anchors.centerIn: parent; text: "+1"; color: "#EDEFF2"; font.pixelSize: 22 * uiScale; font.bold: true }
-                    //             MouseArea { id: plus5; anchors.fill: parent; onClicked: backend.forcedTemp5 = backend.forcedTemp5 + 1.0 }
-                    //         }
-                    //     }
-                    // }
-                }
-
-                
-Text {
-                    width: parent.width
-                    wrapMode: Text.WordWrap
-                    text: "Když je FORCED zapnutý, SensorWorker místo čtení DS18B20 posílá do aplikace tyto ručně nastavené hodnoty."
-                    color: "#c6c5df"
-                    font.pixelSize: 16 * uiScale
                 }
             }
         }

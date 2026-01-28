@@ -32,6 +32,9 @@ add_executable(lnvg_app
     
     src/watchdogWorker.cpp
     src/watchdogWorker.hpp
+
+    src/logManager.cpp
+    src/logManager.hpp
     
     src/runtimeConfig.cpp
     src/runtimeConfig.hpp
