@@ -11,6 +11,7 @@
 #include "config.hpp"
 #include "runtimeConfig.hpp"
 #include "telemetryBuilder.hpp"
+#include "logManager.hpp"
 
 QT_BEGIN_NAMESPACE
 class QTimer;
@@ -108,7 +109,7 @@ class Backend : public QObject {
     QString serialNumber() const { return RuntimeConfig::deviceSerial(); }
     QString reclaimOrderNumber() const { return RuntimeConfig::reclaimOrderNumber(); };
     QString reclaimEmail() const { return RuntimeConfig::reclaimEmail(); };
-    QStringList historyLog() const { return historyLog_; }
+    QStringList historyLog() const { return logManager_.tempsHistory(); }
     
     bool power1On() const { return power1On_; }
     bool power2On() const { return power2On_; }
@@ -230,32 +231,11 @@ class Backend : public QObject {
     bool power1On_ = false;
     bool power2On_ = false;
 
+    static constexpr int mqtt_push_time = AppConfig::MQTT_POLL_INTERVAL_MS;
     QTimer* mqttTimer_ = nullptr;  // nový timer na MQTT payload
 
-    QStringList historyLog_;
-    QString logsDirPath_;
-    QString currentLogFilePath_;
-    int currentLogIndex_ = 0;
-
-    // separátní log všech teplot
-    QString currentTempsLogFilePath_;
-    int currentTempsLogIndex_ = 0;
-
-    static constexpr int kMaxHistoryLines = AppConfig::LOG_MAX_HISTORY_LINES;
-    static constexpr int kMaxLogFiles = AppConfig::LOG_MAX_FILES;
-    static constexpr long long kMaxLogFileSizeBytes = AppConfig::LOG_MAX_FILE_SIZE_BYTES;  // 200 kB
+    LogManager logManager_;
+    void initLogManager();
     
-    static constexpr int mqtt_push_time = AppConfig::MQTT_POLL_INTERVAL_MS;
-    
-    void initLogs();
-    void initTempsLogs();
-    void appendLogLine(const QString& line);
-    void appendTempsLogLine(const QString& line);
-    void rotateLogFileIfNeeded();
-    void rotateTempsLogFileIfNeeded();
-    void cleanupOldLogFiles();
-    void cleanupOldTempsLogFiles();
-    void appendAllTempsSnapshot();
-
-    QStringList loadLastLines(const QString& filePath, int maxLines) const;
+    QString buildTempsSnapshotLine() const;
 };

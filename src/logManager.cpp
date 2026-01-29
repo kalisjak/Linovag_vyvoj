@@ -1,20 +1,51 @@
 #include "logManager.hpp"
 
 #include <QCoreApplication>
-#include <QDir>
-#include <QFile>
-#include <QFileInfo>
-#include <QMap>
-#include <QTextStream>
+#include <QDateTime>
 
-void LogManager::initLogs()
-{
-    QString basePath;
-    if (basePath.isEmpty()) {
-        basePath = QCoreApplication::applicationDirPath() + QStringLiteral("/..");
+namespace {
+
+QString indexedFileName(const QString& prefix, int index) {
+    return QStringLiteral("%1%2.txt").arg(prefix, QStringLiteral("%1").arg(index, 3, 10, QChar('0')));
+}
+
+QMap<int, QString> enumerateIndexedFiles(const QDir& dir, const QString& prefix) {
+    const QString pattern = QStringLiteral("%1*.txt").arg(prefix);
+    const QString suffix = QStringLiteral(".txt");
+
+    QStringList files = dir.entryList(QStringList() << pattern, QDir::Files, QDir::Name);
+
+    QMap<int, QString> indexToFile;
+    for (const QString& fileName : files) {
+        if (!fileName.startsWith(prefix) || !fileName.endsWith(suffix)) continue;
+
+        const QString numberPart = fileName.mid(prefix.size(), fileName.size() - prefix.size() - suffix.size());
+        bool ok = false;
+        const int idx = numberPart.toInt(&ok);
+        if (!ok) continue;
+
+        indexToFile[idx] = fileName;
     }
 
-    QDir dir(basePath);
+    return indexToFile;
+}
+
+}  // namespace
+
+LogManager::LogManager(QObject* parent) : QObject(parent) {
+    tempsTimer_ = new QTimer(this);
+    tempsTimer_->setTimerType(Qt::CoarseTimer);
+    connect(tempsTimer_, &QTimer::timeout, this, &LogManager::appendTempsSnapshotNow);
+}
+
+QString LogManager::ensureLogsDir(const QString& baseDirPath) {
+    // If baseDirPath is empty, use app dir/..
+    QString base = baseDirPath;
+    if (base.isEmpty()) {
+        base = QCoreApplication::applicationDirPath() + QStringLiteral("/..");
+    }
+
+    QDir dir(base);
     if (!dir.exists()) {
         dir.mkpath(QStringLiteral("."));
     }
@@ -24,144 +55,125 @@ void LogManager::initLogs()
         dir.cd(QStringLiteral("logs"));
     }
 
-    logsDirPath_ = dir.absolutePath();
-
-    const QString pattern = QStringLiteral("temperature_log_*.txt");
-    const QString prefix = QStringLiteral("temperature_log_");
-    const QString suffix = QStringLiteral(".txt");
-
-    QStringList files = dir.entryList(QStringList() << pattern, QDir::Files, QDir::Name);
-
-    QMap<int, QString> indexToFile;
-    for (const QString& fileName : files) {
-        if (!fileName.startsWith(prefix) || !fileName.endsWith(suffix)) continue;
-
-        const QString numberPart = fileName.mid(prefix.size(), fileName.size() - prefix.size() - suffix.size());
-        bool ok = false;
-        int idx = numberPart.toInt(&ok);
-        if (!ok) continue;
-
-        indexToFile[idx] = fileName;
-    }
-
-    if (!indexToFile.isEmpty()) {
-        while (indexToFile.size() > kMaxLogFiles) {
-            const int firstKey = indexToFile.firstKey();
-            const QString oldFile = dir.absoluteFilePath(indexToFile[firstKey]);
-            QFile::remove(oldFile);
-            indexToFile.remove(firstKey);
-        }
-
-        currentLogIndex_ = indexToFile.lastKey();
-        currentLogFilePath_ = dir.absoluteFilePath(indexToFile.last());
-        historyLog_ = loadLastLines(currentLogFilePath_, kMaxHistoryLines);
-    } else {
-        currentLogIndex_ = 1;
-        const QString fileName = QStringLiteral("temperature_log_%1.txt").arg(currentLogIndex_, 3, 10, QChar('0'));
-        currentLogFilePath_ = dir.absoluteFilePath(fileName);
-        historyLog_.clear();
-    }
-
-    initTempsLogs();
+    return dir.absolutePath();
 }
 
-void LogManager::initTempsLogs()
-{
+void LogManager::init(const QString& baseDirPath) {
+    logsDirPath_ = ensureLogsDir(baseDirPath);
+
+    initFamily(QStringLiteral("temps_log_"), tempsFilePath_, tempsIndex_);
+    initFamily(QStringLiteral("app_log_"), appFilePath_, appIndex_);
+
+    // load last lines from temps log into history cache
+    if (!tempsFilePath_.isEmpty()) {
+        tempsHistory_ = loadLastLines(tempsFilePath_, kMaxHistoryLines);
+        emit tempsHistoryChanged();
+    }
+}
+
+void LogManager::setTempsSnapshotProvider(std::function<QString()> provider) {
+    tempsSnapshotProvider_ = std::move(provider);
+}
+
+void LogManager::startTempsTimer(int intervalMs) {
+    if (!tempsTimer_) return;
+    tempsTimer_->setInterval(intervalMs);
+    tempsTimer_->start();
+}
+
+void LogManager::stopTempsTimer() {
+    if (tempsTimer_) tempsTimer_->stop();
+}
+
+void LogManager::appendTempsSnapshotNow() {
+    if (!tempsSnapshotProvider_) return;
+
+    const QString line = tempsSnapshotProvider_();
+    if (line.isEmpty()) return;
+
+    appendTempsLineCached(line);
+    flushTempsIfNeeded();
+}
+
+void LogManager::appendAppLogLine(const QString& line) {
+    if (logsDirPath_.isEmpty()) init(QString());
+
+    const QString trimmed = line.trimmed();
+    if (trimmed.isEmpty()) return;
+
+    appCache_.append(trimmed);
+    if (appCache_.size() >= kCacheLines) {
+        flushCache(appCache_, appFilePath_);
+        rotateIfNeeded(QStringLiteral("app_log_"), appFilePath_, appIndex_);
+    }
+}
+
+void LogManager::initFamily(const QString& prefix, QString& filePath, int& index) {
     if (logsDirPath_.isEmpty()) return;
 
     QDir dir(logsDirPath_);
-    const QString pattern = QStringLiteral("alltemps_log_*.txt");
-    const QString prefix = QStringLiteral("alltemps_log_");
-    const QString suffix = QStringLiteral(".txt");
+    QMap<int, QString> indexToFile = enumerateIndexedFiles(dir, prefix);
 
-    QStringList files = dir.entryList(QStringList() << pattern, QDir::Files, QDir::Name);
-    QMap<int, QString> indexToFile;
-    for (const QString& fileName : files) {
-        if (!fileName.startsWith(prefix) || !fileName.endsWith(suffix)) continue;
-
-        const QString numberPart = fileName.mid(prefix.size(), fileName.size() - prefix.size() - suffix.size());
-        bool ok = false;
-        int idx = numberPart.toInt(&ok);
-        if (!ok) continue;
-
-        indexToFile[idx] = fileName;
-    }
-
-    if (!indexToFile.isEmpty()) {
-        currentTempsLogIndex_ = indexToFile.lastKey();
-        currentTempsLogFilePath_ = dir.absoluteFilePath(indexToFile.last());
-    } else {
-        currentTempsLogIndex_ = 1;
-        const QString fileName = QStringLiteral("alltemps_log_%1.txt").arg(currentTempsLogIndex_, 3, 10, QChar('0'));
-        currentTempsLogFilePath_ = dir.absoluteFilePath(fileName);
-    }
-
-    cleanupOldTempsLogFiles();
-}
-
-void LogManager::appendTempsLine(const QString& line)
-{
-    if (logsDirPath_.isEmpty()) initLogs();
-    if (currentTempsLogFilePath_.isEmpty()) return;
-
-    QFile file(currentTempsLogFilePath_);
-    if (file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
-        QTextStream out(&file);
-        out.setCodec("UTF-8");
-        out << line << QLatin1Char('\n');
-    }
-
-    rotateTempsLogFileIfNeeded();
-}
-
-void LogManager::rotateTempsLogFileIfNeeded()
-{
-    if (currentTempsLogFilePath_.isEmpty()) return;
-
-    QFileInfo info(currentTempsLogFilePath_);
-    if (!info.exists()) return;
-    if (info.size() < kMaxLogFileSizeBytes) return;
-
-    QDir dir(logsDirPath_);
-    ++currentTempsLogIndex_;
-    const QString fileName = QStringLiteral("alltemps_log_%1.txt").arg(currentTempsLogIndex_, 3, 10, QChar('0'));
-    currentTempsLogFilePath_ = dir.absoluteFilePath(fileName);
-
-    cleanupOldTempsLogFiles();
-}
-
-void LogManager::cleanupOldTempsLogFiles()
-{
-    if (logsDirPath_.isEmpty()) return;
-
-    QDir dir(logsDirPath_);
-    const QString pattern = QStringLiteral("alltemps_log_*.txt");
-    const QString prefix = QStringLiteral("alltemps_log_");
-    const QString suffix = QStringLiteral(".txt");
-
-    QStringList files = dir.entryList(QStringList() << pattern, QDir::Files, QDir::Name);
-    QMap<int, QString> indexToFile;
-    for (const QString& fileName : files) {
-        if (!fileName.startsWith(prefix) || !fileName.endsWith(suffix)) continue;
-
-        const QString numberPart = fileName.mid(prefix.size(), fileName.size() - prefix.size() - suffix.size());
-        bool ok = false;
-        int idx = numberPart.toInt(&ok);
-        if (!ok) continue;
-
-        indexToFile[idx] = fileName;
-    }
-
-    while (indexToFile.size() > kMaxLogFiles) {
+    // trim oldest files above limit
+    while (indexToFile.size() > kMaxFiles) {
         const int firstKey = indexToFile.firstKey();
-        const QString oldFile = dir.absoluteFilePath(indexToFile[firstKey]);
-        QFile::remove(oldFile);
+        QFile::remove(dir.absoluteFilePath(indexToFile[firstKey]));
+        indexToFile.remove(firstKey);
+    }
+
+    if (!indexToFile.isEmpty()) {
+        index = indexToFile.lastKey();
+        filePath = dir.absoluteFilePath(indexToFile.last());
+    } else {
+        index = 1;
+        filePath = dir.absoluteFilePath(indexedFileName(prefix, index));
+    }
+
+    cleanupOldFiles(prefix);
+}
+
+void LogManager::rotateIfNeeded(const QString& prefix, QString& filePath, int& index) {
+    if (filePath.isEmpty()) return;
+
+    QFileInfo info(filePath);
+    if (!info.exists()) return;
+    if (info.size() < kMaxFileSizeBytes) return;
+
+    QDir dir(logsDirPath_);
+    ++index;
+    filePath = dir.absoluteFilePath(indexedFileName(prefix, index));
+    cleanupOldFiles(prefix);
+}
+
+void LogManager::cleanupOldFiles(const QString& prefix) {
+    if (logsDirPath_.isEmpty()) return;
+
+    QDir dir(logsDirPath_);
+    QMap<int, QString> indexToFile = enumerateIndexedFiles(dir, prefix);
+
+    while (indexToFile.size() > kMaxFiles) {
+        const int firstKey = indexToFile.firstKey();
+        QFile::remove(dir.absoluteFilePath(indexToFile[firstKey]));
         indexToFile.remove(firstKey);
     }
 }
 
-QStringList LogManager::loadLastLines(const QString& filePath, int maxLines) const
-{
+void LogManager::flushCache(QStringList& cache, const QString& filePath) {
+    if (filePath.isEmpty()) return;
+    if (cache.isEmpty()) return;
+
+    QFile file(filePath);
+    if (file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
+        QTextStream out(&file);
+        out.setCodec("UTF-8");
+        for (const QString& line : cache) {
+            out << line << QLatin1Char('\n');
+        }
+    }
+    cache.clear();
+}
+
+QStringList LogManager::loadLastLines(const QString& filePath, int maxLines) const {
     QStringList result;
 
     QFile file(filePath);
@@ -170,84 +182,34 @@ QStringList LogManager::loadLastLines(const QString& filePath, int maxLines) con
     QTextStream in(&file);
     in.setCodec("UTF-8");
     const QString content = in.readAll();
-    QStringList lines = content.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+    const QStringList lines = content.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
 
     if (lines.size() <= maxLines) {
-        for (QString& l : lines) result.append(l.trimmed());
+        for (const QString& l : lines) result.append(l.trimmed());
     } else {
         const int start = lines.size() - maxLines;
-        for (int i = start; i < lines.size(); ++i) {
-            result.append(lines.at(i).trimmed());
-        }
+        for (int i = start; i < lines.size(); ++i) result.append(lines.at(i).trimmed());
     }
 
     return result;
 }
 
-void LogManager::appendHistoryLine(const QString& line)
-{
-    if (logsDirPath_.isEmpty()) initLogs();
+void LogManager::appendTempsLineCached(const QString& line) {
+    if (logsDirPath_.isEmpty()) init(QString());
 
-    historyLog_.append(line);
-    while (historyLog_.size() > kMaxHistoryLines) {
-        historyLog_.removeFirst();
-    }
+    const QString trimmed = line.trimmed();
+    if (trimmed.isEmpty()) return;
 
-    if (currentLogFilePath_.isEmpty()) return;
+    tempsHistory_.append(trimmed);
+    while (tempsHistory_.size() > kMaxHistoryLines) tempsHistory_.removeFirst();
+    emit tempsHistoryChanged();
 
-    QFile file(currentLogFilePath_);
-    if (file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
-        QTextStream out(&file);
-        out.setCodec("UTF-8");
-        out << line << QLatin1Char('\n');
-    }
-
-    rotateLogFileIfNeeded();
+    tempsCache_.append(trimmed);
 }
 
-void LogManager::rotateLogFileIfNeeded()
-{
-    if (currentLogFilePath_.isEmpty()) return;
+void LogManager::flushTempsIfNeeded() {
+    if (tempsCache_.size() < kCacheLines) return;
 
-    QFileInfo info(currentLogFilePath_);
-    if (!info.exists()) return;
-    if (info.size() < kMaxLogFileSizeBytes) return;
-
-    QDir dir(logsDirPath_);
-    ++currentLogIndex_;
-
-    const QString fileName = QStringLiteral("temperature_log_%1.txt").arg(currentLogIndex_, 3, 10, QChar('0'));
-    currentLogFilePath_ = dir.absoluteFilePath(fileName);
-
-    cleanupOldLogFiles();
-}
-
-void LogManager::cleanupOldLogFiles()
-{
-    if (logsDirPath_.isEmpty()) return;
-
-    QDir dir(logsDirPath_);
-    const QString pattern = QStringLiteral("temperature_log_*.txt");
-    const QString prefix = QStringLiteral("temperature_log_");
-    const QString suffix = QStringLiteral(".txt");
-
-    QStringList files = dir.entryList(QStringList() << pattern, QDir::Files, QDir::Name);
-    QMap<int, QString> indexToFile;
-    for (const QString& fileName : files) {
-        if (!fileName.startsWith(prefix) || !fileName.endsWith(suffix)) continue;
-
-        const QString numberPart = fileName.mid(prefix.size(), fileName.size() - prefix.size() - suffix.size());
-        bool ok = false;
-        int idx = numberPart.toInt(&ok);
-        if (!ok) continue;
-
-        indexToFile[idx] = fileName;
-    }
-
-    while (indexToFile.size() > kMaxLogFiles) {
-        const int firstKey = indexToFile.firstKey();
-        const QString oldFile = dir.absoluteFilePath(indexToFile[firstKey]);
-        QFile::remove(oldFile);
-        indexToFile.remove(firstKey);
-    }
+    flushCache(tempsCache_, tempsFilePath_);
+    rotateIfNeeded(QStringLiteral("temps_log_"), tempsFilePath_, tempsIndex_);
 }

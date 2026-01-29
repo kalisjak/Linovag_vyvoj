@@ -54,6 +54,8 @@ void setSensor4Id(const QString& id) { setId("sensors/sensor4_id", id); }
 std::string sensor5Id() { return getId("sensors/sensor5_id", "28-000000000000"); }
 void setSensor5Id(const QString& id) { setId("sensors/sensor5_id", id); }
 
+// DHT22 sensor ID (může být DS18B20 pro simulaci)
+std::string sensor6Id() { return getId("sensors/sensor6_id", "28-000000000000"); }
 
 // ===== Reclaim order number and email =====
 QString reclaimOrderNumber() {

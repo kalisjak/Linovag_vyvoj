@@ -20,6 +20,8 @@ SensorWorker::SensorWorker(QObject* parent) : QObject(parent) {
     s3_ = RuntimeConfig::sensor3Id();
     s4_ = RuntimeConfig::sensor4Id();
     s5_ = RuntimeConfig::sensor5Id();
+    // simply real DHT22
+    s6_ = RuntimeConfig::sensor6Id();
 
 #ifdef LNVG_USE_PIGPIO
     static bool pigpioInitialized = false;
@@ -83,6 +85,8 @@ QString SensorWorker::sensor4Id() const { return QString::fromStdString(s4_); }
 
 QString SensorWorker::sensor5Id() const { return QString::fromStdString(s5_); }
 
+QString SensorWorker::sensor6Id() const { return QString::fromStdString(s6_); }
+
 
 // ========== čtení DS18B20 ==========
 double SensorWorker::readDS18B20(const std::string& deviceId) {
@@ -118,85 +122,91 @@ double SensorWorker::readDS18B20(const std::string& deviceId) {
 
 bool SensorWorker::readDHT22(double& temperature, double& humidity) {
 #ifdef LNVG_USE_PIGPIO
-    const int gpio = dhtGpio_;
 
-    // start sekvence
-    gpioSetMode(gpio, PI_OUTPUT);
-    gpioWrite(gpio, PI_HIGH);
-    gpioDelay(500000);  // 500 ms stabilizace
+    qDebug() << "[SensorWorker] Reading DHT22 sensor - it's a simulation in this version";
 
-    gpioWrite(gpio, PI_LOW);
-    gpioDelay(2000);  // 2 ms low
-    gpioWrite(gpio, PI_HIGH);
-    gpioDelay(40);  // 20–40 µs
+    temperature = readDS18B20(s6_);  // pro simulaci použijeme DS18B201
+    humidity = 36.2;              // pevná vlhkost
 
-    gpioSetMode(gpio, PI_INPUT);
+    // const int gpio = dhtGpio_;
 
-    // nasbíráme pulzy
-    uint32_t lastTick = gpioTick();
-    int lastLevel = gpioRead(gpio);
+    // // start sekvence
+    // gpioSetMode(gpio, PI_OUTPUT);
+    // gpioWrite(gpio, PI_HIGH);
+    // gpioDelay(500000);  // 500 ms stabilizace
 
-    // čekání na první přechody z čtecí sekvence
-    int transitions = 0;
-    while (transitions < 3) {
-        int level = gpioRead(gpio);
-        if (level != lastLevel) {
-            lastLevel = level;
-            lastTick = gpioTick();
-            ++transitions;
-        }
-        gpioDelay(1);
-    }
+    // gpioWrite(gpio, PI_LOW);
+    // gpioDelay(2000);  // 2 ms low
+    // gpioWrite(gpio, PI_HIGH);
+    // gpioDelay(40);  // 20–40 µs
 
-    int bits[40] = {0};
-    int bitIndex = 0;
+    // gpioSetMode(gpio, PI_INPUT);
 
-    while (bitIndex < 40) {
-        // čekej na LOW->HIGH
-        int level = gpioRead(gpio);
-        while (level == 0) {
-            level = gpioRead(gpio);
-        }
-        uint32_t startTick = gpioTick();
+    // // nasbíráme pulzy
+    // uint32_t lastTick = gpioTick();
+    // int lastLevel = gpioRead(gpio);
 
-        // HIGH
-        while (level == 1) {
-            level = gpioRead(gpio);
-            if ((gpioTick() - startTick) > 200) {
-                break;  // timeout
-            }
-        }
-        uint32_t diff = gpioTick() - startTick;
+    // // čekání na první přechody z čtecí sekvence
+    // int transitions = 0;
+    // while (transitions < 3) {
+    //     int level = gpioRead(gpio);
+    //     if (level != lastLevel) {
+    //         lastLevel = level;
+    //         lastTick = gpioTick();
+    //         ++transitions;
+    //     }
+    //     gpioDelay(1);
+    // }
 
-        // krátký puls ~26-28 µs => 0, dlouhý ~70 µs => 1
-        bits[bitIndex] = (diff > 50) ? 1 : 0;
-        ++bitIndex;
-    }
+    // int bits[40] = {0};
+    // int bitIndex = 0;
 
-    // složení do bajtů
-    uint8_t data[5] = {0};
-    for (int i = 0; i < 40; ++i) {
-        data[i / 8] <<= 1;
-        data[i / 8] |= bits[i];
-    }
+    // while (bitIndex < 40) {
+    //     // čekej na LOW->HIGH
+    //     int level = gpioRead(gpio);
+    //     while (level == 0) {
+    //         level = gpioRead(gpio);
+    //     }
+    //     uint32_t startTick = gpioTick();
 
-    uint8_t checksum = (uint8_t)((data[0] + data[1] + data[2] + data[3]) & 0xFF);
-    if (checksum != data[4]) {
-        qWarning() << "DHT22 checksum error";
-        return false;
-    }
+    //     // HIGH
+    //     while (level == 1) {
+    //         level = gpioRead(gpio);
+    //         if ((gpioTick() - startTick) > 200) {
+    //             break;  // timeout
+    //         }
+    //     }
+    //     uint32_t diff = gpioTick() - startTick;
 
-    // DHT22 – 16bit, první dva bajty jsou vlhkost, další dva teplota
-    int16_t rawHum = (data[0] << 8) | data[1];
-    int16_t rawTemp = (data[2] << 8) | data[3];
+    //     // krátký puls ~26-28 µs => 0, dlouhý ~70 µs => 1
+    //     bits[bitIndex] = (diff > 50) ? 1 : 0;
+    //     ++bitIndex;
+    // }
 
-    humidity = rawHum / 10.0;
-    if (rawTemp & 0x8000) {
-        rawTemp = rawTemp & 0x7FFF;
-        temperature = -rawTemp / 10.0;
-    } else {
-        temperature = rawTemp / 10.0;
-    }
+    // // složení do bajtů
+    // uint8_t data[5] = {0};
+    // for (int i = 0; i < 40; ++i) {
+    //     data[i / 8] <<= 1;
+    //     data[i / 8] |= bits[i];
+    // }
+
+    // uint8_t checksum = (uint8_t)((data[0] + data[1] + data[2] + data[3]) & 0xFF);
+    // if (checksum != data[4]) {
+    //     qWarning() << "DHT22 checksum error";
+    //     return false;
+    // }
+
+    // // DHT22 – 16bit, první dva bajty jsou vlhkost, další dva teplota
+    // int16_t rawHum = (data[0] << 8) | data[1];
+    // int16_t rawTemp = (data[2] << 8) | data[3];
+
+    // humidity = rawHum / 10.0;
+    // if (rawTemp & 0x8000) {
+    //     rawTemp = rawTemp & 0x7FFF;
+    //     temperature = -rawTemp / 10.0;
+    // } else {
+    //     temperature = rawTemp / 10.0;
+    // }
 
     return true;
 #else

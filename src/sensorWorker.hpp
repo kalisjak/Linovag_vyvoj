@@ -36,6 +36,7 @@ public slots:
     QString sensor3Id() const;
     QString sensor4Id() const;
     QString sensor5Id() const;
+    QString sensor6Id() const;
 
 private slots:
     void pollSensors();
@@ -51,6 +52,7 @@ private:
     std::string s3_;
     std::string s4_;
     std::string s5_;
+    std::string s6_; // DHT22 sensor ID (pro simulaci může být DS18B20)
 
     // GPIO pin pro DHT22 (doplníš podle svého configu)
     int dhtGpio_ = AppConfig::DHT22_GPIO; // např. GPIO4, můžeš nahradit za AppConfig/Config konstantu

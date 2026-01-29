@@ -11,7 +11,6 @@ set(CMAKE_AUTOUIC ON)
 # Qt5 + MQTT
 find_package(Qt5 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Mqtt)
 
-
 add_executable(lnvg_app
     src/main.cpp
 

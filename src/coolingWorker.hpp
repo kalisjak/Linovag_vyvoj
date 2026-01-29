@@ -1,74 +1,71 @@
 #pragma once
 
-#ifndef LNVG_USE_PIGPIO
-#include <QFile>
-#include <QTextStream>
-#endif
-
-#include <QElapsedTimer>
 #include <QObject>
-#include <QString>
+#include <QElapsedTimer>
 #include <QTimer>
+#include <QString>
 
 #include "config.hpp"
-#include "runtimeConfig.hpp"
 
 class CoolingWorker : public QObject {
     Q_OBJECT
+
    public:
-    explicit CoolingWorker(QObject* parent = nullptr);
-    bool coolingActive() const { return coolingActive_; }
-    bool defrostActive() const { return defrostMode_; }
-    bool compressorOn()  const { return compressorOn_; }
-
-    ~CoolingWorker();
-
-   signals:
-    // pro watchdog
-    void heartbeat(const QString& name);
-
-    void coolingStateChanged(bool coolingActive,
-                             bool defrostActive,
-                             bool compressorOn);
+    // bathIdx: 1 or 2 (maps to DS18 t1/t2)
+    // evapIdx: 3 or 4 (maps to DS18 t3/t4)
+    // condenser is always DS18 t5
+    explicit CoolingWorker(int compressorGpioPin,
+                           int fanPwmGpioPin,
+                           int bathIdx,
+                           int evapIdx,
+                           const QString& heartbeatName,
+                           QObject* parent = nullptr);
 
    public slots:
-    // start/stop vlákna
     void start();
     void stop();
 
-    // vstupy z ostatních vláken
-    void onTempSensors(double t1, double t2);  // senzor 1 a 2 – průměr pro kompresor
-    void onEvapTemp(double tevap);             // senzor 3 – výparník (defrost)
-    void onTargetTempChanged(double t);        // cílová vnitřní teplota X°C
+    void onTempSensors(double t1, double t2, double t3, double t4, double t5);
+    void onTargetTempChanged(double target);
 
-   private slots:
-    void controlStep();  // periodická regulační logika
+   signals:
+    void coolingStateChanged(bool coolingActive, bool defrostActive, bool compressorOn);
+    void heartbeat(const QString& name);
 
    private:
-    QTimer* timer_ = nullptr;
-    QElapsedTimer startupTimer_;
+    void tick();
 
-    double t1_ = 0.0;
-    double t2_ = 0.0;
-    double tevap_ = 0.0;
-    double targetTemp_ = 4.0;  // default, backend ti ho přepíše
+    void setCompressor(bool on);
+    void setFanDuty(double duty);
 
+    const int compressorPin_;
+    const int fanPin_;
+    const int bathIdx_;
+    const int evapIdx_;
+    const QString heartbeatName_;
+
+    QTimer* controlTimer_ = nullptr;
+
+    // latest sensor values
+    double bathTemp_ = 0.0;
+    double evapTemp_ = 0.0;
+    double condenserTemp_ = 0.0;
+    double targetTemp_ = 5.0;
+
+    // state flags requested by user
     bool compressorOn_ = false;
     bool defrostMode_ = false;
     bool hwInitialized_ = false;
     bool startupDelayActive_ = true;
     bool coolingActive_ = false;
 
-#ifndef LNVG_USE_PIGPIO
-    QFile simFile_;
-    QTextStream simStream_;
-#endif
+    bool dripHoldActive_ = false;
 
-    void initGpio();
-    void shutdownGpio();
+    QElapsedTimer startupTimer_;
+    QElapsedTimer dripTimer_;
 
-    void setFanDuty(double duty);  // 0.0–1.0
-    void setCompressor(bool on);   // logický stav (před inverzí)
-
-    void emitCoolingState();
+    void publishStateIfChanged(bool force = false);
+    bool lastCoolingActive_ = false;
+    bool lastDefrostActive_ = false;
+    bool lastCompressorOn_ = false;
 };

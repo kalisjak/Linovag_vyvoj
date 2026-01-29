@@ -122,7 +122,7 @@ Page {
 
                                 delegate: Rectangle {
                                     width: parent.width
-                                    height: 70 * uiScale
+                                    height: 57 * uiScale
                                     radius: 16 * uiScale
                                     color: "#00000033"
                                     border.width: 1 * uiScale
@@ -130,7 +130,7 @@ Page {
 
                                     Row {
                                         anchors.fill: parent
-                                        anchors.margins: 12 * uiScale
+                                        anchors.margins: 8 * uiScale
                                         spacing: 10 * uiScale
 
                                         Text {

@@ -34,6 +34,9 @@ void setSensor4Id(const QString& id);
 std::string sensor5Id();
 void setSensor5Id(const QString& id);
 
+// DHT22 sensor ID (může být DS18B20 pro simulaci)
+std::string sensor6Id();
+
 static std::string getId(const char* key, const char* def);
 static void setId(const char* key, const QString& id);
 

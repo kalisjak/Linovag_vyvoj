@@ -28,6 +28,13 @@ inline constexpr int        LOG_MAX_HISTORY_LINES   = 500;
 inline constexpr int        LOG_MAX_FILES           = 100;
 inline constexpr long long  LOG_MAX_FILE_SIZE_BYTES = 200 * 1024; // 200 kB
 
+// cache v RAM (kolik řádků se drží než se zapíše na SD)
+inline constexpr int        LOG_CACHE_LINES          = 15;
+
+// interval pro snapshot teplot do temps_log_*.txt (nezávislé na SENSOR_POLL_INTERVAL_MS)
+inline constexpr int        TEMPS_LOG_INTERVAL_MS    = 30000;
+
+
 // ========== Chlazení ==========
 
 // GPIO piny (kompresory)
@@ -53,6 +60,7 @@ inline constexpr double COOLING_DEFROST_STOP_TEMP     = 6.0;   // konec defrostu
 
 // teplota kondenzátoru pro varování
 inline constexpr double CRITICAL_TEMPERATURE_KONDENZ  = 45.0;
+inline constexpr double WARNING_TEMPERATURE_KONDENZ   = 40.0;
 
 // PWM duty hodnoty
 inline constexpr double COOLING_FAN_DUTY_NORMAL  = 0.2; // 80 %

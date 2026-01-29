@@ -8,242 +8,202 @@ extern "C" {
 }
 #endif
 
-CoolingWorker::CoolingWorker(QObject* parent) : QObject(parent) {
-    timer_ = new QTimer(this);
-    connect(timer_, &QTimer::timeout, this, &CoolingWorker::controlStep);
-}
-
-CoolingWorker::~CoolingWorker() {
-    stop();
-    shutdownGpio();
+CoolingWorker::CoolingWorker(int compressorGpioPin,
+                             int fanPwmGpioPin,
+                             int bathIdx,
+                             int evapIdx,
+                             const QString& heartbeatName,
+                             QObject* parent)
+    : QObject(parent),
+      compressorPin_(compressorGpioPin),
+      fanPin_(fanPwmGpioPin),
+      bathIdx_(bathIdx),
+      evapIdx_(evapIdx),
+      heartbeatName_(heartbeatName) {
+    controlTimer_ = new QTimer(this);
+    controlTimer_->setInterval(AppConfig::COOLING_CONTROL_INTERVAL_MS);
+    controlTimer_->setTimerType(Qt::CoarseTimer);
+    connect(controlTimer_, &QTimer::timeout, this, &CoolingWorker::tick);
 }
 
 void CoolingWorker::start() {
-    qInfo() << "[CoolingWorker] start()";
-
+    hwInitialized_ = true;
     startupDelayActive_ = true;
-    startupTimer_.restart();
-
-    initGpio();
-
-    // perioda řídicí smyčky z configu
-    timer_->start(AppConfig::COOLING_CONTROL_INTERVAL_MS);
-}
-
-void CoolingWorker::stop() {
-    if (timer_) {
-        timer_->stop();
-    }
-}
-
-void CoolingWorker::onTempSensors(double t1, double t2) {
-    t1_ = t1;
-    t2_ = t2;
-}
-
-void CoolingWorker::onEvapTemp(double tevap) { tevap_ = tevap; }
-
-void CoolingWorker::onTargetTempChanged(double t) { targetTemp_ = t; }
-
-void CoolingWorker::initGpio() {
-    if (hwInitialized_) return;
+    dripHoldActive_ = false;
+    defrostMode_ = false;
+    coolingActive_ = false;
 
 #ifdef LNVG_USE_PIGPIO
     if (gpioInitialise() < 0) {
         qWarning() << "[CoolingWorker] pigpio init failed!";
         return;
     }
+    // pigpio should be initialized elsewhere globally (or you can init here if desired)
+    gpioSetMode(compressorPin_, PI_OUTPUT);
+    gpioSetMode(fanPin_, PI_OUTPUT);
+    gpioWrite(compressorPin_, 0);
 
-    gpioSetMode(AppConfig::FAN_PWM_PIN, PI_OUTPUT);
-    gpioSetPWMfrequency(AppConfig::FAN_PWM_PIN, AppConfig::FAN_PWM_FREQUENCY);
-    gpioPWM(AppConfig::FAN_PWM_PIN, 255);  // 100 % (při startu stáhlé přes pull-up) = netočí se
-
-    gpioSetMode(AppConfig::COMPRESSOR1_PIN, PI_OUTPUT);
-    gpioWrite(AppConfig::COMPRESSOR1_PIN, 0);
-
-    qInfo() << "[CoolingWorker] GPIO fanPWM =" << AppConfig::FAN_PWM_PIN << "compressor =" << AppConfig::COMPRESSOR1_PIN
+    gpioSetPWMfrequency(fanPin_, AppConfig::FAN_PWM_FREQUENCY);
+    gpioPWM(fanPin_, 255); // 100 % (při startu stáhlé přes pull-up) = netočí se
+    // gpioHardwarePWM(fanPin_, AppConfig::FAN_PWM_FREQUENCY, 0);
+    qInfo() << "[CoolingWorker] GPIO fanPWM =" << fanPin_
+            << "compressor =" << compressorPin_
             << "PWM freq =" << AppConfig::FAN_PWM_FREQUENCY << "Hz";
-#else
-    // simulace – otevřeme log soubor
-    if (!simFile_.isOpen()) {
-        simFile_.setFileName("cooling_sim.log");
-        if (!simFile_.open(QIODevice::Append | QIODevice::Text)) {
-            qWarning() << "[CoolingWorker] Cannot open cooling_sim.log for simulation";
-        } else {
-            simStream_.setDevice(&simFile_);
-            simStream_ << "=== Cooling simulation started ===\n";
-            simStream_.flush();
-        }
-    }
-    qInfo() << "[CoolingWorker] Simulation mode (no GPIO)";
 #endif
 
-    hwInitialized_ = true;
+    setCompressor(false);
+    setFanDuty(AppConfig::COOLING_FAN_DUTY_DRIP); // fans OFF
+
+    startupTimer_.restart();
+    controlTimer_->start();
+
+    publishStateIfChanged(true);
 }
 
-void CoolingWorker::shutdownGpio() {
-    if (!hwInitialized_) return;
+void CoolingWorker::stop() {
+    if (controlTimer_) controlTimer_->stop();
 
-#ifdef LNVG_USE_PIGPIO
-    setFanDuty(1.0);
     setCompressor(false);
-    gpioTerminate();
-#else
-    if (simFile_.isOpen()) {
-        simStream_ << "=== Cooling simulation ended ===\n";
-        simStream_.flush();
-        simFile_.close();
-    }
-#endif
+    setFanDuty(AppConfig::COOLING_FAN_DUTY_DRIP);
 
-    hwInitialized_ = false;
+    coolingActive_ = false;
+    defrostMode_ = false;
+    startupDelayActive_ = false;
+    dripHoldActive_ = false;
+
+    publishStateIfChanged(true);
+}
+
+void CoolingWorker::onTempSensors(double t1, double t2, double t3, double t4, double t5) {
+    // Map indices (1..5) into our channels
+    const double bath = (bathIdx_ == 1) ? t1 : t2;
+    const double evap = (evapIdx_ == 3) ? t3 : t4;
+
+    bathTemp_ = bath;
+    evapTemp_ = evap;
+    condenserTemp_ = t5;
+}
+
+void CoolingWorker::onTargetTempChanged(double target) { targetTemp_ = target; }
+
+void CoolingWorker::tick() {
+    emit heartbeat(heartbeatName_);
+
+    // Startup delay: nothing runs
+    if (startupDelayActive_) {
+        const qint64 elapsed = startupTimer_.elapsed();
+        setCompressor(false);
+        setFanDuty(AppConfig::COOLING_FAN_DUTY_DRIP);
+        
+        coolingActive_ = false;
+        
+        if (elapsed >= AppConfig::COOLING_STARTUP_DELAY_MS) {
+            startupDelayActive_ = false;
+        }
+        publishStateIfChanged();
+        return;
+    }
+    
+    // Optional: condenser warning (no control change, just debug)
+    if (condenserTemp_ >= AppConfig::CRITICAL_TEMPERATURE_KONDENZ) {
+        qWarning() << "[CoolingWorker]" << heartbeatName_ << "Condenser temp is too high:" << condenserTemp_;
+        coolingActive_ = false;
+        setCompressor(false);
+        publishStateIfChanged();
+        return;
+    } else if (condenserTemp_ <= AppConfig::CRITICAL_TEMPERATURE_KONDENZ && condenserTemp_ >= AppConfig::WARNING_TEMPERATURE_KONDENZ) {
+        qWarning() << "[CoolingWorker]" << heartbeatName_ << "Condenser temp warning level:" << condenserTemp_;
+    }
+
+    // Defrost mode overrides everything
+    if (defrostMode_) {
+        setCompressor(false);
+        setFanDuty(AppConfig::COOLING_FAN_DUTY_DEFROST); // 100%
+        coolingActive_ = false;
+
+        if (evapTemp_ >= AppConfig::COOLING_DEFROST_STOP_TEMP) {
+            defrostMode_ = false;
+            dripHoldActive_ = true;
+            dripTimer_.restart();
+            setFanDuty(AppConfig::COOLING_FAN_DUTY_DRIP); // stop fans immediately
+        }
+        publishStateIfChanged();
+        return;
+    }
+
+    // Post-defrost drip hold
+    if (dripHoldActive_) {
+        setCompressor(false);
+        setFanDuty(AppConfig::COOLING_FAN_DUTY_DRIP);
+        coolingActive_ = true;
+
+        if (dripTimer_.elapsed() >= AppConfig::COOLING_POST_DEFROST_HOLD_MS) {
+            dripHoldActive_ = false;
+        }
+        publishStateIfChanged();
+        return;
+    }
+
+    // Enter defrost when evaporator gets too cold
+    if (evapTemp_ <= AppConfig::COOLING_DEFROST_START_TEMP) {
+        defrostMode_ = true;
+        setCompressor(false);
+        setFanDuty(AppConfig::COOLING_FAN_DUTY_DEFROST);
+        coolingActive_ = false;
+        publishStateIfChanged();
+        return;
+    }
+
+    // Normal cycle
+    coolingActive_ = true;
+    setFanDuty(AppConfig::COOLING_FAN_DUTY_NORMAL); // 80% (see config mapping)
+
+    const double onTh = targetTemp_ + AppConfig::COOLING_HYSTERESIS_DELTA;
+    const double offTh = targetTemp_;
+
+    if (!compressorOn_ && bathTemp_ >= onTh) {
+        setCompressor(true);
+    } else if (compressorOn_ && bathTemp_ <= offTh) {
+        setCompressor(false);
+    }
+
+    publishStateIfChanged();
+}
+
+void CoolingWorker::setCompressor(bool on) {
+    compressorOn_ = on;
+#ifdef LNVG_USE_PIGPIO
+    gpioWrite(compressorPin_, on ? 1 : 0);
+#else
+    // simulation: no GPIO
+#endif
 }
 
 void CoolingWorker::setFanDuty(double duty) {
-    if (!hwInitialized_) return;
+    if (!hwInitialized_)
+        return;
 
     if (duty < 0.0) duty = 0.0;
     if (duty > 1.0) duty = 1.0;
 
 #ifdef LNVG_USE_PIGPIO
     int pwm = static_cast<int>(duty * 255.0 + 0.5);
-    gpioPWM(AppConfig::FAN_PWM_PIN, pwm);
+    gpioPWM(fanPin_, pwm);
 #else
-    if (simFile_.isOpen()) {
-        simStream_ << "Fan duty set to " << duty << "\n";
-        simStream_.flush();
-    } else {
-        qDebug() << "[CoolingWorker][SIM] Fan duty =" << duty;
-    }
+    Q_UNUSED(duty);
 #endif
 }
 
-void CoolingWorker::emitCoolingState() {
-    const bool cooling = compressorOn_ && !defrostMode_;  // moje definice
-    if (coolingActive_ != cooling) {
-        coolingActive_ = cooling;
-    }
+void CoolingWorker::publishStateIfChanged(bool force) {
+    const bool c = coolingActive_;
+    const bool d = defrostMode_;
+    const bool p = compressorOn_;
 
-    emit coolingStateChanged(coolingActive_, defrostMode_, compressorOn_);
-}
+    if (!force && c == lastCoolingActive_ && d == lastDefrostActive_ && p == lastCompressorOn_) return;
 
-void CoolingWorker::setCompressor(bool on) {
-    if (!hwInitialized_) return;
+    lastCoolingActive_ = c;
+    lastDefrostActive_ = d;
+    lastCompressorOn_ = p;
 
-#ifdef LNVG_USE_PIGPIO
-    gpioWrite(AppConfig::COMPRESSOR1_PIN, on ? 1 : 0);
-#else
-    if (simFile_.isOpen()) {
-        simStream_ << "Compressor " << (on ? "ON" : "OFF") << "\n";
-        simStream_.flush();
-    } else {
-        qDebug() << "[CoolingWorker][SIM] Compressor" << (on ? "ON" : "OFF");
-    }
-#endif
-}
-
-void CoolingWorker::controlStep() {
-    emit heartbeat(QStringLiteral("cooling"));
-
-    // start delay – prvních X ms vůbec nic nezapínat
-    if (startupDelayActive_) {
-        if (startupTimer_.elapsed() < AppConfig::COOLING_STARTUP_DELAY_MS) {
-            setFanDuty(1.0);
-            setCompressor(false);
-            return;
-        }
-        startupDelayActive_ = false;
-        qInfo() << "[CoolingWorker] startup delay finished, enabling control";
-    }
-
-    // --- Post-defrost pauza (odkapání): 2 min kompresor i větráky OFF ---
-    // Požadavek: bezprostředně po ukončení odmražování držet vše vypnuté 2 min,
-    // poté se vrátit do normálního cyklu (hystereze + případný restart chlazení).
-    static bool postDefrostHold_ = false;
-    static QElapsedTimer postDefrostHoldTimer_;
-
-    if (postDefrostHold_) {
-        constexpr qint64 POST_DEFROST_HOLD_MS = 2 * 60 * 1000;
-        if (!postDefrostHoldTimer_.isValid()) {
-            postDefrostHoldTimer_.start();
-        }
-
-        if (postDefrostHoldTimer_.elapsed() < POST_DEFROST_HOLD_MS) {
-            // během pauzy: vše OFF
-            compressorOn_ = false;
-            setCompressor(false);
-            setFanDuty(1.0);
-            return;
-        }
-
-        postDefrostHold_ = false;
-        qInfo() << "[CoolingWorker] post-defrost hold finished, resuming normal cycle";
-    }
-
-    // --- DEFROST logika podle výparníku (senzor 3) ---
-    // Požadavek: odmrazování startuje při tevap <= -16 °C (viz config),
-    // ale pouze pokud právě běží chlazení (kompresor je ON).
-    // Odmrazování končí při tevap >= +6 °C (pevná hodnota).
-
-    if (!defrostMode_) {
-        // vstup do defrostu
-        if (compressorOn_ && (tevap_ <= AppConfig::COOLING_DEFROST_START_TEMP)) {
-            defrostMode_ = true;
-
-            // DŮLEŽITÉ: okamžitě srovnat SW stav kompresoru s HW stavem,
-            // aby TopBar správně ukázal "OFF" během odmražování.
-            compressorOn_ = false;
-
-            qInfo() << "[CoolingWorker] DEFROST START, tevap =" << tevap_;
-            emitCoolingState();
-        }
-    } else {
-        // výstup z defrostu (pevná teplota na výparníku)
-        if (tevap_ >= AppConfig::COOLING_DEFROST_STOP_TEMP) {
-            defrostMode_ = false;
-            // po odmrazu drž 2 min vše vypnuté (odkapání)
-            postDefrostHold_ = true;
-            postDefrostHoldTimer_.restart();
-            compressorOn_ = false;
-            qInfo() << "[CoolingWorker] DEFROST STOP, tevap =" << tevap_;
-            emitCoolingState();
-            // okamžitě po odmrazu vypnout HW a přejít do post-defrost pauzy
-            setCompressor(false);
-            setFanDuty(0.0);
-            return;
-        }
-    }
-
-    if (defrostMode_) {
-        const bool wasOn = compressorOn_;
-        compressorOn_ = false;
-        if (wasOn) {
-            emitCoolingState();
-        }
-
-        setCompressor(false);
-        setFanDuty(AppConfig::COOLING_FAN_DUTY_DEFROST);
-        return;
-    }
-
-    // --- Běžná hysteréze kompresoru podle vnitřní teploty ---
-
-    if (compressorOn_) {
-        // vypnout při X °C
-        if (t1_ <= targetTemp_) {
-            compressorOn_ = false;
-            qInfo() << "[CoolingWorker] Compressor OFF, t1_ =" << t1_;
-            emitCoolingState();
-        }
-    } else {
-        // zapnout při X + 2 °C (delta z configu)
-        if (t1_ >= targetTemp_ + AppConfig::COOLING_HYSTERESIS_DELTA) {
-            compressorOn_ = true;
-            qInfo() << "[CoolingWorker] Compressor ON, t1_ =" << t1_;
-            emitCoolingState();
-        }
-    }
-
-    setCompressor(compressorOn_);
-    setFanDuty(AppConfig::COOLING_FAN_DUTY_NORMAL);
+    emit coolingStateChanged(c, d, p);
 }
