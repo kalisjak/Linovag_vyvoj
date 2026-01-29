@@ -42,12 +42,13 @@ Page {
                 }
 
                 Text {
-                    text: "Otevřít email s předvyplněnou reklamační žádostí"
+                    text: "E-mail mit vorausgefülltem Reklmationsantrag öffnen" // (DE) / Otevřít email s předvyplněnou reklamační žádostí (CZ) / 
+                    // Open email with pre-filled warranty claim (EN) / Åbn e-mail med forudfyldt reklamationsanmodning (DK)
                     color: "#EDEFF2"
-                    font.pixelSize: 32 * uiScale
+                    font.pixelSize: 28 * uiScale
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.WordWrap
-                    width: parent.width * 0.9
+                    width: parent.width * 0.96
                 }
             }
         }
@@ -82,7 +83,7 @@ Page {
                 spacing: 12
 
                 Text {
-                    text: "Reklamační žádost"
+                    text: "Reklamationsantrag" // (DE) / Reklamační žádost (CZ) / Warranty Claim (EN) / Reklamationsanmodning (DK)
                     color: "#EDEFF2"
                     font.pixelSize: 45 * uiScale
                     font.bold: true
@@ -111,7 +112,7 @@ Page {
                         }
 
                         Text {
-                            text: "Email:"
+                            text: "E-mail:"
                             color: "#EDEFF2"
                             font.pixelSize: 28 * uiScale
                             font.bold: true
@@ -120,7 +121,7 @@ Page {
 
                         Text {
                             Layout.fillWidth: true
-                            text: backend.reclaimEmail || "reklamace@gastro.cz"
+                            text: backend.reclaimEmail || "kvalita@gastro.cz"
                             color: "#EDEFF2"
                             font.pixelSize: 28 * uiScale
                             font.bold: false
@@ -142,7 +143,7 @@ Page {
                         }
 
                         Text {
-                            text: "Číslo objednávky:"
+                            text: "Bestellnummer:" // (DE) / Číslo objednávky: (CZ) / Order Number: (EN) / Ordrenummer: (DK)
                             color: "#EDEFF2"
                             font.pixelSize: 28 * uiScale
                             font.bold: true
@@ -173,7 +174,7 @@ Page {
                         }
 
                         Text {
-                            text: "ID zařízení:"
+                            text: "Geräte-ID:" // (DE) / ID zařízení: (CZ) / Device ID: (EN) / Enheds-ID: (DK)
                             color: "#EDEFF2"
                             font.pixelSize: 28 * uiScale
                             font.bold: true
@@ -194,7 +195,7 @@ Page {
 
                 // NÁPIS NAD OKÉNKEM S CHYBAMI
                 Text {
-                    text: "Nalezené chyby:"
+                    text: "Gefundene Fehler:" // (DE) / Nalezené chyby: (CZ) / Detected Errors: (EN) / Fundne fejl: (DK)
                     color: "#EDEFF2"
                     font.pixelSize: 28 * uiScale
                     font.bold: true
@@ -221,7 +222,7 @@ Page {
                         clip: true
 
                         // v C++ jako Q_PROPERTY(QStringList reclaimErrors ...)
-                        model: [backend.reclaimErrorsText || "Zatím nebyla detekována žádná chyba."]
+                        model: [backend.reclaimErrorsText || "Bisher kein Fehler erkannt"] // (DE) / Zatím nebyla detekována žádná chyba. (CZ) / No errors detected so far. (EN) / Der er endnu ikke registreret nogen fejl (DK)
                         // model: [backend.reclaimErrorsText || "Hej nic ještě nebylo nahlášeno, vše vypadá OK! \nAle tohle je testovací text, který simuluje nějaké chyby, které by mohly být zobrazeny v tomto okně. Může to být delší text, který se bude zalamovat podle šířky okna a bude potřeba scrollovat, pokud je ho hodně. \nTakže tady přidávám ještě nějaký další text, aby to opravdu vypadalo jako reálný scénář."]
 
                         delegate: Text {

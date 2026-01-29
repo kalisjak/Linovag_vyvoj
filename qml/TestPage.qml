@@ -241,7 +241,7 @@ Page {
                             Text {
                                 width: parent.width
                                 wrapMode: Text.WordWrap
-                                text: "Klikni na teplotu (FORCED) a upravuj šipkami. Krok " + Number(page.step).toFixed(1) + "°C. Mimo FORCED je vše zablokované."
+                                text: "Click on the temperature (FORCED) and adjust it using the arrow keys. Step" + Number(page.step).toFixed(1) + "°C. Outside of FORCED everything is locked."
                                 color: "#c6c5df"
                                 font.pixelSize: 14 * uiScale
                             }
@@ -319,7 +319,7 @@ Page {
                     // 1) soft type
                     Rectangle {
                         width: 280 * uiScale
-                        height: 82 * uiScale
+                        height: 120 * uiScale
                         radius: 22 * uiScale
                         color: softArea.pressed ? "#5a5a5ac4" : "#00000099"
                         border.width: 2 * uiScale
@@ -339,7 +339,7 @@ Page {
                     // 2) forced teploty
                     Rectangle {
                         width: 280 * uiScale
-                        height: 82 * uiScale
+                        height: 120 * uiScale
                         radius: 22 * uiScale
                         color: forcedArea.pressed ? "#5a5a5ac4" : (backend.forcedSensors ? "#000000cc" : "#00000099")
                         border.width: 2 * uiScale

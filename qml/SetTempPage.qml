@@ -1,5 +1,6 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15
 
 Page {
     id: setTP
@@ -11,8 +12,8 @@ Page {
 
     readonly property bool isDual: backend.softwareType === 22
 
-    // type 3 (legacy): aktuální teplota = průměr ze dvou čidel
-    readonly property double currentTemp: (backend.value1 + backend.value2) / 2.0
+    // type 3 (legacy): aktuální teplota
+    readonly property double currentTemp: backend.value1
     readonly property double diff: Math.abs(currentTemp - backend.targetTemp)
 
     // type 22:
@@ -22,6 +23,29 @@ Page {
     // 1 = target1, 2 = target2 (pouze pro type 22)
     property int activeTarget: 1
     property bool lockToggled: false
+
+    function isBadNumber(v) {
+        // JS NaN check that works in QML
+        return v !== v || v === undefined || v === null
+    }
+
+    function tempText(v) {
+        // show dashes when sensor value is NaN / invalid
+        return isBadNumber(v) ? "- -" : Number(v).toFixed(1)
+    }
+
+    function tempPx(v, basePx) {
+        // If the number gets wider (>= 10.0 or <= -10.0), shrink it a bit so it doesn't overlap arrows.
+        if (isBadNumber(v))
+            return basePx
+
+        var a = Number(v)
+        if (a <= -0.1)
+            return basePx * 0.8
+        if (a >= 10)
+            return basePx * 0.8
+        return basePx
+    }
 
     contentItem: Loader {
         anchors.fill: parent
@@ -53,16 +77,16 @@ Page {
 
                     Text {
                         id: currentTempText
-                        text: Number(setTP.currentTemp).toFixed(1)
-                        color: setTP.diff > 2.5 ? "orange" : "#00ff00"
-                        font.pixelSize: 290 * uiScale
+                        text: setTP.tempText(setTP.currentTemp)
+                        color: setTP.isBadNumber(setTP.currentTemp) ? "#c6c5df" : (setTP.diff > 2.5 ? "orange" : "#00ff00")
+                        font.pixelSize: setTP.tempPx(setTP.currentTemp, 290 * uiScale)
                         font.bold: true
                     }
 
                     Text {
                         text: "°C"
                         color: "#c6c5df"
-                        font.pixelSize: 110 * uiScale
+                        font.pixelSize: 95 * uiScale
                         font.bold: true
                     }
                 }
@@ -196,10 +220,10 @@ Page {
                         onClicked: setTP.activeTarget = 1
                         z: 0
                     }
-
+// ==========
                     Column {
                         anchors.centerIn: parent
-                        spacing: 18 * uiScale
+                        spacing: 40 * uiScale
                         z: 1
 
                         Item {
@@ -213,64 +237,68 @@ Page {
                                 spacing: 8
 
                                 Text {
-                                    text: Number(backend.value1).toFixed(1)
-                                    color: setTP.diff1 > 2.5 ? "orange" : "#00ff00"
-                                    font.pixelSize: 250 * uiScale
+                                    text: setTP.tempText(backend.value1)
+                                    color: setTP.isBadNumber(backend.value1) ? "#c6c5df" : (setTP.diff1 > 2.5 ? "orange" : "#00ff00")
+                                    font.pixelSize: setTP.tempPx(backend.value1, 200 * uiScale)
                                     font.bold: true
                                 }
 
                                 Text {
                                     text: "°C"
                                     color: "#c6c5df"
-                                    font.pixelSize: 95 * uiScale
+                                    font.pixelSize: 80 * uiScale
                                     font.bold: true
                                 }
                             }
                         }
 
-                        // TARGET1 box
-                        Rectangle {
-                            id: target1Box
+                        // TARGET1 box + "edit" under it
+                        Column {
+                            id: target1Col
                             width: 220 * uiScale
-                            height: 80 * uiScale
-                            radius: 18 * uiScale
-                            color: "transparent"
-                            border.width: 2
-                            border.color: (setTP.activeTarget === 1) ? "orange" : "#c6c5df"
+                            spacing: 2 * uiScale
+                            anchors.horizontalCenter: parent.horizontalCenter
+
+                            Rectangle {
+                                id: target1Box
+                                width: parent.width
+                                height: 90 * uiScale
+                                radius: 18 * uiScale
+                                color: "transparent"
+                                border.width: 5
+                                border.color: (setTP.activeTarget === 1) ? "orange" : "#c6c5df"
+
+                                Row {
+                                    anchors.centerIn: parent
+                                    spacing: 4 * uiScale
+
+                                    Text {
+                                        text: Number(backend.targetTemp).toFixed(1)
+                                        color: "#EDEFF2"
+                                        font.pixelSize: 56 * uiScale
+                                        font.bold: true
+                                    }
+
+                                    Text {
+                                        text: "°C"
+                                        color: "#c6c5df"
+                                        font.pixelSize: 34 * uiScale
+                                        font.bold: true
+                                    }
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    onClicked: setTP.activeTarget = 1
+                                }
+                            }
 
                             Text {
                                 text: "edit"
                                 visible: setTP.activeTarget === 1
                                 color: "orange"
                                 font.pixelSize: 20 * uiScale
-                                anchors.right: parent.right
-                                anchors.top: parent.top
-                                anchors.rightMargin: 10 * uiScale
-                                anchors.topMargin: 6 * uiScale
-                            }
-
-                            Row {
-                                anchors.centerIn: parent
-                                spacing: 4 * uiScale
-
-                                Text {
-                                    text: Number(backend.targetTemp).toFixed(1)
-                                    color: "#EDEFF2"
-                                    font.pixelSize: 56 * uiScale
-                                    font.bold: true
-                                }
-
-                                Text {
-                                    text: "°C"
-                                    color: "#c6c5df"
-                                    font.pixelSize: 34 * uiScale
-                                    font.bold: true
-                                }
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                onClicked: setTP.activeTarget = 1
+                                anchors.horizontalCenter: parent.horizontalCenter
                             }
                         }
                     }
@@ -308,7 +336,7 @@ Page {
 
                                 Rectangle {
                                     width: 130 * uiScale
-                                    height: 110 * uiScale
+                                    height: 120 * uiScale
                                     radius: 22 * uiScale
                                     color: upArea22.pressed ? "#5a5a5ac4" : "#00000099"
 
@@ -317,7 +345,7 @@ Page {
                                         sourceComponent: biIcon
                                         onLoaded: {
                                             item.code = "\uF286"
-                                            item.px = 110 * uiScale
+                                            item.px = 120 * uiScale
                                             item.iconColor = "#EDEFF2"
                                         }
                                     }
@@ -334,7 +362,7 @@ Page {
 
                                 Rectangle {
                                     width: 130 * uiScale
-                                    height: 110 * uiScale
+                                    height: 120 * uiScale
                                     radius: 22 * uiScale
                                     color: downArea22.pressed ? "#5a5a5ac4" : "#00000099"
 
@@ -343,7 +371,7 @@ Page {
                                         sourceComponent: biIcon
                                         onLoaded: {
                                             item.code = "\uF282"
-                                            item.px = 110 * uiScale
+                                            item.px = 120 * uiScale
                                             item.iconColor = "#EDEFF2"
                                         }
                                     }
@@ -364,7 +392,7 @@ Page {
                         Rectangle {
                             id: lockButton
                             width: 130 * uiScale
-                            height: 110 * uiScale
+                            height: 120 * uiScale
                             radius: 22 * uiScale
                             color: lockArea.pressed ? "#5a5a5ac4" : "#00000099"
 
@@ -373,7 +401,7 @@ Page {
                                 anchors.centerIn: parent
                                 sourceComponent: biIcon
                                 onLoaded: {
-                                    item.code = setTP.lockToggled ? "\uF600" : "\uF47B"
+                                    item.code = setTP.lockToggled ? "\uF47B" : "\uF600"
                                     item.px = 100 * uiScale
                                     item.iconColor = "#EDEFF2"
                                 }
@@ -384,7 +412,7 @@ Page {
                                 anchors.fill: parent
                                 onClicked: {
                                     setTP.lockToggled = !setTP.lockToggled
-                                    if (lockIcon.item) lockIcon.item.code = setTP.lockToggled ? "\uF600" : "\uF47B"
+                                    if (lockIcon.item) lockIcon.item.code = setTP.lockToggled ? "\uF47B" : "\uF600"
                                 }
                             }
                         }
@@ -415,7 +443,7 @@ Page {
 
                     Column {
                         anchors.centerIn: parent
-                        spacing: 18 * uiScale
+                        spacing: 40 * uiScale
                         z: 1
 
                         Item {
@@ -429,63 +457,67 @@ Page {
                                 spacing: 8
 
                                 Text {
-                                    text: Number(backend.value2).toFixed(1)
-                                    color: setTP.diff2 > 2.5 ? "orange" : "#00ff00"
-                                    font.pixelSize: 200 * uiScale
+                                    text: setTP.tempText(backend.value2)
+                                    color: setTP.isBadNumber(backend.value2) ? "#c6c5df" : (setTP.diff2 > 2.5 ? "orange" : "#00ff00")
+                                    font.pixelSize: setTP.tempPx(backend.value2, 200 * uiScale)
                                     font.bold: true
                                 }
 
                                 Text {
                                     text: "°C"
                                     color: "#c6c5df"
-                                    font.pixelSize: 85 * uiScale
+                                    font.pixelSize: 80 * uiScale
                                     font.bold: true
                                 }
                             }
                         }
 
-                        Rectangle {
-                            id: target2Box
-                            width: 230 * uiScale
-                            height: 90 * uiScale
-                            radius: 18 * uiScale
-                            color: "transparent"
-                            border.width: 4
-                            border.color: (setTP.activeTarget === 2) ? "orange" : "#c6c5df"
+                        Column {
+                            id: target2Col
+                            width: 220 * uiScale
+                            spacing: 2 * uiScale
+                            anchors.horizontalCenter: parent.horizontalCenter
+
+                            Rectangle {
+                                id: target2Box
+                                width: parent.width
+                                height: 90 * uiScale
+                                radius: 18 * uiScale
+                                color: "transparent"
+                                border.width: 5
+                                border.color: (setTP.activeTarget === 2) ? "orange" : "#c6c5df"
+
+                                Row {
+                                    anchors.centerIn: parent
+                                    spacing: 4 * uiScale
+
+                                    Text {
+                                        text: Number(backend.targetTemp2).toFixed(1)
+                                        color: "#EDEFF2"
+                                        font.pixelSize: 56 * uiScale
+                                        font.bold: true
+                                    }
+
+                                    Text {
+                                        text: "°C"
+                                        color: "#c6c5df"
+                                        font.pixelSize: 34 * uiScale
+                                        font.bold: true
+                                    }
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    onClicked: setTP.activeTarget = 2
+                                }
+                            }
 
                             Text {
                                 text: "edit"
                                 visible: setTP.activeTarget === 2
                                 color: "orange"
-                                font.pixelSize: 24 * uiScale
-                                anchors.right: parent.right
-                                anchors.top: parent.top
-                                anchors.rightMargin: 10 * uiScale
-                                anchors.topMargin: 6 * uiScale
-                            }
-
-                            Row {
-                                anchors.centerIn: parent
-                                spacing: 4 * uiScale
-
-                                Text {
-                                    text: Number(backend.targetTemp2).toFixed(1)
-                                    color: "#EDEFF2"
-                                    font.pixelSize: 56 * uiScale
-                                    font.bold: true
-                                }
-
-                                Text {
-                                    text: "°C"
-                                    color: "#c6c5df"
-                                    font.pixelSize: 34 * uiScale
-                                    font.bold: true
-                                }
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                onClicked: setTP.activeTarget = 2
+                                font.pixelSize: 20 * uiScale
+                                anchors.horizontalCenter: parent.horizontalCenter
                             }
                         }
                     }

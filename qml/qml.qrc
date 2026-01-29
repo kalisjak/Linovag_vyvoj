@@ -21,7 +21,7 @@
     <file alias="qr_web.png">../assets/Produkty.png</file>
     <file alias="qr_hist.png">../assets/qr_web_bila2.png</file>
     <file alias="qr_tutor.png">../assets/Video.png</file>
-    <file alias="qr_reklam.png">../assets/qr_web_bila2.png</file>
+    <file alias="qr_reklam.png">../assets/qr_reklMail.png</file>
     <file alias="plocha_tmava.png">../assets/pozadi_velke02.png</file>
     <!-- <file alias="plocha_tmava.png">../assets/tmave.png</file> -->
     <file alias="logo.png">../assets/gastro_uvod.png</file>

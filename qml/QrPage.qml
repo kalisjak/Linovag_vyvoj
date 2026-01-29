@@ -41,11 +41,13 @@ Page {
                     fillMode: Image.PreserveAspectFit
                     sourceSize.width: 340 * uiScale
                     sourceSize.height: 340 * uiScale
+                    // sourceSize.width: Math.min(qrP.width, qrP.height) * 0.6
+                    // sourceSize.height: Math.min(qrP.width, qrP.height) * 0.6
                     cache: true
                 }
 
                 Text {
-                    text: "Otevřít webové stránky"
+                    text: "Produktwebseite öffnen" // (DE) / Otevřít webové stránky produktu (CZ) / Open product website (EN) / Produktwebseite öffnen (DE) / Åbn produktets webside (DK)
                     color: "#EDEFF2"
                     font.pixelSize: 30 * uiScale
                     horizontalAlignment: Text.AlignHCenter
@@ -93,7 +95,7 @@ Page {
                 }
 
                 Text {
-                    text: "Tutorial k udržbě"
+                    text: "Wartungsanleitung öffnen" // (DE) / Otevřít tutoriál k údržbě (CZ) / Open maintenance tutorial (EN) / Wartungsanleitung öffnen (DE) / Åben vedligeholdelsevejledning (DK)
                     color: "#EDEFF2"
                     font.pixelSize: 30 * uiScale
                     horizontalAlignment: Text.AlignHCenter

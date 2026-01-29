@@ -40,10 +40,10 @@ Page {
                         }
                     }
                     Text { 
-                        text: "Temperaturen"
+                        text: "Temperatur" // (DE) / Teplota (CZ) / Temperatur (EN) / Temperatur (DK)
                         color: "#EDEFF2"
                         font.bold: true
-                        font.pixelSize: 16 * uiScale
+                        font.pixelSize: 20 * uiScale
                         horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.WordWrap
                         width: parent.width * 0.9
@@ -74,10 +74,10 @@ Page {
                         }
                     }
                     Text { 
-                        text: "History"
+                        text: "Historie" // (DE) / History (EN) / Historie (CZ) / Historik (DK)
                         color: "#EDEFF2"
                         font.bold: true
-                        font.pixelSize: 16 * uiScale
+                        font.pixelSize: 20 * uiScale
                         horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.WordWrap
                         width: parent.width * 0.9
@@ -108,10 +108,10 @@ Page {
                         }
                     }
                     Text { 
-                        text: "QR"
+                        text: "QR-Code" // (DE) / QR Code (EN) / QR kód (CZ) / QR-kode (DK)
                         color: "#EDEFF2"
                         font.bold: true
-                        font.pixelSize: 16 * uiScale
+                        font.pixelSize: 20 * uiScale
                         horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.WordWrap
                         width: parent.width * 0.9
@@ -141,10 +141,10 @@ Page {
                         }
                     }
                     Text { 
-                        text: "Reklamační žádost"
+                        text: "Reklmationsantrag" // (DE) / Warranty claim (EN) / Reklamační žádost (CZ) / Reklamation (DK)
                         color: "#EDEFF2"
                         font.bold: true
-                        font.pixelSize: 16 * uiScale
+                        font.pixelSize: 20 * uiScale
                         horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.WordWrap
                         width: parent.width * 0.9
@@ -183,7 +183,8 @@ Page {
                 MouseArea {
                     anchors.fill: parent
                     onClicked: {
-                        // TODO: později volat něco jako bar.openWifi()
+
+                        // bar.openWifi()
                         console.log("HomePage WiFi icon clicked")
                     }
                 }

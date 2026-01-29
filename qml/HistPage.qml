@@ -49,13 +49,13 @@ Page {
                 }
 
                 Text {
-                    text: "Otevřít webový přehled historie"
+                    text: "Web-Übersicht der Temperaturhistorie" // (DE) / Webový přehled historie teplot (CZ) / Web overview of temp. history (EN) / Web-Übersicht der Temperaturhistorie (DE) / Weboversigt over temphistorik (DK)
                     color: "#EDEFF2"
                     // font.pixelSize: Math.min(histP.width, histP.height) * 0.05
-                    font.pixelSize: 36 * uiScale
+                    font.pixelSize: 34 * uiScale
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.WordWrap
-                    width: parent.width * 0.9
+                    width: parent.width * 0.95
                 }
             }
         }
@@ -91,7 +91,7 @@ Page {
                 spacing: Math.min(parent.width, parent.height) * 0.01
 
                 Text {
-                    text: "Log teplot"
+                    text: "Temperaturmessung" // (DE) / Měření teploty (CZ) / Temperature Measurement (EN) / Temperaturmessung (DE) / Temperaturmåling (DK)
                     color: "#EDEFF2"
                     font.pixelSize: Math.min(histP.width, histP.height) * 0.08
                     font.bold: true
