@@ -6,22 +6,38 @@ Rectangle {
     id: bar
     property real uiScale: 1.0
 
-    // stavové příznaky pro ikonky vpravo
-    property bool errorActive: backend.errorActive
-    property bool coolingActive: backend.coolingActive
-    property bool defrostActive: backend.defrostActive
-    property bool compressorOn: backend.compressorOn
-    // property bool errorActive: true
-    // property bool coolingActive: true
-    // property bool defrostActive: false
-    // property bool compressorOn: true
+    readonly property int swType: backend.softwareType
+    readonly property bool isDual: swType === 22
+
+    // indikace
+    readonly property bool forcedActive: backend.forcedSensors
+    readonly property bool condensHot: backend.value5 >= 45.0   // CRITICAL_TEMPERATURE_KONDENZ (config.hpp)
+
+    // stavy z backendu (napojené z cooling workerů)
+    readonly property bool errorActive: backend.errorActive
+
+    readonly property bool cooling1Active: backend.coolingActive
+    readonly property bool compressor1On: backend.compressorOn
+
+    readonly property bool cooling2Active: backend.cooling2Active
+    readonly property bool compressor2On: backend.compressor2On
 
     implicitHeight: 70 * uiScale
     height: implicitHeight
-
     color: "transparent"
     anchors.left: parent.left
     anchors.right: parent.right
+
+    // reálný čas uprostřed
+    property string timeText: ""
+
+    Timer {
+        interval: 1000
+        running: true
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: bar.timeText = Qt.formatTime(new Date(), "HH.mm")
+    }
 
     // dělící linka dole
     Rectangle {
@@ -29,46 +45,81 @@ Rectangle {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         height: 1
-        color: "#c7c7c7bd"      // tenká jemná linka
+        color: "#c7c7c7bd"
     }
 
     signal openWifi()
     signal openSettings()
     signal openLogin()
 
-    RowLayout { 
+    RowLayout {
         anchors.fill: parent
         anchors.leftMargin: 15
         anchors.rightMargin: 8
-        anchors.verticalCenter: parent.verticalCenter
         spacing: 8
 
-        // Vlevo výrobní číslo (z backendu)
-        Label {
-            id: sn
-            text: (typeof backend !== "undefined" && backend.serialNumber && backend.serialNumber.length > 0)
-                  ? backend.serialNumber : "SN-000000"
-            color: "#E0E0E0"
-            font.pixelSize: 26 * uiScale
+        // ===== LEFT TEXTS =====
+        RowLayout {
+            id: leftInfo
             Layout.alignment: Qt.AlignVCenter | Qt.AlignLeft
             Layout.fillWidth: true
+            spacing: 12 * uiScale
+
+            Label {
+                id: typeLabel
+                text: bar.isDual ? "Type 2+2" : "Type - 3"
+                color: "#E0E0E0"
+                font.pixelSize: 26 * uiScale
+                Layout.alignment: Qt.AlignVCenter
+            }
+
+            Label {
+                visible: bar.forcedActive
+                text: "FORCED"
+                color: "#FFD54F"
+                font.pixelSize: 22 * uiScale
+                font.bold: true
+                Layout.alignment: Qt.AlignVCenter
+            }
+
+            Label {
+                visible: bar.condensHot
+                text: "CONDENS"
+                color: "#FF8A65"
+                font.pixelSize: 22 * uiScale
+                font.bold: true
+                Layout.alignment: Qt.AlignVCenter
+            }
+
+            Item { Layout.fillWidth: true } // spacer
         }
 
-        // Vpravo Wi-Fi / Stavové ikony / Nastavení / Přihlášení
-        Row {
-            spacing: 30 * uiScale
-            // Layout.fillWidth: true
+        // ===== CENTER TIME =====
+        Label {
+            id: clockLabel
+            text: bar.timeText
+            color: "#EDEFF2"
+            font.pixelSize: 26 * uiScale
+            font.bold: true
+            horizontalAlignment: Text.AlignHCenter
+            Layout.alignment: Qt.AlignVCenter | Qt.AlignHCenter
+            Layout.preferredWidth: 130 * uiScale
+        }
 
-            // 1) Varování (bliká žlutě při chybě)
+        // ===== RIGHT ICONS =====
+        Row {
+            id: rightIcons
+            spacing: 22 * uiScale
+            Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+
+            // 0) Varování (bliká žlutě při chybě)
             ToolButton {
                 id: warnBtn
                 visible: bar.errorActive
                 contentItem: biIcon.createObject(this, {
                     "code": "\uF33A",
                     "px": 44 * uiScale,
-                    "iconColor": Qt.binding(function() {
-                        return "#FFD54F";    // žlutá
-                    })
+                    "iconColor": "#FFD54F"
                 })
                 background: Rectangle {
                     radius: 7 * uiScale
@@ -85,14 +136,14 @@ Rectangle {
                 }
             }
 
-            // 2) Chlazení aktivní
+            // --- TYPE 3: cooling + compressor
             ToolButton {
-                id: coolingBtn
-                visible: bar.coolingActive
+                id: cooling1Btn
+                visible: !bar.isDual && bar.cooling1Active
                 contentItem: biIcon.createObject(this, {
                     "code": "\uF56E",
                     "px": 44 * uiScale,
-                    "iconColor": "#4FC3F7"   // modrá
+                    "iconColor": "#4FC3F7"
                 })
                 background: Rectangle {
                     radius: 7 * uiScale
@@ -102,14 +153,13 @@ Rectangle {
                 }
             }
 
-            // 3) Odmrazování aktivní
             ToolButton {
-                id: defrostBtn
-                visible: bar.defrostActive
+                id: compressor1Btn
+                visible: !bar.isDual
                 contentItem: biIcon.createObject(this, {
-                    "code": "\uF30B",
+                    "code": "\uF670",
                     "px": 44 * uiScale,
-                    "iconColor": "#EF5350"   // červená
+                    "iconColor": Qt.binding(function() { return bar.compressor1On ? "#3abb41" : "#EF5350"; })
                 })
                 background: Rectangle {
                     radius: 7 * uiScale
@@ -119,15 +169,14 @@ Rectangle {
                 }
             }
 
-            // 4) Kompresor zap/vyp (zelený / červený)
+            // --- TYPE 22: cooling1 + compressor1 | cooling2 + compressor2
             ToolButton {
-                id: compressorBtn
+                id: cooling1Btn22
+                visible: bar.isDual && bar.cooling1Active
                 contentItem: biIcon.createObject(this, {
-                    "code": "\uF670",        // libovolná ikona pro kompresor/stroj
+                    "code": "\uF56E",
                     "px": 44 * uiScale,
-                    "iconColor": Qt.binding(function() {
-                        return bar.compressorOn ? "#3abb41" : "#EF5350";
-                    })
+                    "iconColor": "#4FC3F7"
                 })
                 background: Rectangle {
                     radius: 7 * uiScale
@@ -137,16 +186,71 @@ Rectangle {
                 }
             }
 
-            // 5) Wi-Fi (lehce stmavne při stlačení)
+            ToolButton {
+                id: compressor1Btn22
+                visible: bar.isDual
+                contentItem: biIcon.createObject(this, {
+                    "code": "\uF670",
+                    "px": 44 * uiScale,
+                    "iconColor": Qt.binding(function() { return bar.compressor1On ? "#3abb41" : "#EF5350"; })
+                })
+                background: Rectangle {
+                    radius: 7 * uiScale
+                    color: "#00000033"
+                    implicitWidth: 52 * uiScale
+                    implicitHeight: 52 * uiScale
+                }
+            }
+
+            Rectangle {
+                visible: bar.isDual
+                width: 2
+                height: 44 * uiScale
+                radius: 1
+                color: "#c7c7c7bd"
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            ToolButton {
+                id: cooling2Btn22
+                visible: bar.isDual && bar.cooling2Active
+                contentItem: biIcon.createObject(this, {
+                    "code": "\uF56E",
+                    "px": 44 * uiScale,
+                    "iconColor": "#4FC3F7"
+                })
+                background: Rectangle {
+                    radius: 7 * uiScale
+                    color: "#00000033"
+                    implicitWidth: 52 * uiScale
+                    implicitHeight: 52 * uiScale
+                }
+            }
+
+            ToolButton {
+                id: compressor2Btn22
+                visible: bar.isDual
+                contentItem: biIcon.createObject(this, {
+                    "code": "\uF670",
+                    "px": 44 * uiScale,
+                    "iconColor": Qt.binding(function() { return bar.compressor2On ? "#3abb41" : "#EF5350"; })
+                })
+                background: Rectangle {
+                    radius: 7 * uiScale
+                    color: "#00000033"
+                    implicitWidth: 52 * uiScale
+                    implicitHeight: 52 * uiScale
+                }
+            }
+
+            // Wi‑Fi / Settings / Person (beze změny)
             ToolButton {
                 id: wifiBtn
                 onClicked: bar.openWifi()
                 contentItem: biIcon.createObject(this, {
                     "code": "\uF61C",
                     "px": 44 * uiScale,
-                    "iconColor": Qt.binding(function() {
-                        return wifiBtn.down ? "#C0C3C8" : "#EDEFF2";
-                    })
+                    "iconColor": Qt.binding(function() { return wifiBtn.down ? "#C0C3C8" : "#EDEFF2"; })
                 })
                 background: Rectangle {
                     radius: 7 * uiScale
@@ -156,14 +260,11 @@ Rectangle {
                 }
             }
 
-            // 6) Nastavení – při stlačení jiná ikonka (\uF3E5 → \uF3E2)
             ToolButton {
                 id: settingsBtn
                 onClicked: bar.openSettings()
                 contentItem: biIcon.createObject(this, {
-                    "code": Qt.binding(function() {
-                        return settingsBtn.down ? "\uF3E2" : "\uF3E5";
-                    }),
+                    "code": Qt.binding(function() { return settingsBtn.down ? "\uF3E2" : "\uF3E5"; }),
                     "px": 44 * uiScale,
                     "iconColor": "#EDEFF2"
                 })
@@ -175,14 +276,11 @@ Rectangle {
                 }
             }
 
-            // 7) Přihlášení / uživatel – při stlačení jiná ikonka (\uF4E1 → \uF4DA)
             ToolButton {
                 id: loginBtn
                 onClicked: bar.openLogin()
                 contentItem: biIcon.createObject(this, {
-                    "code": Qt.binding(function() {
-                        return loginBtn.down ? "\uF4DA" : "\uF4E1";
-                    }),
+                    "code": Qt.binding(function() { return loginBtn.down ? "\uF4DA" : "\uF4E1"; }),
                     "px": 44 * uiScale,
                     "iconColor": "#EDEFF2"
                 })
@@ -194,6 +292,5 @@ Rectangle {
                 }
             }
         }
-
     }
 }
