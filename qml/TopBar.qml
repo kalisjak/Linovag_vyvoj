@@ -17,10 +17,14 @@ Rectangle {
     readonly property bool errorActive: backend.errorActive
 
     readonly property bool cooling1Active: backend.coolingActive
+    readonly property bool defrost1Active: backend.defrostActive
     readonly property bool compressor1On: backend.compressorOn
+    readonly property bool drip1Active: backend.dripHoldActive
 
     readonly property bool cooling2Active: backend.cooling2Active
+    readonly property bool defrost2Active: backend.defrost2Active
     readonly property bool compressor2On: backend.compressor2On
+    readonly property bool drip2Active: backend.dripHold2Active
 
     implicitHeight: 70 * uiScale
     height: implicitHeight
@@ -152,6 +156,45 @@ Rectangle {
                     implicitHeight: 52 * uiScale
                 }
             }
+            
+            ToolButton {
+                id: defrost1Btn
+                visible: !bar.isDual && bar.defrost1Active
+                contentItem: biIcon.createObject(this, {
+                    "code": "\uF30C",
+                    "px": 44 * uiScale,
+                    "iconColor": "#EF5350"
+                })
+                background: Rectangle {
+                    radius: 7 * uiScale
+                    color: "#00000033"
+                    implicitWidth: 52 * uiScale
+                    implicitHeight: 52 * uiScale
+                }
+                SequentialAnimation on opacity {
+                    running: bar.defrost1Active
+                    loops: Animation.Infinite
+                    NumberAnimation { from: 1.0; to: 1.0; duration: 500 }
+                    NumberAnimation { from: 1.0; to: 0.1; duration: 500 }
+                    NumberAnimation { from: 0.1; to: 1.0; duration: 500 }
+                }
+            }
+
+            ToolButton {
+                id: drip1Btn
+                visible: !bar.isDual && bar.drip1Active && !bar.defrost1Active
+                contentItem: biIcon.createObject(this, {
+                    "code": "\uF30B",
+                    "px": 44 * uiScale,
+                    "iconColor": "#EF5350"
+                })
+                background: Rectangle {
+                    radius: 7 * uiScale
+                    color: "#00000033"
+                    implicitWidth: 52 * uiScale
+                    implicitHeight: 52 * uiScale
+                }
+            }
 
             ToolButton {
                 id: compressor1Btn
@@ -177,6 +220,45 @@ Rectangle {
                     "code": "\uF56E",
                     "px": 44 * uiScale,
                     "iconColor": "#4FC3F7"
+                })
+                background: Rectangle {
+                    radius: 7 * uiScale
+                    color: "#00000033"
+                    implicitWidth: 52 * uiScale
+                    implicitHeight: 52 * uiScale
+                }
+            }
+
+            ToolButton {
+                id: defrost1Btn22
+                visible: bar.isDual && bar.defrost1Active
+                contentItem: biIcon.createObject(this, {
+                    "code": "\uF30C",
+                    "px": 44 * uiScale,
+                    "iconColor": "#EF5350"
+                })
+                background: Rectangle {
+                    radius: 7 * uiScale
+                    color: "#00000033"
+                    implicitWidth: 52 * uiScale
+                    implicitHeight: 52 * uiScale
+                }
+                SequentialAnimation on opacity {
+                    running: bar.defrost1Active
+                    loops: Animation.Infinite
+                    NumberAnimation { from: 1.0; to: 1.0; duration: 500 }
+                    NumberAnimation { from: 1.0; to: 0.1; duration: 500 }
+                    NumberAnimation { from: 0.1; to: 1.0; duration: 500 }
+                }
+            }
+
+            ToolButton {
+                id: drip1Btn22
+                visible: bar.isDual && bar.drip1Active && !bar.defrost1Active
+                contentItem: biIcon.createObject(this, {
+                    "code": "\uF30B",
+                    "px": 44 * uiScale,
+                    "iconColor": "#EF5350"
                 })
                 background: Rectangle {
                     radius: 7 * uiScale
@@ -218,6 +300,45 @@ Rectangle {
                     "code": "\uF56E",
                     "px": 44 * uiScale,
                     "iconColor": "#4FC3F7"
+                })
+                background: Rectangle {
+                    radius: 7 * uiScale
+                    color: "#00000033"
+                    implicitWidth: 52 * uiScale
+                    implicitHeight: 52 * uiScale
+                }
+            }
+
+            ToolButton {
+                id: defrost2Btn22
+                visible: bar.isDual && bar.defrost2Active
+                contentItem: biIcon.createObject(this, {
+                    "code": "\uF30C",
+                    "px": 44 * uiScale,
+                    "iconColor": "#EF5350"
+                })
+                background: Rectangle {
+                    radius: 7 * uiScale
+                    color: "#00000033"
+                    implicitWidth: 52 * uiScale
+                    implicitHeight: 52 * uiScale
+                }
+                SequentialAnimation on opacity {
+                    running: bar.defrost2Active
+                    loops: Animation.Infinite
+                    NumberAnimation { from: 1.0; to: 1.0; duration: 500 }
+                    NumberAnimation { from: 1.0; to: 0.1; duration: 500 }
+                    NumberAnimation { from: 0.1; to: 1.0; duration: 500 }
+                }
+            }
+
+            ToolButton {
+                id: drip2Btn22
+                visible: bar.isDual && bar.drip2Active && !bar.defrost2Active
+                contentItem: biIcon.createObject(this, {
+                    "code": "\uF30B",
+                    "px": 44 * uiScale,
+                    "iconColor": "#EF5350"
                 })
                 background: Rectangle {
                     radius: 7 * uiScale

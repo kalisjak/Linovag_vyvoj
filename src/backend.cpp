@@ -31,9 +31,7 @@ void Backend::initLogManager() {
 
     connect(&logManager_, &LogManager::tempsHistoryChanged, this, &Backend::historyLogChanged);
 
-    logManager_.setTempsSnapshotProvider([this]() {
-        return buildTempsSnapshotLine();
-    });
+    logManager_.setTempsSnapshotProvider([this]() { return buildTempsSnapshotLine(); });
 
     logManager_.startTempsTimer(AppConfig::TEMPS_LOG_INTERVAL_MS);
     // hned po startu jeden řádek, aby bylo jasné, že log běží
@@ -153,7 +151,6 @@ void Backend::setForcedTemp5(double v) {
 // =========== Slots for worker threads ===========
 
 void Backend::updateTempValue(double v1, double v2, double v3, double v4, double v5) {
-    qDebug() << "[Backend] Updating temperature values from SensorWorker";
 
     if (!qFuzzyCompare(value1_, v1)) {
         value1_ = v1;
@@ -195,7 +192,7 @@ void Backend::updateMqttConnected(bool ok) {
     emit mqttConnectedChanged();
 }
 
-void Backend::updateCoolingState(bool coolingActive, bool defrostActive, bool compressorOn) {
+void Backend::updateCoolingState(bool coolingActive, bool defrostActive, bool compressorOn, bool dripHoldActive) {
     if (coolingActive_ != coolingActive) {
         coolingActive_ = coolingActive;
         emit coolingActiveChanged();
@@ -208,9 +205,14 @@ void Backend::updateCoolingState(bool coolingActive, bool defrostActive, bool co
         compressorOn_ = compressorOn;
         emit compressorOnChanged();
     }
+
+    if (dripHoldActive_ != dripHoldActive) {
+        dripHoldActive_ = dripHoldActive;
+        emit dripHoldActiveChanged();
+    }
 }
 
-void Backend::updateCoolingState2(bool coolingActive, bool defrostActive, bool compressorOn) {
+void Backend::updateCoolingState2(bool coolingActive, bool defrostActive, bool compressorOn, bool dripHoldActive) {
     if (cooling2Active_ != coolingActive) {
         cooling2Active_ = coolingActive;
         emit cooling2ActiveChanged();
@@ -223,14 +225,19 @@ void Backend::updateCoolingState2(bool coolingActive, bool defrostActive, bool c
         compressor2On_ = compressorOn;
         emit compressor2OnChanged();
     }
+
+    if (dripHold2Active_ != dripHoldActive) {
+        dripHold2Active_ = dripHoldActive;
+        emit dripHold2ActiveChanged();
+    }
 }
 
 //
 // ============= Sender MQTT =============
 
 void Backend::sendMessage(const QString&) {
-    const QByteArray payload = TelemetryBuilder::buildPayload(value1_, value2_, value3_, value4_, value5_, value6_,
-                                                              humidity_, targetTemp_, targetTemp2_, swType_);
+    const QByteArray payload =
+        TelemetryBuilder::buildPayload(value1_, value2_, value3_, value4_, value5_, value6_, humidity_, targetTemp_, targetTemp2_, swType_);
     emit publishMqtt(payload);
 }
 
@@ -251,7 +258,7 @@ QString Backend::buildTempsSnapshotLine() const {
     }
 
     return QStringLiteral("%1 - target: %2, vana-t1: %3, vypar: %4, kondenz: %5, nasavani: %6, hum: %7")
-        .arg(now.toString(QStringLiteral("HH:mm dd.MM.yy")), QString::number(targetTemp_, 'f', 1),
-             QString::number(value1_, 'f', 1), QString::number(value3_, 'f', 1), QString::number(value5_, 'f', 1),
-             QString::number(value6_, 'f', 1), QString::number(humidity_, 'f', 1));
+        .arg(now.toString(QStringLiteral("HH:mm dd.MM.yy")), QString::number(targetTemp_, 'f', 1), QString::number(value1_, 'f', 1),
+             QString::number(value3_, 'f', 1), QString::number(value5_, 'f', 1), QString::number(value6_, 'f', 1),
+             QString::number(humidity_, 'f', 1));
 }

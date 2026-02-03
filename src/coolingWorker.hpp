@@ -29,7 +29,7 @@ class CoolingWorker : public QObject {
     void onTargetTempChanged(double target);
 
    signals:
-    void coolingStateChanged(bool coolingActive, bool defrostActive, bool compressorOn);
+    void coolingStateChanged(bool coolingActive, bool defrostActive, bool compressorOn, bool dripActive);
     void heartbeat(const QString& name);
 
    private:
@@ -68,4 +68,5 @@ class CoolingWorker : public QObject {
     bool lastCoolingActive_ = false;
     bool lastDefrostActive_ = false;
     bool lastCompressorOn_ = false;
+    bool lastDripHoldAc_ = false;
 };

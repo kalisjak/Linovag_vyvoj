@@ -135,10 +135,11 @@ void CoolingWorker::tick() {
     if (dripHoldActive_) {
         setCompressor(false);
         setFanDuty(AppConfig::COOLING_FAN_DUTY_DRIP);
-        coolingActive_ = true;
-
+        
         if (dripTimer_.elapsed() >= AppConfig::COOLING_POST_DEFROST_HOLD_MS) {
             dripHoldActive_ = false;
+            coolingActive_ = true;
+            qDebug() << "[CoolingWorker]" << "Drip hold ended.";
         }
         publishStateIfChanged();
         return;
@@ -198,12 +199,14 @@ void CoolingWorker::publishStateIfChanged(bool force) {
     const bool c = coolingActive_;
     const bool d = defrostMode_;
     const bool p = compressorOn_;
+    const bool dh = dripHoldActive_;
 
-    if (!force && c == lastCoolingActive_ && d == lastDefrostActive_ && p == lastCompressorOn_) return;
+    if (!force && c == lastCoolingActive_ && d == lastDefrostActive_ && p == lastCompressorOn_ && dh == lastDripHoldAc_) return;
 
     lastCoolingActive_ = c;
     lastDefrostActive_ = d;
     lastCompressorOn_ = p;
+    lastDripHoldAc_ = dh;
 
-    emit coolingStateChanged(c, d, p);
+    emit coolingStateChanged(c, d, p, dh);
 }

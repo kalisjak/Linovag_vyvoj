@@ -50,29 +50,27 @@ void SensorWorker::stop() {
 void SensorWorker::setSensor1Id(const QString& id) {
     RuntimeConfig::setSensor1Id(id);
     s1_ = RuntimeConfig::sensor1Id();
-    qInfo() << "[SensorWorker] Sensor1 ID changed to" << id;
+    // qInfo() << "[SensorWorker] Sensor1 ID changed to" << id;
 }
 
 void SensorWorker::setSensor2Id(const QString& id) {
     RuntimeConfig::setSensor2Id(id);
     s2_ = RuntimeConfig::sensor2Id();
-    qInfo() << "[SensorWorker] Sensor2 ID changed to" << id;
+    // qInfo() << "[SensorWorker] Sensor2 ID changed to" << id;
 }
 
 void SensorWorker::setSensor3Id(const QString& id) {
     RuntimeConfig::setSensor3Id(id);
     s3_ = RuntimeConfig::sensor3Id();
-    qInfo() << "[SensorWorker] Sensor3 ID changed to" << id;
+    // qInfo() << "[SensorWorker] Sensor3 ID changed to" << id;
 }
 void SensorWorker::setSensor4Id(const QString& id) {
     RuntimeConfig::setSensor4Id(id);
     s4_ = RuntimeConfig::sensor4Id();
-    qInfo() << "[SensorWorker] Sensor4 ID changed to" << id;
 }
 void SensorWorker::setSensor5Id(const QString& id) {
     RuntimeConfig::setSensor5Id(id);
     s5_ = RuntimeConfig::sensor5Id();
-    qInfo() << "[SensorWorker] Sensor5 ID changed to" << id;
 }
 
 QString SensorWorker::sensor1Id() const { return QString::fromStdString(s1_); }
@@ -90,7 +88,7 @@ QString SensorWorker::sensor6Id() const { return QString::fromStdString(s6_); }
 
 // ========== čtení DS18B20 ==========
 double SensorWorker::readDS18B20(const std::string& deviceId) {
-    qDebug() << "[SensorWorker] Reading DS18B20 sensor" << QString::fromStdString(deviceId);
+    // qDebug() << "[SensorWorker] Reading DS18B20 sensor" << QString::fromStdString(deviceId);
 
     if (deviceId.empty()) return nanVal();
 
@@ -219,7 +217,7 @@ bool SensorWorker::readDHT22(double& temperature, double& humidity) {
 void SensorWorker::pollSensors() {
     emit heartbeat(QStringLiteral("sensors"));
 
-    qDebug() << "[SensorWorker] Polling sensors...";
+    // qDebug() << "[SensorWorker] Polling sensors...";
 
     double v1 = nanVal(), v2 = nanVal(), v3 = nanVal(), v4 = nanVal(), v5 = nanVal();
     double tempIntake = nanVal(), humIntake = nanVal();
