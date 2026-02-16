@@ -14,6 +14,7 @@
     <file>SettingsPage.qml</file>
     <file>LoginPage.qml</file>
     <file>TestPage.qml</file>
+    <file>SensorConfigPage.qml</file>
     <file>KeyboardPanel.qml</file>
     <file>fonts/bootstrap-icons.ttf</file>
 

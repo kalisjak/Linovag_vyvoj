@@ -103,18 +103,83 @@ void Backend::setBath2Enabled(bool en) {
     emit requestBath2Enabled(en);
 }
 
+// =========== Sensor config setters ===========
+void Backend::setSensor1Id(const QString& id) {
+    RuntimeConfig::setSensor1Id(id);
+    emit requestSetSensor1Id(id);
+    emit sensorConfigChanged();
+}
+void Backend::setSensor2Id(const QString& id) {
+    RuntimeConfig::setSensor2Id(id);
+    emit requestSetSensor2Id(id);
+    emit sensorConfigChanged();
+}
+void Backend::setSensor3Id(const QString& id) {
+    RuntimeConfig::setSensor3Id(id);
+    emit requestSetSensor3Id(id);
+    emit sensorConfigChanged();
+}
+void Backend::setSensor4Id(const QString& id) {
+    RuntimeConfig::setSensor4Id(id);
+    emit requestSetSensor4Id(id);
+    emit sensorConfigChanged();
+}
+void Backend::setSensor5Id(const QString& id) {
+    RuntimeConfig::setSensor5Id(id);
+    emit requestSetSensor5Id(id);
+    emit sensorConfigChanged();
+}
+void Backend::setSensor6Id(const QString& id) {
+    RuntimeConfig::setSensor6Id(id);
+    emit requestSetSensor6Id(id);
+    emit sensorConfigChanged();
+}
+
+// =========== Sensor offsets setters ===========
+void Backend::setSensor1Offset(double off) {
+    RuntimeConfig::setSensor1Offset(off);
+    emit requestSetSensor1Offset(off);
+    emit sensorConfigChanged();
+}
+void Backend::setSensor2Offset(double off) {
+    RuntimeConfig::setSensor2Offset(off);
+    emit requestSetSensor2Offset(off);
+    emit sensorConfigChanged();
+}
+void Backend::setSensor3Offset(double off) {
+    RuntimeConfig::setSensor3Offset(off);
+    emit requestSetSensor3Offset(off);
+    emit sensorConfigChanged();
+}
+void Backend::setSensor4Offset(double off) {
+    RuntimeConfig::setSensor4Offset(off);
+    emit requestSetSensor4Offset(off);
+    emit sensorConfigChanged();
+}
+void Backend::setSensor5Offset(double off) {
+    RuntimeConfig::setSensor5Offset(off);
+    emit requestSetSensor5Offset(off);
+    emit sensorConfigChanged();
+}
+void Backend::setSensor6Offset(double off) {
+    RuntimeConfig::setSensor6Offset(off);
+    emit requestSetSensor6Offset(off);
+    emit sensorConfigChanged();
+}
+
+
 //
 // =========== Forced setters ===========
 
 void Backend::setForcedSensors(bool en) {
     if (forcedSensors_ == en) return;
     forcedSensors_ = en;
-
+    
     if (forcedSensors_) {
         if (!std::isfinite(forcedT1_)) forcedT1_ = targetTemp_;
         if (!std::isfinite(forcedT3_)) forcedT3_ = -5.0;
         if (!std::isfinite(forcedT5_)) forcedT5_ = 20.0;
-
+        
         if (swType_ == 22) {
             if (!std::isfinite(forcedT2_)) forcedT2_ = targetTemp2_;
             if (!std::isfinite(forcedT4_)) forcedT4_ = -5.0;
@@ -165,7 +230,6 @@ void Backend::setForcedTemp5(double v) {
 // =========== Slots for worker threads ===========
 
 void Backend::updateTempValue(double v1, double v2, double v3, double v4, double v5) {
-
     if (!qFuzzyCompare(value1_, v1)) {
         value1_ = v1;
         emit value1Changed();
@@ -199,9 +263,17 @@ void Backend::updateIntakeValue(double v6, double hum) {
     }
 }
 
+void Backend::refreshVisibleOneWireIds() { emit requestRefreshVisibleOneWireIds(); }
+
+void Backend::updateVisibleOneWireIds(const QStringList& ids) {
+    if (ids == visibleOneWireIds_) return;
+    visibleOneWireIds_ = ids;
+    emit visibleOneWireIdsChanged();
+}
+
 void Backend::updateMqttConnected(bool ok) {
     if (mqttConnected_ == ok) return;
-
+    
     mqttConnected_ = ok;
     emit mqttConnectedChanged();
 }

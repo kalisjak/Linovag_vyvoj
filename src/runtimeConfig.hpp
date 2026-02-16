@@ -36,9 +36,30 @@ void setSensor5Id(const QString& id);
 
 // DHT22 sensor ID (může být DS18B20 pro simulaci)
 std::string sensor6Id();
+void setSensor6Id(const QString& id);
 
 static std::string getId(const char* key, const char* def);
 static void setId(const char* key, const QString& id);
+
+// Sensor offsets (°C)
+// sensor1..6 map to logical sensors based on software type (3 or 22).
+double sensor1Offset();
+void setSensor1Offset(double off);
+
+double sensor2Offset();
+void setSensor2Offset(double off);
+
+double sensor3Offset();
+void setSensor3Offset(double off);
+
+double sensor4Offset();
+void setSensor4Offset(double off);
+
+double sensor5Offset();
+void setSensor5Offset(double off);
+
+double sensor6Offset();
+void setSensor6Offset(double off);
 
 QString reclaimOrderNumber();
 void setReclaimOrderNumber(const QString& number);

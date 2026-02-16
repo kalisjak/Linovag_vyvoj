@@ -60,6 +60,29 @@ int main(int argc, char* argv[]) {
     QObject::connect(&backend, &Backend::requestForcedEnabled, sensorWorker, &SensorWorker::setForcedEnabled, Qt::QueuedConnection);
     QObject::connect(&backend, &Backend::requestForcedTemps, sensorWorker, &SensorWorker::setForcedTemps, Qt::QueuedConnection);
 
+    // sensor -> backend (visible ids)
+    QObject::connect(sensorWorker, &SensorWorker::visibleOneWireIds, &backend, &Backend::updateVisibleOneWireIds, Qt::QueuedConnection);
+
+    // backend -> sensor (runtime ID mapping)
+    QObject::connect(&backend, &Backend::requestSetSensor1Id, sensorWorker, &SensorWorker::setSensor1Id, Qt::QueuedConnection);
+    QObject::connect(&backend, &Backend::requestSetSensor2Id, sensorWorker, &SensorWorker::setSensor2Id, Qt::QueuedConnection);
+    QObject::connect(&backend, &Backend::requestSetSensor3Id, sensorWorker, &SensorWorker::setSensor3Id, Qt::QueuedConnection);
+    QObject::connect(&backend, &Backend::requestSetSensor4Id, sensorWorker, &SensorWorker::setSensor4Id, Qt::QueuedConnection);
+    QObject::connect(&backend, &Backend::requestSetSensor5Id, sensorWorker, &SensorWorker::setSensor5Id, Qt::QueuedConnection);
+    QObject::connect(&backend, &Backend::requestSetSensor6Id, sensorWorker, &SensorWorker::setSensor6Id, Qt::QueuedConnection);
+
+    // backend -> sensor (offsets)
+    QObject::connect(&backend, &Backend::requestSetSensor1Offset, sensorWorker, &SensorWorker::setSensor1Offset, Qt::QueuedConnection);
+    QObject::connect(&backend, &Backend::requestSetSensor2Offset, sensorWorker, &SensorWorker::setSensor2Offset, Qt::QueuedConnection);
+    QObject::connect(&backend, &Backend::requestSetSensor3Offset, sensorWorker, &SensorWorker::setSensor3Offset, Qt::QueuedConnection);
+    QObject::connect(&backend, &Backend::requestSetSensor4Offset, sensorWorker, &SensorWorker::setSensor4Offset, Qt::QueuedConnection);
+    QObject::connect(&backend, &Backend::requestSetSensor5Offset, sensorWorker, &SensorWorker::setSensor5Offset, Qt::QueuedConnection);
+    QObject::connect(&backend, &Backend::requestSetSensor6Offset, sensorWorker, &SensorWorker::setSensor6Offset, Qt::QueuedConnection);
+
+    // manual refresh
+    QObject::connect(&backend, &Backend::requestRefreshVisibleOneWireIds, sensorWorker, &SensorWorker::refreshVisibleOneWireIds,
+                     Qt::QueuedConnection);
+
     // ==================== Cooling workers + threads ====================
     QThread* coolingThread1 = nullptr;
     QThread* coolingThread2 = nullptr;
@@ -70,11 +93,7 @@ int main(int argc, char* argv[]) {
 
     if (swTypeNow == 3) {
         coolingThread1 = new QThread(&app);
-        coolingW1 = new CoolingWorker(AppConfig::COMPRESSOR1_PIN,
-                                      AppConfig::FAN_PWM1_PIN,
-                                      1,
-                                      3,
-                                      QStringLiteral("cooling1"));
+        coolingW1 = new CoolingWorker(AppConfig::COMPRESSOR1_PIN, AppConfig::FAN_PWM1_PIN, 1, 3, QStringLiteral("cooling1"));
         coolingW1->moveToThread(coolingThread1);
         QObject::connect(coolingThread1, &QThread::started, coolingW1, &CoolingWorker::start);
 
@@ -95,11 +114,7 @@ int main(int argc, char* argv[]) {
     } else if (swTypeNow == 22) {
         // Cooling 1
         coolingThread1 = new QThread(&app);
-        coolingW1 = new CoolingWorker(AppConfig::COMPRESSOR1_PIN,
-                                      AppConfig::FAN_PWM1_PIN,
-                                      1,
-                                      3,
-                                      QStringLiteral("cooling1"));
+        coolingW1 = new CoolingWorker(AppConfig::COMPRESSOR1_PIN, AppConfig::FAN_PWM1_PIN, 1, 3, QStringLiteral("cooling1"));
         coolingW1->moveToThread(coolingThread1);
         QObject::connect(coolingThread1, &QThread::started, coolingW1, &CoolingWorker::start);
         QObject::connect(sensorWorker, &SensorWorker::sensorDS18, coolingW1, &CoolingWorker::onTempSensors, Qt::QueuedConnection);
@@ -113,11 +128,7 @@ int main(int argc, char* argv[]) {
 
         // Cooling 2 (independent thread)
         coolingThread2 = new QThread(&app);
-        coolingW2 = new CoolingWorker(AppConfig::COMPRESSOR2_PIN,
-                                      AppConfig::FAN_PWM2_PIN,
-                                      2,
-                                      4,
-                                      QStringLiteral("cooling2"));
+        coolingW2 = new CoolingWorker(AppConfig::COMPRESSOR2_PIN, AppConfig::FAN_PWM2_PIN, 2, 4, QStringLiteral("cooling2"));
         coolingW2->moveToThread(coolingThread2);
         QObject::connect(coolingThread2, &QThread::started, coolingW2, &CoolingWorker::start);
         QObject::connect(sensorWorker, &SensorWorker::sensorDS18, coolingW2, &CoolingWorker::onTempSensors, Qt::QueuedConnection);

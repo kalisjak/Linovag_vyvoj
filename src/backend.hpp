@@ -69,6 +69,25 @@ class Backend : public QObject {
     Q_PROPERTY(double forcedTemp4 READ forcedTemp4 WRITE setForcedTemp4 NOTIFY forcedTempsChanged)
     Q_PROPERTY(double forcedTemp5 READ forcedTemp5 WRITE setForcedTemp5 NOTIFY forcedTempsChanged)
 
+    // Visible 1-wire IDs (scanned)
+    Q_PROPERTY(QStringList visibleOneWireIds READ visibleOneWireIds NOTIFY visibleOneWireIdsChanged)
+
+    // Sensor IDs (runtime config)
+    Q_PROPERTY(QString sensor1Id READ sensor1Id WRITE setSensor1Id NOTIFY sensorConfigChanged)
+    Q_PROPERTY(QString sensor2Id READ sensor2Id WRITE setSensor2Id NOTIFY sensorConfigChanged)
+    Q_PROPERTY(QString sensor3Id READ sensor3Id WRITE setSensor3Id NOTIFY sensorConfigChanged)
+    Q_PROPERTY(QString sensor4Id READ sensor4Id WRITE setSensor4Id NOTIFY sensorConfigChanged)
+    Q_PROPERTY(QString sensor5Id READ sensor5Id WRITE setSensor5Id NOTIFY sensorConfigChanged)
+    Q_PROPERTY(QString sensor6Id READ sensor6Id WRITE setSensor6Id NOTIFY sensorConfigChanged)
+
+    // Offsets
+    Q_PROPERTY(double sensor1Offset READ sensor1Offset WRITE setSensor1Offset NOTIFY sensorConfigChanged)
+    Q_PROPERTY(double sensor2Offset READ sensor2Offset WRITE setSensor2Offset NOTIFY sensorConfigChanged)
+    Q_PROPERTY(double sensor3Offset READ sensor3Offset WRITE setSensor3Offset NOTIFY sensorConfigChanged)
+    Q_PROPERTY(double sensor4Offset READ sensor4Offset WRITE setSensor4Offset NOTIFY sensorConfigChanged)
+    Q_PROPERTY(double sensor5Offset READ sensor5Offset WRITE setSensor5Offset NOTIFY sensorConfigChanged)
+    Q_PROPERTY(double sensor6Offset READ sensor6Offset WRITE setSensor6Offset NOTIFY sensorConfigChanged)
+
     // Power pins (future page)
     Q_PROPERTY(bool power1On READ power1On WRITE setPower1On NOTIFY power1OnChanged)
     Q_PROPERTY(bool power2On READ power2On WRITE setPower2On NOTIFY power2OnChanged)
@@ -121,6 +140,22 @@ class Backend : public QObject {
     QString reclaimEmail() const { return RuntimeConfig::reclaimEmail(); };
     QStringList historyLog() const { return logManager_.tempsHistory(); }
 
+    QStringList visibleOneWireIds() const { return visibleOneWireIds_; }
+
+    QString sensor1Id() const { return QString::fromStdString(RuntimeConfig::sensor1Id()); }
+    QString sensor2Id() const { return QString::fromStdString(RuntimeConfig::sensor2Id()); }
+    QString sensor3Id() const { return QString::fromStdString(RuntimeConfig::sensor3Id()); }
+    QString sensor4Id() const { return QString::fromStdString(RuntimeConfig::sensor4Id()); }
+    QString sensor5Id() const { return QString::fromStdString(RuntimeConfig::sensor5Id()); }
+    QString sensor6Id() const { return QString::fromStdString(RuntimeConfig::sensor6Id()); }
+
+    double sensor1Offset() const { return RuntimeConfig::sensor1Offset(); }
+    double sensor2Offset() const { return RuntimeConfig::sensor2Offset(); }
+    double sensor3Offset() const { return RuntimeConfig::sensor3Offset(); }
+    double sensor4Offset() const { return RuntimeConfig::sensor4Offset(); }
+    double sensor5Offset() const { return RuntimeConfig::sensor5Offset(); }
+    double sensor6Offset() const { return RuntimeConfig::sensor6Offset(); }
+
     bool power1On() const { return power1On_; }
     bool power2On() const { return power2On_; }
 
@@ -155,6 +190,24 @@ class Backend : public QObject {
     void setForcedTemp4(double v);
     void setForcedTemp5(double v);
 
+    void setSensor1Id(const QString& id);
+    void setSensor2Id(const QString& id);
+    void setSensor3Id(const QString& id);
+    void setSensor4Id(const QString& id);
+    void setSensor5Id(const QString& id);
+    void setSensor6Id(const QString& id);
+
+    void setSensor1Offset(double off);
+    void setSensor2Offset(double off);
+    void setSensor3Offset(double off);
+    void setSensor4Offset(double off);
+    void setSensor5Offset(double off);
+    void setSensor6Offset(double off);
+
+    Q_INVOKABLE void refreshVisibleOneWireIds();
+
+    void updateVisibleOneWireIds(const QStringList& ids);
+
     void setPower1On(bool on);
     void setPower2On(bool on);
 
@@ -187,7 +240,7 @@ class Backend : public QObject {
     void defrostActiveChanged();
     void compressorOnChanged();
     void dripHoldActiveChanged();
-    
+
     void cooling2ActiveChanged();
     void defrost2ActiveChanged();
     void compressor2OnChanged();
@@ -205,6 +258,25 @@ class Backend : public QObject {
     // requesty do SensorWorkeru
     void requestForcedEnabled(bool en);
     void requestForcedTemps(double t1, double t2, double t3, double t4, double t5);
+
+    void sensorConfigChanged();
+    void visibleOneWireIdsChanged();
+
+    void requestSetSensor1Id(const QString& id);
+    void requestSetSensor2Id(const QString& id);
+    void requestSetSensor3Id(const QString& id);
+    void requestSetSensor4Id(const QString& id);
+    void requestSetSensor5Id(const QString& id);
+    void requestSetSensor6Id(const QString& id);
+
+    void requestSetSensor1Offset(double off);
+    void requestSetSensor2Offset(double off);
+    void requestSetSensor3Offset(double off);
+    void requestSetSensor4Offset(double off);
+    void requestSetSensor5Offset(double off);
+    void requestSetSensor6Offset(double off);
+
+    void requestRefreshVisibleOneWireIds();
 
     // power worker zatim neexistuje
     void requestPower1(bool on);
@@ -239,7 +311,7 @@ class Backend : public QObject {
     bool defrostActive_ = false;
     bool compressorOn_ = false;
     bool dripHoldActive_ = false;
-    
+
     bool cooling2Active_ = false;
     bool defrost2Active_ = false;
     bool compressor2On_ = false;
@@ -258,6 +330,8 @@ class Backend : public QObject {
 
     bool bath1Enabled_ = true;
     bool bath2Enabled_ = true;
+
+    QStringList visibleOneWireIds_;
 
     static constexpr int mqtt_push_time = AppConfig::MQTT_POLL_INTERVAL_MS;
     QTimer* mqttTimer_ = nullptr;  // nový timer na MQTT payload

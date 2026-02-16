@@ -109,7 +109,8 @@ ApplicationWindow {
             QrPage   { uiScale: win.uiScale }     // index 3
             ReclaimPage { uiScale: win.uiScale }  // index 4
             TestPage { uiScale: win.uiScale }     // index 5
-            // TempPage {  }     // index 6
+            SensorConfigPage { }    // index 6
+            // TempPage {  }     // index 7
         }
 
         // Spodní "dock" s tečkami a domečkem

@@ -56,6 +56,35 @@ void setSensor5Id(const QString& id) { setId("sensors/sensor5_id", id); }
 
 // DHT22 sensor ID (může být DS18B20 pro simulaci)
 std::string sensor6Id() { return getId("sensors/sensor6_id", "28-000000000000"); }
+void setSensor6Id(const QString& id) { setId("sensors/sensor6_id", id); }
+
+// ===== Sensor offsets (°C) =====
+static double getOffset(const char* key, double def) {
+    QSettings s = makeSettings();
+    return s.value(key, def).toDouble();
+}
+static void setOffset(const char* key, double val) {
+    QSettings s = makeSettings();
+    s.setValue(key, val);
+}
+
+double sensor1Offset() { return getOffset("sensors/sensor1_offset", 0.0); }
+void setSensor1Offset(double off) { setOffset("sensors/sensor1_offset", off); }
+
+double sensor2Offset() { return getOffset("sensors/sensor2_offset", 0.0); }
+void setSensor2Offset(double off) { setOffset("sensors/sensor2_offset", off); }
+
+double sensor3Offset() { return getOffset("sensors/sensor3_offset", 0.0); }
+void setSensor3Offset(double off) { setOffset("sensors/sensor3_offset", off); }
+
+double sensor4Offset() { return getOffset("sensors/sensor4_offset", 0.0); }
+void setSensor4Offset(double off) { setOffset("sensors/sensor4_offset", off); }
+
+double sensor5Offset() { return getOffset("sensors/sensor5_offset", 0.0); }
+void setSensor5Offset(double off) { setOffset("sensors/sensor5_offset", off); }
+
+double sensor6Offset() { return getOffset("sensors/sensor6_offset", 0.0); }
+void setSensor6Offset(double off) { setOffset("sensors/sensor6_offset", off); }
 
 // ===== Reclaim order number and email =====
 QString reclaimOrderNumber() {

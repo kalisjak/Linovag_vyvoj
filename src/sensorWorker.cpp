@@ -2,6 +2,7 @@
 
 #include <QDebug>
 #include <QDir>
+#include <cmath>
 #include <fstream>
 
 #ifdef LNVG_USE_PIGPIO
@@ -14,6 +15,10 @@ SensorWorker::SensorWorker(QObject* parent) : QObject(parent) {
     timer_ = new QTimer(this);
     connect(timer_, &QTimer::timeout, this, &SensorWorker::pollSensors);
 
+    addrTimer_ = new QTimer(this);
+    addrTimer_->setInterval(3000);
+    connect(addrTimer_, &QTimer::timeout, this, &SensorWorker::refreshVisibleOneWireIds);
+
     // read actual ID from runtimeConfig
     s1_ = RuntimeConfig::sensor1Id();
     s2_ = RuntimeConfig::sensor2Id();
@@ -22,6 +27,14 @@ SensorWorker::SensorWorker(QObject* parent) : QObject(parent) {
     s5_ = RuntimeConfig::sensor5Id();
     // simply real DHT22
     s6_ = RuntimeConfig::sensor6Id();
+
+    // offsets
+    off1_ = RuntimeConfig::sensor1Offset();
+    off2_ = RuntimeConfig::sensor2Offset();
+    off3_ = RuntimeConfig::sensor3Offset();
+    off4_ = RuntimeConfig::sensor4Offset();
+    off5_ = RuntimeConfig::sensor5Offset();
+    off6_ = RuntimeConfig::sensor6Offset();
 
 #ifdef LNVG_USE_PIGPIO
     static bool pigpioInitialized = false;
@@ -35,14 +48,16 @@ SensorWorker::SensorWorker(QObject* parent) : QObject(parent) {
 #endif
 }
 
-void SensorWorker::start() { 
+void SensorWorker::start() {
     qInfo() << "[SensorWorker] Starting sensor polling...";
-    timer_->start(AppConfig::SENSOR_POLL_INTERVAL_MS); }
+    timer_->start(AppConfig::SENSOR_POLL_INTERVAL_MS);
+    refreshVisibleOneWireIds();
+    if (addrTimer_) addrTimer_->start();
+}
 
 void SensorWorker::stop() {
-    if (timer_) {
-        timer_->stop();
-    }
+    if (timer_) timer_->stop();
+    if (addrTimer_) addrTimer_->stop();
 }
 
 // ========== runtime změna ID senzorů ==========
@@ -73,24 +88,65 @@ void SensorWorker::setSensor5Id(const QString& id) {
     s5_ = RuntimeConfig::sensor5Id();
 }
 
+void SensorWorker::setSensor6Id(const QString& id) {
+    RuntimeConfig::setSensor6Id(id);
+    s6_ = RuntimeConfig::sensor6Id();
+}
+
 QString SensorWorker::sensor1Id() const { return QString::fromStdString(s1_); }
-
 QString SensorWorker::sensor2Id() const { return QString::fromStdString(s2_); }
-
 QString SensorWorker::sensor3Id() const { return QString::fromStdString(s3_); }
-
 QString SensorWorker::sensor4Id() const { return QString::fromStdString(s4_); }
-
 QString SensorWorker::sensor5Id() const { return QString::fromStdString(s5_); }
-
 QString SensorWorker::sensor6Id() const { return QString::fromStdString(s6_); }
 
+void SensorWorker::setSensor1Offset(double off) {
+    RuntimeConfig::setSensor1Offset(off);
+    off1_ = RuntimeConfig::sensor1Offset();
+}
+void SensorWorker::setSensor2Offset(double off) {
+    RuntimeConfig::setSensor2Offset(off);
+    off2_ = RuntimeConfig::sensor2Offset();
+}
+void SensorWorker::setSensor3Offset(double off) {
+    RuntimeConfig::setSensor3Offset(off);
+    off3_ = RuntimeConfig::sensor3Offset();
+}
+void SensorWorker::setSensor4Offset(double off) {
+    RuntimeConfig::setSensor4Offset(off);
+    off4_ = RuntimeConfig::sensor4Offset();
+}
+void SensorWorker::setSensor5Offset(double off) {
+    RuntimeConfig::setSensor5Offset(off);
+    off5_ = RuntimeConfig::sensor5Offset();
+}
+void SensorWorker::setSensor6Offset(double off) {
+    RuntimeConfig::setSensor6Offset(off);
+    off6_ = RuntimeConfig::sensor6Offset();
+}
+
+void SensorWorker::refreshVisibleOneWireIds() {
+    QStringList ids;
+#ifdef LNVG_USE_PIGPIO
+    QDir dir(QStringLiteral("/sys/bus/w1/devices"));
+    if (dir.exists()) {
+        const QStringList entries = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+        for (const QString& e : entries) {
+            if (e.startsWith(QStringLiteral("28-"))) ids.append(e);
+        }
+        ids.sort();
+    }
+#endif
+    emit visibleOneWireIds(ids);
+}
 
 // ========== čtení DS18B20 ==========
 double SensorWorker::readDS18B20(const std::string& deviceId) {
     // qDebug() << "[SensorWorker] Reading DS18B20 sensor" << QString::fromStdString(deviceId);
 
     if (deviceId.empty()) return nanVal();
+
+#ifdef LNVG_USE_PIGPIO
 
     const std::string path = "/sys/bus/w1/devices/" + deviceId + "/w1_slave";
     std::ifstream file(path);
@@ -114,6 +170,9 @@ double SensorWorker::readDS18B20(const std::string& deviceId) {
 
     const int temp_milli = std::stoi(line2.substr(pos + 2));
     return temp_milli / 1000.0;
+#else
+    return nanVal();
+#endif
 }
 
 // ========== čtení DHT22 ==========
@@ -124,87 +183,7 @@ bool SensorWorker::readDHT22(double& temperature, double& humidity) {
     qDebug() << "[SensorWorker] Reading DHT22 sensor - it's a simulation in this version";
 
     temperature = readDS18B20(s6_);  // pro simulaci použijeme DS18B201
-    humidity = 36.2;              // pevná vlhkost
-
-    // const int gpio = dhtGpio_;
-
-    // // start sekvence
-    // gpioSetMode(gpio, PI_OUTPUT);
-    // gpioWrite(gpio, PI_HIGH);
-    // gpioDelay(500000);  // 500 ms stabilizace
-
-    // gpioWrite(gpio, PI_LOW);
-    // gpioDelay(2000);  // 2 ms low
-    // gpioWrite(gpio, PI_HIGH);
-    // gpioDelay(40);  // 20–40 µs
-
-    // gpioSetMode(gpio, PI_INPUT);
-
-    // // nasbíráme pulzy
-    // uint32_t lastTick = gpioTick();
-    // int lastLevel = gpioRead(gpio);
-
-    // // čekání na první přechody z čtecí sekvence
-    // int transitions = 0;
-    // while (transitions < 3) {
-    //     int level = gpioRead(gpio);
-    //     if (level != lastLevel) {
-    //         lastLevel = level;
-    //         lastTick = gpioTick();
-    //         ++transitions;
-    //     }
-    //     gpioDelay(1);
-    // }
-
-    // int bits[40] = {0};
-    // int bitIndex = 0;
-
-    // while (bitIndex < 40) {
-    //     // čekej na LOW->HIGH
-    //     int level = gpioRead(gpio);
-    //     while (level == 0) {
-    //         level = gpioRead(gpio);
-    //     }
-    //     uint32_t startTick = gpioTick();
-
-    //     // HIGH
-    //     while (level == 1) {
-    //         level = gpioRead(gpio);
-    //         if ((gpioTick() - startTick) > 200) {
-    //             break;  // timeout
-    //         }
-    //     }
-    //     uint32_t diff = gpioTick() - startTick;
-
-    //     // krátký puls ~26-28 µs => 0, dlouhý ~70 µs => 1
-    //     bits[bitIndex] = (diff > 50) ? 1 : 0;
-    //     ++bitIndex;
-    // }
-
-    // // složení do bajtů
-    // uint8_t data[5] = {0};
-    // for (int i = 0; i < 40; ++i) {
-    //     data[i / 8] <<= 1;
-    //     data[i / 8] |= bits[i];
-    // }
-
-    // uint8_t checksum = (uint8_t)((data[0] + data[1] + data[2] + data[3]) & 0xFF);
-    // if (checksum != data[4]) {
-    //     qWarning() << "DHT22 checksum error";
-    //     return false;
-    // }
-
-    // // DHT22 – 16bit, první dva bajty jsou vlhkost, další dva teplota
-    // int16_t rawHum = (data[0] << 8) | data[1];
-    // int16_t rawTemp = (data[2] << 8) | data[3];
-
-    // humidity = rawHum / 10.0;
-    // if (rawTemp & 0x8000) {
-    //     rawTemp = rawTemp & 0x7FFF;
-    //     temperature = -rawTemp / 10.0;
-    // } else {
-    //     temperature = rawTemp / 10.0;
-    // }
+    humidity = 36.2;                 // pevná vlhkost
 
     return true;
 #else
@@ -213,6 +192,11 @@ bool SensorWorker::readDHT22(double& temperature, double& humidity) {
     return true;
 #endif
 }
+
+auto applyOff = [](double v, double off) -> double { return std::isnan(v) ? v : (v + off); };
+auto checkValidity = [](double v) -> double {
+    return (std::isnan(v) || v <= -30 || v >= 55) ? std::numeric_limits<double>::quiet_NaN() : v;
+};
 
 void SensorWorker::pollSensors() {
     emit heartbeat(QStringLiteral("sensors"));
@@ -237,7 +221,7 @@ void SensorWorker::pollSensors() {
             v3 = readDS18B20(s3_);
             v4 = readDS18B20(s4_);
             v5 = readDS18B20(s5_);
-        } else { // typ 3
+        } else {  // typ 3
             v1 = readDS18B20(s1_);
             v3 = readDS18B20(s3_);
             v5 = readDS18B20(s5_);
@@ -247,6 +231,13 @@ void SensorWorker::pollSensors() {
     if (!readDHT22(tempIntake, humIntake)) {
         qWarning() << "DHT22 read failed";
     }
+
+    v1 = applyOff(checkValidity(v1), off1_);
+    v2 = applyOff(checkValidity(v2), off2_);
+    v3 = applyOff(checkValidity(v3), off3_);
+    v4 = applyOff(checkValidity(v4), off4_);
+    v5 = applyOff(checkValidity(v5), off5_);
+    tempIntake = applyOff(checkValidity(tempIntake), off6_);
 
     emit sensorDS18(v1, v2, v3, v4, v5);
     emit sensorDHT22Value(tempIntake, humIntake);
