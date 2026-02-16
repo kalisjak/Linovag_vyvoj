@@ -40,7 +40,7 @@ Rectangle {
         running: true
         repeat: true
         triggeredOnStart: true
-        onTriggered: bar.timeText = Qt.formatTime(new Date(), "HH.mm")
+        onTriggered: bar.timeText = Qt.formatTime(new Date(), "HH:mm")
     }
 
     // dělící linka dole

@@ -25,6 +25,10 @@ class CoolingWorker : public QObject {
     void start();
     void stop();
 
+    // Enable/disable the whole bath (fans OFF + compressor OFF when disabled).
+    // When re-enabled, startup delay is re-applied to protect compressor.
+    void setEnabled(bool en);
+
     void onTempSensors(double t1, double t2, double t3, double t4, double t5);
     void onTargetTempChanged(double target);
 
@@ -60,6 +64,8 @@ class CoolingWorker : public QObject {
     bool coolingActive_ = false;
 
     bool dripHoldActive_ = false;
+
+    bool enabled_ = true;
 
     QElapsedTimer startupTimer_;
     QElapsedTimer dripTimer_;

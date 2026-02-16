@@ -54,6 +54,10 @@ class Backend : public QObject {
     Q_PROPERTY(bool compressor2On READ compressor2On NOTIFY compressor2OnChanged)
     Q_PROPERTY(bool dripHold2Active READ dripHold2Active NOTIFY dripHold2ActiveChanged)
 
+    // Bath enable/disable (user OFF = compressor OFF + fans OFF)
+    Q_PROPERTY(bool bath1Enabled READ bath1Enabled WRITE setBath1Enabled NOTIFY bath1EnabledChanged)
+    Q_PROPERTY(bool bath2Enabled READ bath2Enabled WRITE setBath2Enabled NOTIFY bath2EnabledChanged)
+
     Q_PROPERTY(QString reclaimOrderNumber READ reclaimOrderNumber NOTIFY reclaimInfoChanged)
     Q_PROPERTY(QString reclaimEmail READ reclaimEmail NOTIFY reclaimInfoChanged)
 
@@ -109,6 +113,9 @@ class Backend : public QObject {
     bool compressor2On() const { return compressor2On_; }
     bool dripHold2Active() const { return dripHold2Active_; }
 
+    bool bath1Enabled() const { return bath1Enabled_; }
+    bool bath2Enabled() const { return bath2Enabled_; }
+
     QString serialNumber() const { return RuntimeConfig::deviceSerial(); }
     QString reclaimOrderNumber() const { return RuntimeConfig::reclaimOrderNumber(); };
     QString reclaimEmail() const { return RuntimeConfig::reclaimEmail(); };
@@ -151,6 +158,9 @@ class Backend : public QObject {
     void setPower1On(bool on);
     void setPower2On(bool on);
 
+    void setBath1Enabled(bool en);
+    void setBath2Enabled(bool en);
+
    signals:
     void value1Changed();
     void value2Changed();
@@ -183,6 +193,9 @@ class Backend : public QObject {
     void compressor2OnChanged();
     void dripHold2ActiveChanged();
 
+    void bath1EnabledChanged();
+    void bath2EnabledChanged();
+
     void reclaimInfoChanged();
 
     // forced sensors
@@ -196,6 +209,11 @@ class Backend : public QObject {
     // power worker zatim neexistuje
     void requestPower1(bool on);
     void requestPower2(bool on);
+
+    // requests to CoolingWorker(s)
+    void requestBath1Enabled(bool en);
+    void requestBath2Enabled(bool en);
+
     void power1OnChanged();
     void power2OnChanged();
 
@@ -232,11 +250,14 @@ class Backend : public QObject {
     double forcedT1_ = 5.0;
     double forcedT2_ = 5.0;
     double forcedT3_ = -8.0;
-    double forcedT4_ = 20.0;
-    double forcedT5_ = 20.0;
+    double forcedT4_ = -7.0;
+    double forcedT5_ = 28.0;
 
     bool power1On_ = false;
     bool power2On_ = false;
+
+    bool bath1Enabled_ = true;
+    bool bath2Enabled_ = true;
 
     static constexpr int mqtt_push_time = AppConfig::MQTT_POLL_INTERVAL_MS;
     QTimer* mqttTimer_ = nullptr;  // nový timer na MQTT payload

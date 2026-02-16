@@ -15,10 +15,12 @@ Page {
     // type 3 (legacy): aktuální teplota
     readonly property double currentTemp: backend.value1
     readonly property double diff: Math.abs(currentTemp - backend.targetTemp)
+    readonly property bool defrost1Active: backend.defrostActive
 
     // type 22:
     readonly property double diff1: Math.abs(backend.value1 - backend.targetTemp)
     readonly property double diff2: Math.abs(backend.value2 - backend.targetTemp2)
+    readonly property bool defrost2Active: backend.defrost2Active
 
     // 1 = target1, 2 = target2 (pouze pro type 22)
     property int activeTarget: 1
@@ -29,7 +31,10 @@ Page {
         return v !== v || v === undefined || v === null
     }
 
-    function tempText(v) {
+    function tempText(v, defr) {
+
+        if (defr)
+            return "def"
         // show dashes when sensor value is NaN / invalid
         return isBadNumber(v) ? "- -" : Number(v).toFixed(1)
     }
@@ -52,12 +57,70 @@ Page {
         sourceComponent: setTP.isDual ? dualContent : singleContent
     }
 
+    // small ON/OFF pill buttons used for bath enable
+    Component {
+        id: bathToggleRow
+
+        Row {
+            property bool enabledValue: true
+            property var onChangedFn: function(v) {}
+
+            spacing: 6 * setTP.uiScale
+
+            Rectangle {
+                width: 56 * setTP.uiScale
+                height: 28 * setTP.uiScale
+                radius: 14 * setTP.uiScale
+                color: enabledValue ? "#00ff00" : "#00000066"
+                border.width: 1
+                border.color: "#c6c5df"
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "ON"
+                    color: enabledValue ? "#000000" : "#c6c5df"
+                    font.pixelSize: 14 * setTP.uiScale
+                    font.bold: true
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: onChangedFn(true)
+                }
+            }
+
+            Rectangle {
+                width: 56 * setTP.uiScale
+                height: 28 * setTP.uiScale
+                radius: 14 * setTP.uiScale
+                color: !enabledValue ? "orange" : "#00000066"
+                border.width: 1
+                border.color: "#c6c5df"
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "OFF"
+                    color: !enabledValue ? "#000000" : "#c6c5df"
+                    font.pixelSize: 14 * setTP.uiScale
+                    font.bold: true
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: onChangedFn(false)
+                }
+            }
+        }
+    }
+
     Component {
         id: singleContent
 
         Item {
             anchors.fill: parent
             anchors.margins: 32 * uiScale
+
+            readonly property bool bathEnabled: backend.bath1Enabled
 
             // levá část – velké číslo s aktuální teplotou
             Rectangle {
@@ -70,24 +133,39 @@ Page {
                 }
                 width: parent.width * 0.66
                 color: "transparent"
+                opacity: bathEnabled ? 1.0 : 0.30
 
-                Row {
+                Column {
                     anchors.centerIn: parent
-                    spacing: 8
+                    spacing: 12 * uiScale
 
-                    Text {
-                        id: currentTempText
-                        text: setTP.tempText(setTP.currentTemp)
-                        color: setTP.isBadNumber(setTP.currentTemp) ? "#c6c5df" : (setTP.diff > 2.5 ? "orange" : "#00ff00")
-                        font.pixelSize: setTP.tempPx(setTP.currentTemp, 290 * uiScale)
-                        font.bold: true
+                    // Bath 1 enable/disable
+                    Loader {
+                        sourceComponent: bathToggleRow
+                        opacity: 1.0
+                        onLoaded: {
+                            item.enabledValue = Qt.binding(function() { return backend.bath1Enabled })
+                            item.onChangedFn = function(v) { backend.bath1Enabled = v }
+                        }
                     }
 
-                    Text {
-                        text: "°C"
-                        color: "#c6c5df"
-                        font.pixelSize: 95 * uiScale
-                        font.bold: true
+                    Row {
+                        spacing: 8
+
+                        Text {
+                            id: currentTempText
+                            text: setTP.tempText(setTP.currentTemp, defrost1Active)
+                            color: (setTP.isBadNumber(setTP.currentTemp)  | defrost1Active) ? "#c6c5df" : (setTP.diff > 5.0 ? "orange" : "#00ff00")
+                            font.pixelSize: setTP.tempPx(setTP.currentTemp, 290 * uiScale)
+                            font.bold: true
+                        }
+
+                        Text {
+                            text: defrost1Active ? "" : "°C"
+                            color: "#c6c5df"
+                            font.pixelSize: 95 * uiScale
+                            font.bold: true
+                        }
                     }
                 }
             }
@@ -100,6 +178,7 @@ Page {
                 width: 2
                 height: parent.height * 0.7
                 color: "#b9b9b9ff"
+                opacity: bathEnabled ? 1.0 : 0.30
             }
 
             // pravá část – nastavení požadované teploty
@@ -112,6 +191,8 @@ Page {
                     right: parent.right
                 }
                 color: "transparent"
+                opacity: bathEnabled ? 1.0 : 0.30
+                enabled: bathEnabled
 
                 Column {
                     anchors.centerIn: parent
@@ -140,6 +221,7 @@ Page {
                         MouseArea {
                             id: upArea
                             anchors.fill: parent
+                            enabled: bathEnabled
                             onClicked: backend.targetTemp = backend.targetTemp + 0.5
                         }
                     }
@@ -188,6 +270,7 @@ Page {
                         MouseArea {
                             id: downArea
                             anchors.fill: parent
+                            enabled: bathEnabled
                             onClicked: backend.targetTemp = backend.targetTemp - 0.5
                         }
                     }
@@ -218,87 +301,111 @@ Page {
                     MouseArea {
                         anchors.fill: parent
                         onClicked: setTP.activeTarget = 1
+                        enabled: backend.bath1Enabled
                         z: 0
                     }
 // ==========
                     Column {
                         anchors.centerIn: parent
-                        spacing: 40 * uiScale
+                        spacing: 16 * uiScale
                         z: 1
 
-                        Item {
-                            id: v1Wrap
-                            width: target1Box.width
-                            height: v1Row.implicitHeight
-
-                            Row {
-                                id: v1Row
-                                anchors.centerIn: parent
-                                spacing: 8
-
-                                Text {
-                                    text: setTP.tempText(backend.value1)
-                                    color: setTP.isBadNumber(backend.value1) ? "#c6c5df" : (setTP.diff1 > 2.5 ? "orange" : "#00ff00")
-                                    font.pixelSize: setTP.tempPx(backend.value1, 200 * uiScale)
-                                    font.bold: true
-                                }
-
-                                Text {
-                                    text: "°C"
-                                    color: "#c6c5df"
-                                    font.pixelSize: 80 * uiScale
-                                    font.bold: true
-                                }
+                        // Bath 1 enable/disable
+                        Loader {
+                            sourceComponent: bathToggleRow
+                            onLoaded: {
+                                item.enabledValue = Qt.binding(function() { return backend.bath1Enabled })
+                                item.onChangedFn = function(v) { backend.bath1Enabled = v }
                             }
                         }
 
-                        // TARGET1 box + "edit" under it
-                        Column {
-                            id: target1Col
-                            width: 220 * uiScale
-                            spacing: 2 * uiScale
-                            anchors.horizontalCenter: parent.horizontalCenter
+                        Item {
+                            width: 1
+                            height: 1
+                        }
 
-                            Rectangle {
-                                id: target1Box
-                                width: parent.width
-                                height: 90 * uiScale
-                                radius: 18 * uiScale
-                                color: "transparent"
-                                border.width: 5
-                                border.color: (setTP.activeTarget === 1) ? "orange" : "#c6c5df"
+                        // Content that becomes inactive when bath is OFF
+                        Column {
+                            id: bath1Content
+                            spacing: 40 * uiScale
+                            opacity: backend.bath1Enabled ? 1.0 : 0.30
+                            enabled: backend.bath1Enabled
+
+                            Item {
+                                id: v1Wrap
+                                width: target1Box.width
+                                height: v1Row.implicitHeight
 
                                 Row {
+                                    id: v1Row
                                     anchors.centerIn: parent
-                                    spacing: 4 * uiScale
+                                    spacing: 8
 
                                     Text {
-                                        text: Number(backend.targetTemp).toFixed(1)
-                                        color: "#EDEFF2"
-                                        font.pixelSize: 56 * uiScale
+                                        text: setTP.tempText(backend.value1, defrost1Active)
+                                        color: (setTP.isBadNumber(backend.value1) | defrost1Active) ? "#c6c5df" : (setTP.diff1 > 5.0 ? "orange" : "#00ff00")
+                                        font.pixelSize: setTP.tempPx(backend.value1, 200 * uiScale)
                                         font.bold: true
                                     }
 
                                     Text {
-                                        text: "°C"
+                                        text: defrost1Active ? "" : "°C"
                                         color: "#c6c5df"
-                                        font.pixelSize: 34 * uiScale
+                                        font.pixelSize: 80 * uiScale
                                         font.bold: true
                                     }
-                                }
-
-                                MouseArea {
-                                    anchors.fill: parent
-                                    onClicked: setTP.activeTarget = 1
                                 }
                             }
 
-                            Text {
-                                text: "edit"
-                                visible: setTP.activeTarget === 1
-                                color: "orange"
-                                font.pixelSize: 20 * uiScale
+                            // TARGET1 box + "edit" under it
+                            Column {
+                                id: target1Col
+                                width: 220 * uiScale
+                                spacing: 2 * uiScale
                                 anchors.horizontalCenter: parent.horizontalCenter
+
+                                Rectangle {
+                                    id: target1Box
+                                    width: parent.width
+                                    height: 90 * uiScale
+                                    radius: 18 * uiScale
+                                    color: "transparent"
+                                    border.width: 5
+                                    border.color: (setTP.activeTarget === 1) ? "orange" : "#c6c5df"
+
+                                    Row {
+                                        anchors.centerIn: parent
+                                        spacing: 4 * uiScale
+
+                                        Text {
+                                            text: Number(backend.targetTemp).toFixed(1)
+                                            color: "#EDEFF2"
+                                            font.pixelSize: 56 * uiScale
+                                            font.bold: true
+                                        }
+
+                                        Text {
+                                            text: "°C"
+                                            color: "#c6c5df"
+                                            font.pixelSize: 34 * uiScale
+                                            font.bold: true
+                                        }
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        enabled: backend.bath1Enabled
+                                        onClicked: setTP.activeTarget = 1
+                                    }
+                                }
+
+                                Text {
+                                    text: "edit"
+                                    visible: setTP.activeTarget === 1
+                                    color: "orange"
+                                    font.pixelSize: 20 * uiScale
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                }
                             }
                         }
                     }
@@ -353,6 +460,7 @@ Page {
                                     MouseArea {
                                         id: upArea22
                                         anchors.fill: parent
+                                        enabled: (setTP.activeTarget === 1) ? backend.bath1Enabled : backend.bath2Enabled
                                         onClicked: {
                                             if (setTP.activeTarget === 1) backend.targetTemp = backend.targetTemp + 0.5
                                             else backend.targetTemp2 = backend.targetTemp2 + 0.5
@@ -379,6 +487,7 @@ Page {
                                     MouseArea {
                                         id: downArea22
                                         anchors.fill: parent
+                                        enabled: (setTP.activeTarget === 1) ? backend.bath1Enabled : backend.bath2Enabled
                                         onClicked: {
                                             if (setTP.activeTarget === 1) backend.targetTemp = backend.targetTemp - 0.5
                                             else backend.targetTemp2 = backend.targetTemp2 - 0.5
@@ -438,45 +547,62 @@ Page {
                     MouseArea {
                         anchors.fill: parent
                         onClicked: setTP.activeTarget = 2
+                        enabled: backend.bath2Enabled
                         z: 0
                     }
 
                     Column {
                         anchors.centerIn: parent
-                        spacing: 40 * uiScale
+                        spacing: 16 * uiScale
                         z: 1
 
-                        Item {
-                            id: v2Wrap
-                            width: target2Box.width
-                            height: v2Row.implicitHeight
-
-                            Row {
-                                id: v2Row
-                                anchors.centerIn: parent
-                                spacing: 8
-
-                                Text {
-                                    text: setTP.tempText(backend.value2)
-                                    color: setTP.isBadNumber(backend.value2) ? "#c6c5df" : (setTP.diff2 > 2.5 ? "orange" : "#00ff00")
-                                    font.pixelSize: setTP.tempPx(backend.value2, 200 * uiScale)
-                                    font.bold: true
-                                }
-
-                                Text {
-                                    text: "°C"
-                                    color: "#c6c5df"
-                                    font.pixelSize: 80 * uiScale
-                                    font.bold: true
-                                }
+                        // Bath 2 enable/disable
+                        Loader {
+                            sourceComponent: bathToggleRow
+                            onLoaded: {
+                                item.enabledValue = Qt.binding(function() { return backend.bath2Enabled })
+                                item.onChangedFn = function(v) { backend.bath2Enabled = v }
                             }
                         }
 
+                        // Content that becomes inactive when bath is OFF
                         Column {
-                            id: target2Col
-                            width: 220 * uiScale
-                            spacing: 2 * uiScale
-                            anchors.horizontalCenter: parent.horizontalCenter
+                            id: bath2Content
+                            spacing: 40 * uiScale
+                            opacity: backend.bath2Enabled ? 1.0 : 0.30
+                            enabled: backend.bath2Enabled
+
+                            Item {
+                                id: v2Wrap
+                                width: target2Box.width
+                                height: v2Row.implicitHeight
+
+                                Row {
+                                    id: v2Row
+                                    anchors.centerIn: parent
+                                    spacing: 8
+
+                                    Text {
+                                        text: setTP.tempText(backend.value2, defrost2Active)
+                                        color: (setTP.isBadNumber(backend.value2) | defrost2Active) ? "#c6c5df" : (setTP.diff2 > 5.0 ? "orange" : "#00ff00")
+                                        font.pixelSize: setTP.tempPx(backend.value2, 200 * uiScale)
+                                        font.bold: true
+                                    }
+
+                                    Text {
+                                        text: defrost2Active ? "" : "°C"
+                                        color: "#c6c5df"
+                                        font.pixelSize: 80 * uiScale
+                                        font.bold: true
+                                    }
+                                }
+                            }
+
+                            Column {
+                                id: target2Col
+                                width: 220 * uiScale
+                                spacing: 2 * uiScale
+                                anchors.horizontalCenter: parent.horizontalCenter
 
                             Rectangle {
                                 id: target2Box
@@ -525,4 +651,4 @@ Page {
             }
         }
     }
-}
+}}

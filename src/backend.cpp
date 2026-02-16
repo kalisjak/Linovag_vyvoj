@@ -89,6 +89,20 @@ void Backend::setPower2On(bool on) {
     emit requestPower2(on);
 }
 
+void Backend::setBath1Enabled(bool en) {
+    if (bath1Enabled_ == en) return;
+    bath1Enabled_ = en;
+    emit bath1EnabledChanged();
+    emit requestBath1Enabled(en);
+}
+
+void Backend::setBath2Enabled(bool en) {
+    if (bath2Enabled_ == en) return;
+    bath2Enabled_ = en;
+    emit bath2EnabledChanged();
+    emit requestBath2Enabled(en);
+}
+
 //
 // =========== Forced setters ===========
 

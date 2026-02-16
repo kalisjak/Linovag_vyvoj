@@ -74,6 +74,33 @@ void CoolingWorker::stop() {
     publishStateIfChanged(true);
 }
 
+void CoolingWorker::setEnabled(bool en) {
+    if (enabled_ == en) return;
+    enabled_ = en;
+
+    if (!enabled_) {
+        // Hard OFF
+        setCompressor(false);
+        setFanDuty(AppConfig::COOLING_FAN_DUTY_DRIP);
+        coolingActive_ = false;
+        defrostMode_ = false;
+        dripHoldActive_ = false;
+        startupDelayActive_ = false;
+        publishStateIfChanged(true);
+        return;
+    }
+
+    // Re-enabled → apply startup delay again
+    setCompressor(false);
+    setFanDuty(AppConfig::COOLING_FAN_DUTY_NORMAL);
+    coolingActive_ = false;
+    defrostMode_ = false;
+    dripHoldActive_ = false;
+    // startupDelayActive_ = true;
+    // startupTimer_.restart();
+    publishStateIfChanged(true);
+}
+
 void CoolingWorker::onTempSensors(double t1, double t2, double t3, double t4, double t5) {
     // Map indices (1..5) into our channels
     const double bath = (bathIdx_ == 1) ? t1 : t2;
@@ -88,6 +115,18 @@ void CoolingWorker::onTargetTempChanged(double target) { targetTemp_ = target; }
 
 void CoolingWorker::tick() {
     emit heartbeat(heartbeatName_);
+
+    // Global disable (user OFF)
+    if (!enabled_) {
+        setCompressor(false);
+        setFanDuty(AppConfig::COOLING_FAN_DUTY_DRIP);
+        coolingActive_ = false;
+        defrostMode_ = false;
+        dripHoldActive_ = false;
+        startupDelayActive_ = false;
+        publishStateIfChanged();
+        return;
+    }
 
     // Startup delay: nothing runs
     if (startupDelayActive_) {

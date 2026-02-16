@@ -7,10 +7,10 @@
 namespace AppConfig {
 
 // ========== MQTT ==========
-inline const QString MQTT_BROKER_HOST        = QStringLiteral("192.168.3.101");
+inline const QString MQTT_BROKER_HOST        = QStringLiteral("194.228.245.109");
 inline constexpr quint16 MQTT_BROKER_PORT    = 8883;
-inline const QString MQTT_USERNAME           = QStringLiteral("device1");
-inline const QString MQTT_PASSWORD           = QStringLiteral("pass1");
+inline const QString MQTT_USERNAME           = QStringLiteral("device2");
+inline const QString MQTT_PASSWORD           = QStringLiteral("pass2");
 inline const QString MQTT_TOPIC_TELEMETRY    = QStringLiteral("devices/device1/telemetry");
 inline const QString MQTT_CA_FILE            = QStringLiteral("/usr/local/share/ca-certificates/rootCA.pem");
 

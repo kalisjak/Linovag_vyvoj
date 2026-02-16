@@ -88,6 +88,10 @@ int main(int argc, char* argv[]) {
 
         // cooling1 → backend
         QObject::connect(coolingW1, &CoolingWorker::coolingStateChanged, &backend, &Backend::updateCoolingState, Qt::QueuedConnection);
+
+        // enable/disable bath1
+        QObject::connect(&backend, &Backend::requestBath1Enabled, coolingW1, &CoolingWorker::setEnabled, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(coolingW1, "setEnabled", Qt::QueuedConnection, Q_ARG(bool, backend.bath1Enabled()));
     } else if (swTypeNow == 22) {
         // Cooling 1
         coolingThread1 = new QThread(&app);
@@ -104,6 +108,9 @@ int main(int argc, char* argv[]) {
         });
         QObject::connect(coolingW1, &CoolingWorker::coolingStateChanged, &backend, &Backend::updateCoolingState, Qt::QueuedConnection);
 
+        QObject::connect(&backend, &Backend::requestBath1Enabled, coolingW1, &CoolingWorker::setEnabled, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(coolingW1, "setEnabled", Qt::QueuedConnection, Q_ARG(bool, backend.bath1Enabled()));
+
         // Cooling 2 (independent thread)
         coolingThread2 = new QThread(&app);
         coolingW2 = new CoolingWorker(AppConfig::COMPRESSOR2_PIN,
@@ -118,6 +125,9 @@ int main(int argc, char* argv[]) {
             QMetaObject::invokeMethod(coolingW2, "onTargetTempChanged", Qt::QueuedConnection, Q_ARG(double, backend.targetTemp2()));
         });
         QObject::connect(coolingW2, &CoolingWorker::coolingStateChanged, &backend, &Backend::updateCoolingState2, Qt::QueuedConnection);
+
+        QObject::connect(&backend, &Backend::requestBath2Enabled, coolingW2, &CoolingWorker::setEnabled, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(coolingW2, "setEnabled", Qt::QueuedConnection, Q_ARG(bool, backend.bath2Enabled()));
     }
 
     // ==================== Watchdog worker + thread ====================
