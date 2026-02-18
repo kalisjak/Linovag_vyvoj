@@ -128,6 +128,7 @@ void CoolingWorker::tick() {
         return;
     }
 
+    checkScheduledDefrost();
     // Startup delay: nothing runs
     if (startupDelayActive_) {
         const qint64 elapsed = startupTimer_.elapsed();
@@ -232,6 +233,66 @@ void CoolingWorker::setFanDuty(double duty) {
 #else
     Q_UNUSED(duty);
 #endif
+}
+
+void CoolingWorker::setAutoDefrostEnabled(bool en) {
+    autoDefrostEnabled_ = en;
+}
+
+void CoolingWorker::setAutoDefrostTimes(int t1Min, int t2Min) {
+    autoDefrostTime1Min_ = t1Min;
+    autoDefrostTime2Min_ = t2Min;
+}
+
+int CoolingWorker::minutesSinceMidnightLocal() const {
+    const QTime t = QTime::currentTime();
+    return t.hour() * 60 + t.minute();
+}
+
+void CoolingWorker::checkScheduledDefrost() {
+    if (!autoDefrostEnabled_) return;
+    if (!enabled_) return;
+
+    // nezasahuj do běžícího defrostu / pauzy
+    if (defrostMode_ || dripHoldActive_ || startupDelayActive_) return;
+
+    const int nowMin = minutesSinceMidnightLocal();
+
+    const bool isMatch = (nowMin == autoDefrostTime1Min_) || (nowMin == autoDefrostTime2Min_);
+    if (!isMatch) return;
+
+    const QDateTime now = QDateTime::currentDateTime();
+
+    // anti-double-fire (když tick běží víckrát v minutě)
+    if (lastScheduledFire_.isValid()) {
+        if (lastScheduledFire_.date() == now.date() &&
+            lastScheduledFire_.time().hour() == now.time().hour() &&
+            lastScheduledFire_.time().minute() == now.time().minute()) {
+            return;
+        }
+    }
+
+    // podmínka 4h od zapnutí vany
+    if (enabledSince_.isValid()) {
+        if (enabledSince_.secsTo(now) < minTimeAutoDefrostS_) return;
+    } else {
+        return;
+    }
+
+    // podmínka 4h od posledního defrostu (scheduled i threshold)
+    if (lastDefrostAt_.isValid()) {
+        if (lastDefrostAt_.secsTo(now) < minTimeAutoDefrostS_) return;
+    }
+
+    defrostMode_ = true;
+    // defrostTimer_.restart();
+    coolingActive_ = false;
+    setCompressor(false);
+    setFanDuty(100);
+    publishStateIfChanged(true);
+
+    lastDefrostAt_ = now;
+    lastScheduledFire_ = now;
 }
 
 void CoolingWorker::publishStateIfChanged(bool force) {

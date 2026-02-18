@@ -58,6 +58,44 @@ void setSensor5Id(const QString& id) { setId("sensors/sensor5_id", id); }
 std::string sensor6Id() { return getId("sensors/sensor6_id", "28-000000000000"); }
 void setSensor6Id(const QString& id) { setId("sensors/sensor6_id", id); }
 
+// ===== Auto defrost schedule =====
+bool autoDefrostEnabled() {
+    QSettings s = makeSettings();
+    return s.value("defrost/auto_enabled", true).toBool();
+}
+
+void setAutoDefrostEnabled(bool en) {
+    QSettings s = makeSettings();
+    s.setValue("defrost/auto_enabled", en);
+}
+
+static int clampDayMin(int m) {
+    // normalize to 0..1439
+    m %= 1440;
+    if (m < 0) m += 1440;
+    return m;
+}
+
+int autoDefrostTime1Min() {
+    QSettings s = makeSettings();
+    return clampDayMin(s.value("defrost/auto_time1_min", 6 * 60).toInt());
+}
+
+void setAutoDefrostTime1Min(int minutes) {
+    QSettings s = makeSettings();
+    s.setValue("defrost/auto_time1_min", clampDayMin(minutes));
+}
+
+int autoDefrostTime2Min() {
+    QSettings s = makeSettings();
+    return clampDayMin(s.value("defrost/auto_time2_min", 20 * 60).toInt());
+}
+
+void setAutoDefrostTime2Min(int minutes) {
+    QSettings s = makeSettings();
+    s.setValue("defrost/auto_time2_min", clampDayMin(minutes));
+}
+
 // ===== Sensor offsets (°C) =====
 static double getOffset(const char* key, double def) {
     QSettings s = makeSettings();

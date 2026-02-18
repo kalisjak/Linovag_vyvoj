@@ -87,7 +87,7 @@ Page {
                 width: parent.width * 0.52
                 height: parent.height
                 radius: 20 * uiScale
-                color: "#00000055"
+                color: "transparent"
                 border.width: 1 * uiScale
                 border.color: "#c6c5df"
 
@@ -101,7 +101,7 @@ Page {
                         width: parent.width * 0.50
                         height: parent.height
                         radius: 18 * uiScale
-                        color: "#00000044"
+                        color: "#bb2e2e2e"
                         border.width: 1 * uiScale
                         border.color: "#c6c5df"
 
@@ -124,7 +124,7 @@ Page {
                                     width: parent.width
                                     height: 57 * uiScale
                                     radius: 16 * uiScale
-                                    color: "#00000033"
+                                    color: "#1d1f24"
                                     border.width: 1 * uiScale
                                     border.color: "#c6c5df"
 
@@ -160,9 +160,10 @@ Page {
                         width: parent.width - (parent.width * 0.50) - (14 * uiScale)
                         height: parent.height
                         radius: 18 * uiScale
-                        color: "#00000044"
+                        color: "#bb2e2e2e"
                         border.width: 1 * uiScale
                         border.color: "#c6c5df"
+                        opacity: backend.forcedSensors ? 1.0 : 0.5
 
                         Column {
                             anchors.fill: parent
@@ -180,7 +181,7 @@ Page {
                                 Text {
                                     text: backend.forcedSensors ? "ON" : "OFF"
                                     color: backend.forcedSensors ? "orange" : "#c6c5df"
-                                    font.pixelSize: 20 * uiScale
+                                    font.pixelSize: 24 * uiScale
                                     font.bold: true
                                 }
                             }
@@ -194,10 +195,10 @@ Page {
                                     width: parent.width
                                     height: 70 * uiScale
                                     radius: 16 * uiScale
-                                    color: isSelected ? "#1f1f1fcc" : "#00000033"
+                                    color: isSelected ? "#5a5a5ac4" : "#1d1f24"
                                     border.width: 2 * uiScale
                                     border.color: isSelected ? "orange" : "#c6c5df"
-                                    opacity: backend.forcedSensors ? 1.0 : 0.45
+                                    opacity: backend.forcedSensors ? 1.0 : 0.5
 
                                     MouseArea {
                                         anchors.fill: parent
@@ -256,9 +257,10 @@ Page {
                 width: parent.width * 0.18
                 height: parent.height
                 radius: 20 * uiScale
-                color: "#00000044"
+                color: "#bb2e2e2e"
                 border.width: 1 * uiScale
                 border.color: "#c6c5df"
+                opacity: backend.forcedSensors ? 1.0 : 0.5
 
                 Column {
                     anchors.centerIn: parent
@@ -268,7 +270,7 @@ Page {
                         width: 120 * uiScale
                         height: 120 * uiScale
                         radius: 26 * uiScale
-                        color: upArea.pressed ? "#5a5a5ac4" : "#00000099"
+                        color: upArea.pressed ? "#5a5a5ac4" : "#88000000"
                         opacity: backend.forcedSensors ? 1.0 : 0.35
                         border.width: 2 * uiScale
                         border.color: "#c6c5df"
@@ -290,7 +292,7 @@ Page {
                         width: 120 * uiScale
                         height: 120 * uiScale
                         radius: 26 * uiScale
-                        color: downArea.pressed ? "#5a5a5ac4" : "#00000099"
+                        color: downArea.pressed ? "#5a5a5ac4" : "#88000000"
                         opacity: backend.forcedSensors ? 1.0 : 0.35
                         border.width: 2 * uiScale
                         border.color: "#c6c5df"
@@ -308,7 +310,7 @@ Page {
                 width: parent.width - leftPane.width - midPane.width - 2 * (18 * uiScale)
                 height: parent.height
                 radius: 20 * uiScale
-                color: "#00000044"
+                color: "#bb2e2e2e"
                 border.width: 1 * uiScale
                 border.color: "#c6c5df"
 
@@ -321,7 +323,7 @@ Page {
                         width: 280 * uiScale
                         height: 120 * uiScale
                         radius: 22 * uiScale
-                        color: softArea.pressed ? "#5a5a5ac4" : "#00000099"
+                        color: softArea.pressed ? "#5a5a5ac4" : "#66000000"
                         border.width: 2 * uiScale
                         border.color: "#c6c5df"
 
@@ -341,7 +343,7 @@ Page {
                         width: 280 * uiScale
                         height: 120 * uiScale
                         radius: 22 * uiScale
-                        color: forcedArea.pressed ? "#5a5a5ac4" : (backend.forcedSensors ? "#000000cc" : "#00000099")
+                        color: forcedArea.pressed ? "#5a5a5ac4" : (backend.forcedSensors ? "#1d1f24" : "#1d1f24")
                         border.width: 2 * uiScale
                         border.color: backend.forcedSensors ? "orange" : "#c6c5df"
 

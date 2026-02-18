@@ -38,11 +38,7 @@ void setSensor5Id(const QString& id);
 std::string sensor6Id();
 void setSensor6Id(const QString& id);
 
-static std::string getId(const char* key, const char* def);
-static void setId(const char* key, const QString& id);
-
 // Sensor offsets (°C)
-// sensor1..6 map to logical sensors based on software type (3 or 22).
 double sensor1Offset();
 void setSensor1Offset(double off);
 
@@ -60,6 +56,21 @@ void setSensor5Offset(double off);
 
 double sensor6Offset();
 void setSensor6Offset(double off);
+
+// ===== Auto defrost schedule =====
+// enabled = whether scheduled defrost is active
+bool autoDefrostEnabled();
+void setAutoDefrostEnabled(bool en);
+
+// Times are minutes since midnight (0..1439)
+int autoDefrostTime1Min();
+void setAutoDefrostTime1Min(int minutes);
+
+int autoDefrostTime2Min();
+void setAutoDefrostTime2Min(int minutes);
+
+static std::string getId(const char* key, const char* def);
+static void setId(const char* key, const QString& id);
 
 QString reclaimOrderNumber();
 void setReclaimOrderNumber(const QString& number);

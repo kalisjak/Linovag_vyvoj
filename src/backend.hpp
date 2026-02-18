@@ -54,6 +54,10 @@ class Backend : public QObject {
     Q_PROPERTY(bool compressor2On READ compressor2On NOTIFY compressor2OnChanged)
     Q_PROPERTY(bool dripHold2Active READ dripHold2Active NOTIFY dripHold2ActiveChanged)
 
+    Q_PROPERTY(bool autoDefrostEnabled READ autoDefrostEnabled WRITE setAutoDefrostEnabled NOTIFY autoDefrostEnabledChanged)
+    Q_PROPERTY(int autoDefrostTime1Min READ autoDefrostTime1Min WRITE setAutoDefrostTime1Min NOTIFY autoDefrostTimeChanged)
+    Q_PROPERTY(int autoDefrostTime2Min READ autoDefrostTime2Min WRITE setAutoDefrostTime2Min NOTIFY autoDefrostTimeChanged)
+
     // Bath enable/disable (user OFF = compressor OFF + fans OFF)
     Q_PROPERTY(bool bath1Enabled READ bath1Enabled WRITE setBath1Enabled NOTIFY bath1EnabledChanged)
     Q_PROPERTY(bool bath2Enabled READ bath2Enabled WRITE setBath2Enabled NOTIFY bath2EnabledChanged)
@@ -135,6 +139,11 @@ class Backend : public QObject {
     bool bath1Enabled() const { return bath1Enabled_; }
     bool bath2Enabled() const { return bath2Enabled_; }
 
+    // Auto defrost schedule (cached from runtime config)
+    bool autoDefrostEnabled() const { return autoDefrostEnabled_; }
+    int autoDefrostTime1Min() const { return autoDefrostTime1Min_; }
+    int autoDefrostTime2Min() const { return autoDefrostTime2Min_; }
+
     QString serialNumber() const { return RuntimeConfig::deviceSerial(); }
     QString reclaimOrderNumber() const { return RuntimeConfig::reclaimOrderNumber(); };
     QString reclaimEmail() const { return RuntimeConfig::reclaimEmail(); };
@@ -214,6 +223,11 @@ class Backend : public QObject {
     void setBath1Enabled(bool en);
     void setBath2Enabled(bool en);
 
+    // Auto defrost schedule (settings page)
+    void setAutoDefrostEnabled(bool en);
+    void setAutoDefrostTime1Min(int minutes);
+    void setAutoDefrostTime2Min(int minutes);
+
    signals:
     void value1Changed();
     void value2Changed();
@@ -248,6 +262,9 @@ class Backend : public QObject {
 
     void bath1EnabledChanged();
     void bath2EnabledChanged();
+
+    void autoDefrostEnabledChanged();
+    void autoDefrostTimeChanged();
 
     void reclaimInfoChanged();
 
@@ -285,6 +302,9 @@ class Backend : public QObject {
     // requests to CoolingWorker(s)
     void requestBath1Enabled(bool en);
     void requestBath2Enabled(bool en);
+
+    void requestAutoDefrostEnabled(bool en);
+    void requestAutoDefrostTimes(int t1Min, int t2Min);
 
     void power1OnChanged();
     void power2OnChanged();
@@ -324,6 +344,11 @@ class Backend : public QObject {
     double forcedT3_ = -8.0;
     double forcedT4_ = -7.0;
     double forcedT5_ = 28.0;
+
+    // Auto defrost schedule (cached)
+    bool autoDefrostEnabled_ = true;
+    int autoDefrostTime1Min_ = 6 * 60;
+    int autoDefrostTime2Min_ = 20 * 60;
 
     bool power1On_ = false;
     bool power2On_ = false;

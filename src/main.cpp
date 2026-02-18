@@ -105,6 +105,15 @@ int main(int argc, char* argv[]) {
             QMetaObject::invokeMethod(coolingW1, "onTargetTempChanged", Qt::QueuedConnection, Q_ARG(double, backend.targetTemp()));
         });
 
+        // auto defrost schedule -> coolingW1
+        QObject::connect(&backend, &Backend::requestAutoDefrostEnabled, coolingW1, &CoolingWorker::setAutoDefrostEnabled,
+                         Qt::QueuedConnection);
+        QObject::connect(&backend, &Backend::requestAutoDefrostTimes, coolingW1, &CoolingWorker::setAutoDefrostTimes, Qt::QueuedConnection);
+
+        QMetaObject::invokeMethod(coolingW1, "setAutoDefrostEnabled", Qt::QueuedConnection, Q_ARG(bool, backend.autoDefrostEnabled()));
+        QMetaObject::invokeMethod(coolingW1, "setAutoDefrostTimes", Qt::QueuedConnection, Q_ARG(int, backend.autoDefrostTime1Min()),
+                                  Q_ARG(int, backend.autoDefrostTime2Min()));
+
         // cooling1 → backend
         QObject::connect(coolingW1, &CoolingWorker::coolingStateChanged, &backend, &Backend::updateCoolingState, Qt::QueuedConnection);
 
@@ -139,6 +148,24 @@ int main(int argc, char* argv[]) {
 
         QObject::connect(&backend, &Backend::requestBath2Enabled, coolingW2, &CoolingWorker::setEnabled, Qt::QueuedConnection);
         QMetaObject::invokeMethod(coolingW2, "setEnabled", Qt::QueuedConnection, Q_ARG(bool, backend.bath2Enabled()));
+
+        // auto defrost schedule -> both cooling workers (shared times)
+        QObject::connect(&backend, &Backend::requestAutoDefrostEnabled, coolingW1, &CoolingWorker::setAutoDefrostEnabled,
+                         Qt::QueuedConnection);
+        QObject::connect(&backend, &Backend::requestAutoDefrostTimes, coolingW1, &CoolingWorker::setAutoDefrostTimes, Qt::QueuedConnection);
+
+        QObject::connect(&backend, &Backend::requestAutoDefrostEnabled, coolingW2, &CoolingWorker::setAutoDefrostEnabled,
+                         Qt::QueuedConnection);
+        QObject::connect(&backend, &Backend::requestAutoDefrostTimes, coolingW2, &CoolingWorker::setAutoDefrostTimes, Qt::QueuedConnection);
+
+        // push current config immediately
+        QMetaObject::invokeMethod(coolingW1, "setAutoDefrostEnabled", Qt::QueuedConnection, Q_ARG(bool, backend.autoDefrostEnabled()));
+        QMetaObject::invokeMethod(coolingW1, "setAutoDefrostTimes", Qt::QueuedConnection, Q_ARG(int, backend.autoDefrostTime1Min()),
+                                  Q_ARG(int, backend.autoDefrostTime2Min()));
+
+        QMetaObject::invokeMethod(coolingW2, "setAutoDefrostEnabled", Qt::QueuedConnection, Q_ARG(bool, backend.autoDefrostEnabled()));
+        QMetaObject::invokeMethod(coolingW2, "setAutoDefrostTimes", Qt::QueuedConnection, Q_ARG(int, backend.autoDefrostTime1Min()),
+                                  Q_ARG(int, backend.autoDefrostTime2Min()));
     }
 
     // ==================== Watchdog worker + thread ====================

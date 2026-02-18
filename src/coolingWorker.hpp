@@ -1,9 +1,10 @@
 #pragma once
 
-#include <QObject>
+#include <QDateTime>
 #include <QElapsedTimer>
-#include <QTimer>
+#include <QObject>
 #include <QString>
+#include <QTimer>
 
 #include "config.hpp"
 
@@ -14,11 +15,7 @@ class CoolingWorker : public QObject {
     // bathIdx: 1 or 2 (maps to DS18 t1/t2)
     // evapIdx: 3 or 4 (maps to DS18 t3/t4)
     // condenser is always DS18 t5
-    explicit CoolingWorker(int compressorGpioPin,
-                           int fanPwmGpioPin,
-                           int bathIdx,
-                           int evapIdx,
-                           const QString& heartbeatName,
+    explicit CoolingWorker(int compressorGpioPin, int fanPwmGpioPin, int bathIdx, int evapIdx, const QString& heartbeatName,
                            QObject* parent = nullptr);
 
    public slots:
@@ -32,6 +29,9 @@ class CoolingWorker : public QObject {
     void onTempSensors(double t1, double t2, double t3, double t4, double t5);
     void onTargetTempChanged(double target);
 
+    void setAutoDefrostEnabled(bool en);
+    void setAutoDefrostTimes(int t1Min, int t2Min);
+
    signals:
     void coolingStateChanged(bool coolingActive, bool defrostActive, bool compressorOn, bool dripActive);
     void heartbeat(const QString& name);
@@ -41,6 +41,9 @@ class CoolingWorker : public QObject {
 
     void setCompressor(bool on);
     void setFanDuty(double duty);
+
+    void checkScheduledDefrost();
+    int minutesSinceMidnightLocal() const;
 
     const int compressorPin_;
     const int fanPin_;
@@ -75,4 +78,14 @@ class CoolingWorker : public QObject {
     bool lastDefrostActive_ = false;
     bool lastCompressorOn_ = false;
     bool lastDripHoldAc_ = false;
+
+    bool autoDefrostEnabled_ = true;
+    int autoDefrostTime1Min_ = 6 * 60;
+    int autoDefrostTime2Min_ = 20 * 60;
+
+    uint minTimeAutoDefrostS_ = AppConfig::MIN_TIME_BEETWEEN_AUTODEFROST_S;
+
+    QDateTime enabledSince_;       // kdy byla vana zapnutá (setEnabled(true))
+    QDateTime lastDefrostAt_;      // start defrostu (jakýkoliv)
+    QDateTime lastScheduledFire_;  // aby to nespouštělo několikrát v té samé minutě
 };

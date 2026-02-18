@@ -17,6 +17,10 @@ Backend::Backend(QObject* parent) : QObject(parent), rng_(std::random_device{}()
     swType_ = RuntimeConfig::softwareType();
     targetTemp_ = 5.0;
     targetTemp2_ = 5.0;
+    // auto defrost schedule (from runtime config)
+    autoDefrostEnabled_ = RuntimeConfig::autoDefrostEnabled();
+    autoDefrostTime1Min_ = RuntimeConfig::autoDefrostTime1Min();
+    autoDefrostTime2Min_ = RuntimeConfig::autoDefrostTime2Min();
 
     mqttTimer_ = new QTimer(this);
     mqttTimer_->setInterval(mqtt_push_time);
@@ -103,6 +107,31 @@ void Backend::setBath2Enabled(bool en) {
     emit requestBath2Enabled(en);
 }
 
+// =========== Auto defrost schedule (settings) ===========
+void Backend::setAutoDefrostEnabled(bool en) {
+    if (autoDefrostEnabled_ == en) return;
+    autoDefrostEnabled_ = en;
+    RuntimeConfig::setAutoDefrostEnabled(en);
+    emit autoDefrostEnabledChanged();
+    emit requestAutoDefrostEnabled(en);
+}
+
+void Backend::setAutoDefrostTime1Min(int minutes) {
+    if (autoDefrostTime1Min_ == minutes) return;
+    autoDefrostTime1Min_ = minutes;
+    RuntimeConfig::setAutoDefrostTime1Min(minutes);
+    emit autoDefrostTimeChanged();
+    emit requestAutoDefrostTimes(autoDefrostTime1Min_, autoDefrostTime2Min_);
+}
+
+void Backend::setAutoDefrostTime2Min(int minutes) {
+    if (autoDefrostTime2Min_ == minutes) return;
+    autoDefrostTime2Min_ = minutes;
+    RuntimeConfig::setAutoDefrostTime2Min(minutes);
+    emit autoDefrostTimeChanged();
+    emit requestAutoDefrostTimes(autoDefrostTime1Min_, autoDefrostTime2Min_);
+}
+
 // =========== Sensor config setters ===========
 void Backend::setSensor1Id(const QString& id) {
     RuntimeConfig::setSensor1Id(id);
@@ -167,19 +196,18 @@ void Backend::setSensor6Offset(double off) {
     emit sensorConfigChanged();
 }
 
-
 //
 // =========== Forced setters ===========
 
 void Backend::setForcedSensors(bool en) {
     if (forcedSensors_ == en) return;
     forcedSensors_ = en;
-    
+
     if (forcedSensors_) {
         if (!std::isfinite(forcedT1_)) forcedT1_ = targetTemp_;
         if (!std::isfinite(forcedT3_)) forcedT3_ = -5.0;
         if (!std::isfinite(forcedT5_)) forcedT5_ = 20.0;
-        
+
         if (swType_ == 22) {
             if (!std::isfinite(forcedT2_)) forcedT2_ = targetTemp2_;
             if (!std::isfinite(forcedT4_)) forcedT4_ = -5.0;
@@ -273,7 +301,7 @@ void Backend::updateVisibleOneWireIds(const QStringList& ids) {
 
 void Backend::updateMqttConnected(bool ok) {
     if (mqttConnected_ == ok) return;
-    
+
     mqttConnected_ = ok;
     emit mqttConnectedChanged();
 }

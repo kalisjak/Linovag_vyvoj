@@ -5,32 +5,37 @@ import QtQuick.Layouts 1.15
 Page {
     id: page
     title: "Senzory"
-    background: Item {}
-    visible: SwipeView.isCurrentItem
+    background: Rectangle { color: "transparent" }
+
+    // POUŽIJU PŘÍMO globální uiScale z projektu.
+    // Pokud ho nemáš, dej si sem "property real s: 1.0"
+    readonly property real s: uiScale
 
     readonly property bool is22: backend.softwareType === 22
     readonly property real step: 0.1
 
-    // UI state
     property string selectedAddr: ""
     property int selectedOffsetKey: -1   // 1..6
+    property bool assignUnlocked: false
+
+    readonly property bool canAdjust: selectedOffsetKey > 0
 
     function sensorRows() {
         if (is22) {
             return [
-                { key: 1, label: "VANA 1", idProp: "sensor1Id", offProp: "sensor1Offset" },
-                { key: 2, label: "VANA 2", idProp: "sensor2Id", offProp: "sensor2Offset" },
-                { key: 3, label: "VYPAR 1", idProp: "sensor3Id", offProp: "sensor3Offset" },
-                { key: 4, label: "VYPAR 2", idProp: "sensor4Id", offProp: "sensor4Offset" },
-                { key: 5, label: "KONDEN", idProp: "sensor5Id", offProp: "sensor5Offset" },
-                { key: 6, label: "NASAV", idProp: "sensor6Id", offProp: "sensor6Offset" }
+                { key: 1, label: "VANA 1", idProp: "sensor1Id" },
+                { key: 2, label: "VANA 2", idProp: "sensor2Id" },
+                { key: 3, label: "VÝPARNÍK 1", idProp: "sensor3Id" },
+                { key: 4, label: "VÝPARNÍK 2", idProp: "sensor4Id" },
+                { key: 5, label: "KONDENZÁTOR", idProp: "sensor5Id" },
+                { key: 6, label: "NASÁVÁNÍ", idProp: "sensor6Id" }
             ]
         }
         return [
-            { key: 1, label: "VANA", idProp: "sensor1Id", offProp: "sensor1Offset" },
-            { key: 3, label: "VYPAR", idProp: "sensor3Id", offProp: "sensor3Offset" },
-            { key: 5, label: "KONDEN", idProp: "sensor5Id", offProp: "sensor5Offset" },
-            { key: 6, label: "NASAV", idProp: "sensor6Id", offProp: "sensor6Offset" }
+            { key: 1, label: "VANA", idProp: "sensor1Id" },
+            { key: 3, label: "VÝPARNÍK", idProp: "sensor3Id" },
+            { key: 5, label: "KONDENZÁTOR", idProp: "sensor5Id" },
+            { key: 6, label: "NASÁVÁNÍ", idProp: "sensor6Id" }
         ]
     }
 
@@ -47,7 +52,6 @@ Page {
     }
 
     function setOff(key, v) {
-        // lehká ochrana rozsahu (ať se to neutrhne)
         v = Math.max(-50, Math.min(50, v))
         switch (key) {
         case 1: backend.sensor1Offset = v; break
@@ -70,142 +74,218 @@ Page {
         }
     }
 
-    RowLayout {
-        anchors.fill: parent
-        anchors.margins: 14
-        spacing: 14
+    function adjust(delta) {
+        if (!canAdjust) return
+        setOff(selectedOffsetKey, getOff(selectedOffsetKey) + delta)
+    }
 
-        // ============ LEFT: visible 1-wire addresses ============
-        Rectangle {
-            Layout.preferredWidth: 320
-            Layout.fillHeight: true
-            radius: 12
-            color: "#1d1f24"
-            border.color: "#2a2d34"
+    // ---------- GEOMETRIE (anchors, žádný RowLayout) ----------
+    readonly property real pad: 14 * s
+    readonly property real gap: 14 * s
 
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 12
-                spacing: 10
+    readonly property real leftW: Math.round((width - 2*pad - 2*gap) * 0.30)
+    readonly property real rightW: Math.round((width - 2*pad - 2*gap) * 0.18)
+    readonly property real midW: (width - 2*pad - 2*gap) - leftW - rightW
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 8
+    // ============ LEFT ============
+    Rectangle {
+        id: leftPane
+        x: pad
+        y: pad
+        width: leftW
+        height: parent.height - 2*pad
+        radius: 20 * s
+        color: page.assignUnlocked ? "#bb2e2e2e" : "#772e2e2e"
+        border.width: 1 * s
+        border.color: page.assignUnlocked ? "#c6c5df" : "#77c6c5df"
 
-                    Label { text: "VIDITELNÉ 1-WIRE"; color: "white"; font.pixelSize: 16; Layout.fillWidth: true }
+        Column {
+            anchors.fill: parent
+            anchors.margins: 14 * s
+            spacing: 12 * s
 
-                    Button {
-                        text: "↻"
-                        onClicked: backend.refreshVisibleOneWireIds()
-                        width: 44
-                    }
+            Row {
+                width: parent.width
+                height: 36 * s
+                spacing: 10 * s
+
+                Text {
+                    text: "VIDITELNÉ 1-WIRE"
+                    color: page.assignUnlocked ? "#c6c5df" : "#77c6c5df"
+                    font.pixelSize: 18 * s
+                    font.bold: true
+                    anchors.verticalCenter: parent.verticalCenter
                 }
 
-                ListView {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    clip: true
-                    model: backend.visibleOneWireIds
-
-                    delegate: Rectangle {
-                        width: ListView.view.width
-                        height: 44
-                        radius: 10
-                        color: (modelData === selectedAddr) ? "#2f6fed" : "#262a31"
-                        border.color: "#2a2d34"
-
-                        Text {
-                            anchors.verticalCenter: parent.verticalCenter
-                            anchors.left: parent.left
-                            anchors.leftMargin: 12
-                            text: modelData
-                            color: "white"
-                            font.pixelSize: 15
-                        }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            onClicked: selectedAddr = modelData
-                        }
-                    }
-                }
+                Item { width: 1; height: 1; anchors.horizontalCenter: undefined }
 
                 Rectangle {
-                    Layout.fillWidth: true
-                    height: 1
-                    color: "#2a2d34"
+                    width: 60 * s
+                    height: 50 * s
+                    radius: 10 * s
+                    color: refreshArea.pressed ? "#5a5a5ac4" : "#00000099"
+                    border.width: 1 * s
+                    border.color: "#88c6c5df"
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    Text { anchors.centerIn: parent; text: "↻"; color: "#EDEFF2"; font.pixelSize: 30 * s; font.bold: true; opacity: page.assignUnlocked ? 1.0 : 0.6 }
+                    MouseArea {
+                        id: refreshArea
+                        anchors.fill: parent
+                        onClicked: backend.refreshVisibleOneWireIds()
+                    }
+                }
+                Rectangle {
+                    width: 60 * s
+                    height: 50 * s
+                    radius: 10 * s
+                    color: unlockArea.pressed ? "#5a5a5ac4" : "#00000099"
+                    border.width: 1 * s
+                    border.color: "#88c6c5df"
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: page.assignUnlocked ? "\uF600" : "\uF47B"
+                        color: "#EDEFF2"
+                        font.pixelSize: 28 * s
+                        font.bold: true
+                    }
+
+                    MouseArea {
+                        id: unlockArea
+                        anchors.fill: parent
+                        onClicked: page.assignUnlocked = !page.assignUnlocked
+                    }
                 }
 
-                Label {
-                    Layout.fillWidth: true
-                    color: "#bfc6d1"
-                    font.pixelSize: 13
-                    wrapMode: Text.WordWrap
-                    text: selectedAddr === "" ?
-                          "Tip: Klikni na adresu vlevo, potom klikni na roli čidla (vpravo uprostřed) pro přiřazení." :
-                          ("Vybraná adresa: " + selectedAddr)
+            }
+
+            Rectangle { width: parent.width; height: 1 * s; color: "#c6c5df"; opacity: 0.35 }
+
+            ListView {
+                id: addrList
+                width: parent.width
+                height: parent.height - (36*s + 12*s + 1*s + 12*s + 50*s)
+                clip: true
+                model: backend.visibleOneWireIds
+                spacing: 10 * s
+
+                delegate: Rectangle {
+                    width: addrList.width
+                    height: 58 * s
+                    radius: 18 * s
+                    color: (modelData === selectedAddr & page.assignUnlocked) ? "#2f6fed" : "#1d1f24"
+                    border.width: 1 * s
+                    border.color: "#c6c5df"
+                    opacity: page.assignUnlocked ? 0.95 : 0.5
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: modelData
+                        color: "#EDEFF2"
+                        font.pixelSize: 22 * s
+                        font.bold: true
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: selectedAddr = modelData
+                    }
                 }
             }
+
+            Text {
+                width: parent.width
+                text: selectedAddr === "" ? "Klikni na adresu a pak na roli uprostřed." : ("Vybraná: " + selectedAddr)
+                color: selectedAddr === "" ? "#666666" : "#c6c5df"
+                font.pixelSize: 16 * s
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WordWrap
+            }
         }
+    }
 
-        // ============ MIDDLE: mapping + offsets ============
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            radius: 12
-            color: "#1d1f2425"
-            border.color: "#c6c5df"
+    // ============ MIDDLE ============
+    Rectangle {
+        id: midPane
+        x: leftPane.x + leftPane.width + gap
+        y: pad
+        width: midW
+        height: parent.height - 2*pad
+        radius: 20 * s
+        color: "#bb2e2e2e"
+        border.width: 1 * s
+        border.color: "#c6c5df"
 
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 8
-                spacing: 5
+        Column {
+            anchors.fill: parent
+            anchors.margins: 14 * s
+            spacing: 12 * s
 
-                Label { text: is22 ? "PŘIŘAZENÍ + OFFSETY (2+2)" : "PŘIŘAZENÍ + OFFSETY (TYP-3)"; color: "white"; font.pixelSize: 16 }
+            Text {
+                width: parent.width
+                text: is22 ? "PŘIŘAZENÍ + OFFSETY (2+2)" : "PŘIŘAZENÍ + OFFSETY (TYP-3)"
+                color: "white"
+                font.pixelSize: 18 * s
+                font.bold: true
+            }
+
+            Rectangle { width: parent.width; height: 1 * s; color: "#c6c5df"; opacity: 0.35 }
+
+            Grid {
+                id: grid
+                width: parent.width
+                height: parent.height - (24*s + 12*s + 1*s + 12*s)
+                columns: 2
+                spacing: 12 * s
 
                 Repeater {
                     model: sensorRows()
 
                     delegate: Rectangle {
-                        Layout.fillWidth: true
-                        height: 80
-                        radius: 12
-                        color: (selectedOffsetKey === modelData.key) ? "#263451" : "#262a31"
-                        border.width: 2
-                        border.color: (selectedOffsetKey === modelData.key) ? "orange" : "#c6c5df"
+                        width: (grid.width - grid.spacing) / 2
+                        height: 150 * s
+                        radius: 22 * s
+                        color: (selectedOffsetKey === modelData.key) ? "#2158c7" : "#1d1f24"
+                        border.width: 2 * s
+                        border.color: (selectedOffsetKey === modelData.key) ? "orange" : "#757485"
 
-                        RowLayout {
+                        Column {
                             anchors.fill: parent
-                            anchors.margins: 10
-                            spacing: 10
+                            anchors.margins: 14 * s
+                            spacing: 8 * s
 
-                            // role + current id (kliknutím přiřadíš vybranou adresu)
-                            ColumnLayout {
-                                Layout.fillWidth: true
-                                spacing: 2
-
-                                Text { text: modelData.label; color: "white"; font.pixelSize: 15 }
-                                Text {
-                                    text: backend[modelData.idProp]
-                                    color: "#bfc6d1"
-                                    font.pixelSize: 13
-                                    elide: Text.ElideRight
-                                }
+                            Text {
+                                text: modelData.label
+                                color: "#EDEFF2"
+                                font.pixelSize: 20 * s
+                                font.bold: true
+                                elide: Text.ElideRight
                             }
 
-                            // offset display (kliknutím vybereš čidlo pro šipky)
+                            Text {
+                                text: backend[modelData.idProp]
+                                color: "white"
+                                font.pixelSize: 18 * s
+                                font.bold: true
+                                elide: Text.ElideRight
+                            }
+
                             Rectangle {
-                                width: 110
-                                height: 38
-                                radius: 10
-                                color: "#1d1f24"
-                                border.color: "#3a3f49"
+                                width: parent.width
+                                height: 50 * s
+                                radius: 16 * s
+                                color: "#00000077"
+                                border.width: 1 * s
+                                border.color: "#c6c5df"
 
                                 Text {
                                     anchors.centerIn: parent
                                     text: (getOff(modelData.key) >= 0 ? "+" : "") + getOff(modelData.key).toFixed(1) + " °C"
-                                    color: "white"
-                                    font.pixelSize: 14
+                                    color: "#EDEFF2"
+                                    font.pixelSize: 24 * s
+                                    font.bold: true
                                 }
                             }
                         }
@@ -214,65 +294,78 @@ Page {
                             anchors.fill: parent
                             onClicked: {
                                 selectedOffsetKey = modelData.key
-                                if (selectedAddr !== "") {
-                                    setId(modelData.key, selectedAddr)
-                                }
+                                if (page.assignUnlocked && selectedAddr !== "") setId(modelData.key, selectedAddr)
                             }
                         }
                     }
                 }
             }
         }
+    }
 
-        // ============ RIGHT: common arrows ============
-        Rectangle {
-            Layout.preferredWidth: 140
-            Layout.fillHeight: true
-            radius: 12
-            color: "#1d1f24"
-            border.color: "#2a2d34"
+    // ============ RIGHT (arrows like TestPage) ============
+    Rectangle {
+        id: rightPane
+        x: midPane.x + midPane.width + gap
+        y: pad
+        width: rightW
+        height: parent.height - 2*pad
+        radius: 20 * s
+        color: "#bb2e2e2e"
+        border.width: 1 * s
+        border.color: "#c6c5df"
+        opacity: page.canAdjust ? 1.0 : 0.6
 
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 12
-                spacing: 12
+        Column {
+            anchors.centerIn: parent
+            spacing: 18 * s
 
-                // Label { text: "ŠIPKY"; color: "white"; font.pixelSize: 16; horizontalAlignment: Text.AlignHCenter; Layout.fillWidth: true }
+            Rectangle {
+                width: 120 * s
+                height: 120 * s
+                radius: 26 * s
+                color: upArea.pressed ? "#5a5a5ac4" : "#00000099"
+                opacity: page.canAdjust ? 1.0 : 0.35
+                border.width: 2 * s
+                border.color: "#c6c5df"
 
-                Label {
-                    Layout.fillWidth: true
-                    wrapMode: Text.WordWrap
-                    color: "#bfc6d1"
-                    font.pixelSize: 13
-                    text: selectedOffsetKey < 0 ? "Vyber čidlo uprostřed." : ("Krok: " + step.toFixed(1) + " °C")
-                }
+                Text { anchors.centerIn: parent; text: "▲"; color: "#EDEFF2"; font.pixelSize: 60 * s; font.bold: true }
+                MouseArea { id: upArea; anchors.fill: parent; enabled: page.canAdjust; onClicked: page.adjust(+page.step) }
+            }
 
-                Rectangle { Layout.fillWidth: true; height: 1; color: "#2a2d34" }
+            Text {
+                text: page.canAdjust ? ("krok " + Number(page.step).toFixed(1) + "°C") : "VYBER ČIDLO"
+                color: page.canAdjust ? "#c6c5df" : "#666666"
+                font.pixelSize: 18 * s
+                horizontalAlignment: Text.AlignHCenter
+                width: parent.width
+            }
 
-                Item { Layout.fillHeight: true }
+            Rectangle {
+                width: 120 * s
+                height: 120 * s
+                radius: 26 * s
+                color: downArea.pressed ? "#5a5a5ac4" : "#00000099"
+                opacity: page.canAdjust ? 1.0 : 0.35
+                border.width: 2 * s
+                border.color: "#c6c5df"
 
-                Button {
-                    Layout.fillWidth: true
-                    text: "▲"
-                    enabled: selectedOffsetKey > 0
-                    onClicked: setOff(selectedOffsetKey, getOff(selectedOffsetKey) + step)
-                }
+                Text { anchors.centerIn: parent; text: "▼"; color: "#EDEFF2"; font.pixelSize: 60 * s; font.bold: true }
+                MouseArea { id: downArea; anchors.fill: parent; enabled: page.canAdjust; onClicked: page.adjust(-page.step) }
+            }
 
-                Button {
-                    Layout.fillWidth: true
-                    text: "▼"
-                    enabled: selectedOffsetKey > 0
-                    onClicked: setOff(selectedOffsetKey, getOff(selectedOffsetKey) - step)
-                }
+            // ZERO (nulování offsetu)
+            Rectangle {
+                width: 120 * s
+                height: 64 * s
+                radius: 22 * s
+                color: zeroArea.pressed ? "#5a5a5ac4" : "#00000099"
+                opacity: page.canAdjust ? 1.0 : 0.35
+                border.width: 2 * s
+                border.color: "#c6c5df"
 
-                Button {
-                    Layout.fillWidth: true
-                    text: "0.0"
-                    enabled: selectedOffsetKey > 0
-                    onClicked: setOff(selectedOffsetKey, 0.0)
-                }
-
-                Item { Layout.fillHeight: true }
+                Text { anchors.centerIn: parent; text: "0.0"; color: "#EDEFF2"; font.pixelSize: 26 * s; font.bold: true }
+                MouseArea { id: zeroArea; anchors.fill: parent; enabled: page.canAdjust; onClicked: page.setOff(page.selectedOffsetKey, 0.0) }
             }
         }
     }

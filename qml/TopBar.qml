@@ -375,7 +375,7 @@ Rectangle {
                 })
                 background: Rectangle {
                     radius: 7 * uiScale
-                    color: wifiBtn.down ? "#00000066" : "#00000033"
+                    color: wifiBtn.down ? "#66000000" : "transparent"
                     implicitWidth: 52 * uiScale
                     implicitHeight: 52 * uiScale
                 }
@@ -391,7 +391,7 @@ Rectangle {
                 })
                 background: Rectangle {
                     radius: 7 * uiScale
-                    color: settingsBtn.down ? "#00000066" : "#00000033"
+                    color: settingsBtn.down ? "#66000000" : "transparent"
                     implicitWidth: 52 * uiScale
                     implicitHeight: 52 * uiScale
                 }
@@ -407,7 +407,7 @@ Rectangle {
                 })
                 background: Rectangle {
                     radius: 7 * uiScale
-                    color: loginBtn.down ? "#00000066" : "#00000033"
+                    color: loginBtn.down ? "#66000000" : "transparent"
                     implicitWidth: 52 * uiScale
                     implicitHeight: 52 * uiScale
                 }

@@ -19,6 +19,8 @@ inline const QString MQTT_CA_FILE            = QStringLiteral("/usr/local/share/
 inline constexpr int SENSOR_POLL_INTERVAL_MS = 8000;
 inline constexpr int MQTT_POLL_INTERVAL_MS   = 60000;
 
+inline constexpr uint MIN_TIME_BEETWEEN_AUTODEFROST_S = 4 * 3600; // minimální interval mezi defrosty (4h) 4 * 3600
+
 // watchdog
 inline constexpr qint64 WATCHDOG_CHECK_INTERVAL_MS = 20000;
 inline constexpr qint64 WATCHDOG_TIMEOUT_MS        = 65000;  // 65 s bez heartbeat
@@ -56,7 +58,7 @@ inline constexpr int COOLING_CONTROL_INTERVAL_MS = 1000;
 // hysteréze a defrost
 inline constexpr double COOLING_HYSTERESIS_DELTA      = 2.0;   // X / X+2 °C
 inline constexpr double COOLING_DEFROST_START_TEMP    = -16.0; // začátek defrostu
-inline constexpr double COOLING_DEFROST_STOP_TEMP     = 6.0;   // konec defrostu
+inline constexpr double COOLING_DEFROST_STOP_TEMP     = 8.0;   // konec defrostu
 
 // teplota kondenzátoru pro varování
 inline constexpr double CRITICAL_TEMPERATURE_KONDENZ  = 45.0;
