@@ -12,7 +12,7 @@ OverlayPage {
     readonly property real s: uiScale
 
     property int activeTimeIdx: 1   // 1 or 2
-    readonly property int stepMin: 30
+    readonly property int stepMin: 15   // step for adjusting time, in minutes
 
     function clampMin(v) {
         var m = Math.round(v / stepMin) * stepMin
@@ -221,7 +221,7 @@ OverlayPage {
                                     MouseArea {
                                         anchors.fill: parent
                                         onClicked: {
-                                            if (backend.autoDefrostEnabled) confirmOff.open()
+                                            if (backend.autoDefrostEnabled) confirmOff.visible = true
                                             else backend.autoDefrostEnabled = false
                                         }
                                     }
@@ -427,106 +427,90 @@ OverlayPage {
         }
     }
 
-    Dialog {
+    Item {
         id: confirmOff
-        modal: true
-        focus: true
+        anchors.fill: parent
+        visible: false
+        z: 9999
 
-        width: Math.min(page.width * 0.86, 720 * s)
-        x: Math.round((page.width - width) / 2)
-        y: Math.round((page.height - implicitHeight) / 2)
-
-        background: Rectangle {
-            color: "#dd4b4b4b"
-            radius: 20 * s
-            border.width: 2 * s
-            border.color: "#c6c5df"
+        Rectangle {
+            anchors.fill: parent
+            color: "#000000aa"
         }
 
-        contentItem: Column {
-            width: confirmOff.width
-            spacing: 14 * s
-            padding: 16 * s
+        Rectangle {
+            id: dialogCard
+            width: Math.min(parent.width * 0.8, 700 * s)
+            height: 310 * s
+            anchors.centerIn: parent
+            radius: 22 * s
+            color: "#1b1b1b"
+            border.width: 2 * s
+            border.color: "#c6c5df"
 
-            Text {
-                text: "Vypnout auto odtávání?"
-                color: "#EDEFF2"
-                font.pixelSize: 22 * s
-                font.bold: true
-            }
-
-            Rectangle {
-                width: parent.width - 20
-                height: 120 * s
-                radius: 16 * s
-                color: "#bb000000"
-                border.width: 1 * s
-                border.color: "#767588"
-                anchors.horizontalCenter: parent.horizontalCenter
+            Column {
+                anchors.fill: parent
+                anchors.margins: 20 * s
+                spacing: 24 * s
 
                 Text {
-                    anchors.centerIn: parent
-                    width: parent.width - 32 * s
+                    text: "Vypnout auto odtávání?"
+                    color: "#EDEFF2"
+                    font.pixelSize: 24 * s
+                    font.bold: true
+                }
+
+                Text {
+                    width: parent.width
                     wrapMode: Text.WordWrap
                     color: "#EDEFF2"
-                    font.pixelSize: 18 * s
+                    font.pixelSize: 22 * s
                     text: "Pokud časový defrost vypneš, zařízení nemusí správně fungovat a může zamrznout výparník.\n\nOpravdu chceš pokračovat?"
                 }
-            }
-
-            // Rectangle {
-            //     width: parent.width - 20
-            //     height: 1 * s
-            //     color: "#00000000"
-            //     anchors.horizontalCenter: parent.horizontalCenter
-            // }
-
-            Rectangle {
-                width: parent.width - 20
-                height: 60 * s
-                color: "#00000000"
-                anchors.horizontalCenter: parent.horizontalCenter
-            
-
-            // vlastní footer -> žádná bílá lišta
-            Row {
-                anchors.fill: parent
-                anchors.margins: 16 * s
-                anchors.centerIn: parent
-                spacing: 55 * s
 
                 Rectangle {
-                    width: (parent.width - 60 * s) / 2
-                    height: 55 * s
-                    radius: 16 * s
-                    anchors.leftMargin: 30 * s
-                    color: cancelArea.pressed ? "#5a5a5ac4" : "#aa000000"
-                    border.width: 2 * s
-                    border.color: "#767588"
-
-                    Text { anchors.centerIn: parent; text: "Zrušit"; color: "#EDEFF2"; font.pixelSize: 20 * s; font.bold: true }
-                    MouseArea { id: cancelArea; anchors.fill: parent; onClicked: confirmOff.close() }
+                    width: parent.width - 20
+                    height: 1 * s
+                    color: "#00000000"
+                    anchors.horizontalCenter: parent.horizontalCenter
                 }
 
-                Rectangle {
-                    width: (parent.width - 60 * s) / 2
-                    height: 55 * s
-                    radius: 16 * s
-                    color: okArea.pressed ? "#5a5a5ac4" : "#aa000000"
-                    border.width: 2 * s
-                    border.color: "#767588"
+                Row {
+                    spacing: 310 * s
+                    anchors.horizontalCenter: parent.horizontalCenter
 
-                    Text { anchors.centerIn: parent; text: "OK"; color: "#EDEFF2"; font.pixelSize: 20 * s; font.bold: true }
-                    MouseArea {
-                        id: okArea
-                        anchors.fill: parent
-                        onClicked: {
-                            backend.autoDefrostEnabled = false
-                            confirmOff.close()
+                    Rectangle {
+                        width: 160 * s
+                        height: 64 * s
+                        radius: 18 * s
+                        color: cancelArea.pressed ? "#5a5a5ac4" : "#00000099"
+                        border.width: 2 * s
+                        border.color: "#c6c5df"
+
+                        Text { anchors.centerIn: parent; text: "Zrušit"; color: "#EDEFF2"; font.pixelSize: 20 * s; font.bold: true }
+                        MouseArea { id: cancelArea; anchors.fill: parent; onClicked: confirmOff.visible = false }
+                    }
+
+                    Rectangle {
+                        width: 160 * s
+                        height: 64 * s
+                        radius: 18 * s
+                        color: okArea.pressed ? "#5a5a5ac4" : "#00000099"
+                        border.width: 2 * s
+                        border.color: "#c6c5df"
+
+                        Text { anchors.centerIn: parent; text: "OK"; color: "#EDEFF2"; font.pixelSize: 20 * s; font.bold: true }
+                        MouseArea {
+                            id: okArea
+                            anchors.fill: parent
+                            onClicked: {
+                                backend.autoDefrostEnabled = false
+                                confirmOff.visible = false
+                            }
                         }
                     }
                 }
-            }}
+            }
         }
     }
 }

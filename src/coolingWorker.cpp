@@ -32,6 +32,7 @@ void CoolingWorker::start() {
     dripHoldActive_ = false;
     defrostMode_ = false;
     coolingActive_ = false;
+    enabledSince_ = QDateTime::currentDateTime();
 
 #ifdef LNVG_USE_PIGPIO
     if (gpioInitialise() < 0) {
@@ -162,6 +163,7 @@ void CoolingWorker::tick() {
         coolingActive_ = false;
 
         if (evapTemp_ >= AppConfig::COOLING_DEFROST_STOP_TEMP) {
+            qDebug() << "[CoolingWorker]" << "Defrost ended. Evap temp:" << evapTemp_;
             defrostMode_ = false;
             dripHoldActive_ = true;
             dripTimer_.restart();
@@ -265,6 +267,7 @@ void CoolingWorker::checkScheduledDefrost() {
 
     // anti-double-fire (když tick běží víckrát v minutě)
     if (lastScheduledFire_.isValid()) {
+        qDebug() << "[CoolingWorker]" << "Last scheduled defrost fire at:" << lastScheduledFire_.toString("yyyy-MM-dd HH:mm:ss");
         if (lastScheduledFire_.date() == now.date() &&
             lastScheduledFire_.time().hour() == now.time().hour() &&
             lastScheduledFire_.time().minute() == now.time().minute()) {
@@ -274,23 +277,20 @@ void CoolingWorker::checkScheduledDefrost() {
 
     // podmínka 4h od zapnutí vany
     if (enabledSince_.isValid()) {
+        qDebug() << "[CoolingWorker]" << "Bath enabled since:" << enabledSince_.toString("yyyy-MM-dd HH:mm:ss") << "which is" << enabledSince_.secsTo(now) << "seconds ago";
         if (enabledSince_.secsTo(now) < minTimeAutoDefrostS_) return;
     } else {
+        qDebug() << "[CoolingWorker]" << "Bath has never been enabled, skipping scheduled defrost.";
         return;
     }
 
     // podmínka 4h od posledního defrostu (scheduled i threshold)
     if (lastDefrostAt_.isValid()) {
+        qDebug() << "[CoolingWorker]" << "Last defrost at:" << lastDefrostAt_.toString("yyyy-MM-dd HH:mm:ss") << "which is" << lastDefrostAt_.secsTo(now) << "seconds ago";
         if (lastDefrostAt_.secsTo(now) < minTimeAutoDefrostS_) return;
     }
 
     defrostMode_ = true;
-    // defrostTimer_.restart();
-    coolingActive_ = false;
-    setCompressor(false);
-    setFanDuty(100);
-    publishStateIfChanged(true);
-
     lastDefrostAt_ = now;
     lastScheduledFire_ = now;
 }

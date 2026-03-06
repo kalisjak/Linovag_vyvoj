@@ -16,7 +16,6 @@ MqttWorker::~MqttWorker()
 {
     if (mqtt_) {
         mqtt_->disconnectFromHost();
-        // parent = this → smaže se automaticky
     }
 }
 
@@ -45,11 +44,10 @@ void MqttWorker::ensureClient()
     mqtt_->setCleanSession(true);
     mqtt_->setKeepAlive(15);
 
-    // TLS config – podle tvého původního kódu
     QSslConfiguration ssl = QSslConfiguration::defaultConfiguration();
     QFile caFile(ca_file_);
     if (!caFile.open(QIODevice::ReadOnly)) {
-        qWarning() << "[MQTT] Nemůžu otevřít CA soubor:" << ca_file_ << caFile.errorString();
+        qWarning() << "[MQTT] Cannnot open CA file:" << ca_file_ << caFile.errorString();
     } else {
         QList<QSslCertificate> caList = ssl.caCertificates();
         caList.append(QSslCertificate::fromDevice(&caFile, QSsl::Pem));
@@ -70,29 +68,25 @@ void MqttWorker::ensureConnected()
     ensureClient();
 
     if (mqtt_->state() == QMqttClient::Disconnected) {
-        qInfo().noquote() << "[MQTT] Connecting (TLS) to"
-                          << brokerHost_ << ":" << brokerPort_ << "…";
+        // qInfo().noquote() << "[MQTT] Connecting (TLS) to"
+                        //   << brokerHost_ << ":" << brokerPort_ << "…";
         mqtt_->connectToHostEncrypted();
     }
 }
 
 void MqttWorker::publish(const QByteArray& data)
 {
-    // 1) přidáme do fronty
     buffer_.enqueue(data);
-    qInfo().noquote() << "[MQTT] Enqueued payload, queue size =" << buffer_.size();
+    // qInfo().noquote() << "[MQTT] Enqueued payload, queue size =" << buffer_.size();
     
     emit heartbeat(QStringLiteral("mqtt"));
-    // 2) zajistit klienta + případně připojení
     ensureConnected();
-    
-    // 3) pokud nejsme connected, NEŠAHÁME na frontu
+
     if (!mqtt_ || mqtt_->state() != QMqttClient::Connected) {
         qInfo() << "[MQTT] Not connected, will send when connected. Queue size =" << buffer_.size();
         return;
     }
-    
-    // 4) jsme connected → zkusíme vyprázdnit frontu
+
     flush();
 }
 
@@ -106,7 +100,6 @@ void MqttWorker::onStateChanged(int state)
 
     qInfo() << "[MQTT] state changed:" << st << "queue size =" << buffer_.size();
 
-    // Po úspěšném připojení zkusíme frontu hned vyprázdnit
     if (connected) {
         flush();
     }
@@ -136,13 +129,11 @@ void MqttWorker::flush()
 
     while (!buffer_.isEmpty()) {
         const QByteArray payload = buffer_.head();
-        qInfo().noquote() << "[MQTT] flush(): trying publish to" << topic_ << ":" << payload;
+        // qInfo().noquote() << "[MQTT] flush(): trying publish to" << topic_ << ":" << payload;
 
         const auto result = mqtt_->publish(topic_, payload, 1 /*QoS*/, false /*retain*/);
         if (result == -1) {
-            // NEODEBÍRÁME Z FRONTY
             qWarning() << "[MQTT] flush(): publish failed, keeping in queue. Queue size =" << buffer_.size();
-            // necháme připojení jak je, příští pokus flush() to zkusí znovu
             break;
         }
 
