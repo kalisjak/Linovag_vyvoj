@@ -85,7 +85,7 @@ ApplicationWindow {
             anchors.top: parent.top
 
             // signály z TopBaru – otevře overlay stránky
-            onOpenWifi:     overlay.push(Qt.resolvedUrl("WifiPage.qml"),     { pageStack: overlay })
+            onOpenWifi:     overlay.push(Qt.resolvedUrl("WifiPage.qml"),     { pageStack: overlay, floatEditorRef: floatEditor })
             onOpenSettings: overlay.push(Qt.resolvedUrl("SettingsPage.qml"), { pageStack: overlay })
             onOpenLogin:    overlay.push(Qt.resolvedUrl("LoginPage.qml"),    { pageStack: overlay })
         }
@@ -141,7 +141,7 @@ ApplicationWindow {
         KeyboardPanel {
             id: osk
             uiScale: win.uiScale
-            z: 30
+            z: 240
         }
 
     Item {
@@ -152,9 +152,11 @@ ApplicationWindow {
 
         property bool active: false
         property var sourceField   // původní TextField / TextArea
+        property bool sourceIsPassword: false
 
         function openFor(field) {
             sourceField = field
+            sourceIsPassword = !!(field && field.echoMode !== undefined && field.echoMode === TextInput.Password)
 
             // načteme aktuální text
             if (field) {
@@ -163,6 +165,8 @@ ApplicationWindow {
                 else if (field.contentItem && field.contentItem.text !== undefined)
                     edit.text = field.contentItem.text
             }
+
+            edit.echoMode = sourceIsPassword ? TextInput.Password : TextInput.Normal
 
             active = true
             osk.showFor(edit)      // klávesnice píše do plovoucího pole
@@ -188,6 +192,8 @@ ApplicationWindow {
             active = false
             osk.target = null
             osk.hide()
+            sourceIsPassword = false
+            edit.echoMode = TextInput.Normal
         }
 
         // MouseArea přes celou obrazovku:
@@ -214,17 +220,21 @@ ApplicationWindow {
             }
         }
 
-        // jen vizuální zatemnění, bez MouseArea
+        // horní třetina (mimo klávesnici) je lehce ztmavená,
+        // aby pozadí nerušilo, ale zůstalo rozeznatelné
         Rectangle {
-            anchors.fill: parent
-            color: "#00000080"
+            x: 0
+            y: 0
+            width: parent.width
+            height: Math.max(0, parent.height - osk.exposedHeight)
+            color: "#99000000"
             z: 0
         }
 
         // samotný panel s textovým polem
         Rectangle {
             id: panel
-            width: parent.width * 0.9
+            width: parent.width * 0.84
             height: 120
             radius: 10
             color: "#333333"
@@ -232,8 +242,12 @@ ApplicationWindow {
             z: 1
 
             anchors.horizontalCenter: parent.horizontalCenter
-            // pozice: kousek nad klávesnicí – bez anchoru na osk.top!
-            y: parent.height - osk.exposedHeight - height - 8
+            // pozice: mezi horním okrajem a začátkem klávesnice
+            y: {
+                var keyboardTop = parent.height - osk.exposedHeight
+                var topSpace = Math.max(0, keyboardTop)
+                return Math.max(8, (topSpace - height) / 2)
+            }
 
             ColumnLayout {
                 anchors.fill: parent

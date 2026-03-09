@@ -15,6 +15,7 @@
 
 Backend::Backend(QObject* parent) : QObject(parent), rng_(std::random_device{}()) {
     swType_ = RuntimeConfig::softwareType();
+    appLanguage_ = RuntimeConfig::appLanguage();
     targetTemp_ = 5.0;
     targetTemp2_ = 5.0;
     // auto defrost schedule (from runtime config)

@@ -5,65 +5,75 @@ import QtQuick.Controls 2.15
 Item {
     id: osk
     property real uiScale: 1.0
+    readonly property real edgeInset: 6
 
-    width: parent ? parent.width : 800 * uiScale
-    height: parent ? parent.height * 0.5 : 240 * uiScale
-    // --- pozice a rozměry ---
+    width: parent ? (parent.width - (2 * edgeInset)) : 800 * uiScale
+    height: parent ? parent.height * 0.66 : 320 * uiScale
 
     anchors.left: parent ? parent.left : undefined
     anchors.right: parent ? parent.right : undefined
+    anchors.leftMargin: parent ? edgeInset : 0
+    anchors.rightMargin: parent ? edgeInset : 0
 
-    // vysouvání odspodu podle exposedHeight
     y: parent ? parent.height - exposedHeight : 0
     z: 200
 
-    // API pro App.qml
     property bool show: false
     property real exposedHeight: show ? height : 0
     Behavior on exposedHeight {
         NumberAnimation { duration: 180; easing.type: Easing.InOutQuad }
     }
 
-    // cílové pole, na které píšeme
-    property var target: null    // sem nastavíš TextField / TextArea zvenku
+    property var target: null
 
-    // režimy
     property bool numericMode: false
-    property int  shiftState: 0      // 0=off, 1=once, 2=locked (caps)
+    property int symbolPage: 0        // 0=123 set, 1=#+= set
+    property bool localeMode: false   // special chars for CZ/DE/DK
+
+    property int shiftState: 0        // 0=off, 1=once, 2=locked
     property bool shift: shiftState > 0
 
-    // rozložení kláves TODO: NEKOMPLETNÍ
-    property var lettersRow1: [ "q","w","e","r","t","y","u","i","o","p" ]
-    property var lettersRow2: [ "a","s","d","f","g","h","j","k","l" ]
-    property var lettersRow3: [ "z","x","c","v","b","n","m" ]
+    property var lettersBaseRow1: [ "q","w","e","r","t","y","u","i","o","p" ]
+    property var lettersBaseRow2: [ "a","s","d","f","g","h","j","k","l" ]
+    property var lettersBaseRow3: [ "z","x","c","v","b","n","m" ]
 
-    property var numsRow1:   [ "1","2","3","4","5","6","7","8","9","0" ]
-    property var numsRow2:   [ "-","/",":",";","(",")","€","&","@","#" ]
-    property var numsRow3:   [ ".","_",",","?","!","\"","'" ]
+    property var lettersLocaleRow1: [ "á","č","ď","é","ě","í","ň","ó","ř","š" ]
+    property var lettersLocaleRow2: [ "ť","ú","ů","ý","ž","ä","ö","ü","æ","ø" ]
+    property var lettersLocaleRow3: [ "å","ß","à","è","ì","ò","ù" ]
 
-    // --- veřejné funkce ---
+    property var numsRow1Page0: [ "1","2","3","4","5","6","7","8","9","0" ]
+    property var numsRow2Page0: [ "-","_","@",".",",",":",";","/","?","!" ]
+    property var numsRow3Page0: [ "'","\"","(",")","[","]","{","}" ]
+
+    property var numsRow1Page1: [ "#","$","%","&","*","+","=","<",">","|" ]
+    property var numsRow2Page1: [ "\\","^","~","`","€","£","§","°","¤","_" ]
+    property var numsRow3Page1: [ "!","?","/",":",";","@",",","." ]
+
+    function activeLettersRow1() { return localeMode ? lettersLocaleRow1 : lettersBaseRow1 }
+    function activeLettersRow2() { return localeMode ? lettersLocaleRow2 : lettersBaseRow2 }
+    function activeLettersRow3() { return localeMode ? lettersLocaleRow3 : lettersBaseRow3 }
+
+    function activeNumsRow1() { return symbolPage === 0 ? numsRow1Page0 : numsRow1Page1 }
+    function activeNumsRow2() { return symbolPage === 0 ? numsRow2Page0 : numsRow2Page1 }
+    function activeNumsRow3() { return symbolPage === 0 ? numsRow3Page0 : numsRow3Page1 }
 
     function hide() {
         show = false
     }
 
     function showFor(field) {
-        // můžeš volat zvenku: osk.showFor(input)
         target = field
         show = true
         if (target) target.forceActiveFocus()
     }
 
-    // pomocná funkce: vrátí skutečný editovatelný objekt (TextInput/TextArea)
     function editObject() {
         var t = target
         if (!t) return null
 
-        // když je to TextField z Controls 2 – má contentItem (TextInput)
         if (t.contentItem && t.contentItem.text !== undefined)
             return t.contentItem
 
-        // TextInput / TextArea
         if (t.text !== undefined)
             return t
 
@@ -99,270 +109,326 @@ Item {
 
     function commitText(s) {
         insertText(s)
-        // jednorázový shift spadne po prvním znaku
         if (!numericMode && shiftState === 1)
             shiftState = 0
     }
 
     function doEnter() {
-    // pokud je aktivní plovoucí editor, potvrď ho
-    if (floatEditor && floatEditor.active) {
-        floatEditor.accept()
-    } else {
-        commitText("\n")
+        if (floatEditor && floatEditor.active) {
+            floatEditor.accept()
+        } else {
+            commitText("\n")
+        }
     }
-}
-
-    // --- pozadí panelu ---
 
     Rectangle {
         anchors.fill: parent
-        color: "#202020"
-        border.color: "#505050"
-        radius: 10
+        color: "#1C1C1C"
+        border.color: "#4A4A4A"
+        radius: 8
         opacity: exposedHeight > 0 ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: 120 } }
     }
 
-    // --- layout kláves ---
-
     ColumnLayout {
         id: layoutRoot
         anchors.fill: parent
-        anchors.margins: 10
-        spacing: 8
+        anchors.margins: 6
+        spacing: 5
 
-        // PÍSMENA – 1. řádek
         RowLayout {
             Layout.fillWidth: true
-            spacing: 6
+            Layout.fillHeight: true
+            spacing: 4
             visible: !osk.numericMode
 
             Repeater {
-                model: osk.lettersRow1.length
+                model: osk.activeLettersRow1()
                 delegate: Loader {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.preferredWidth: 1.0
                     sourceComponent: keyButton
                     onLoaded: {
-                        item.keyText  = osk.lettersRow1[index]
-                        item.keyType  = "char"
+                        item.keyText = modelData
+                        item.keyType = "char"
                         item.isLetter = true
                     }
                 }
             }
         }
 
-        // PÍSMENA – 2. řádek
         RowLayout {
             Layout.fillWidth: true
-            spacing: 6
+            Layout.fillHeight: true
+            spacing: 4
             visible: !osk.numericMode
 
             Repeater {
-                model: osk.lettersRow2.length
+                model: osk.activeLettersRow2()
                 delegate: Loader {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.preferredWidth: 1.0
                     sourceComponent: keyButton
                     onLoaded: {
-                        item.keyText  = osk.lettersRow2[index]
-                        item.keyType  = "char"
+                        item.keyText = modelData
+                        item.keyType = "char"
                         item.isLetter = true
                     }
                 }
             }
         }
 
-        // PÍSMENA – 3. řádek (SHIFT + písmena + BKSP)
         RowLayout {
             Layout.fillWidth: true
-            spacing: 6
+            Layout.fillHeight: true
+            spacing: 4
             visible: !osk.numericMode
 
             Loader {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.preferredWidth: 1.7
                 sourceComponent: keyButton
                 onLoaded: {
-                    item.keyType  = "shift"
-                    item.keyText  = "⇧"
-                    item.wide     = true
-                    item.accent   = true
+                    item.keyType = "shift"
+                    item.keyText = "⇧"
+                    item.wide = true
+                    item.accent = true
                 }
             }
 
             Repeater {
-                model: osk.lettersRow3.length
+                model: osk.activeLettersRow3()
                 delegate: Loader {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.preferredWidth: 1.0
                     sourceComponent: keyButton
                     onLoaded: {
-                        item.keyText  = osk.lettersRow3[index]
-                        item.keyType  = "char"
+                        item.keyText = modelData
+                        item.keyType = "char"
                         item.isLetter = true
                     }
                 }
             }
 
             Loader {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.preferredWidth: 1.9
                 sourceComponent: keyButton
                 onLoaded: {
-                    item.keyType  = "backspace"
-                    item.keyText  = "⌫"
-                    item.wide     = true
-                    item.accent   = true
+                    item.keyType = "backspace"
+                    item.keyText = "⌫"
+                    item.wide = true
+                    item.accent = true
                 }
             }
         }
 
-        // PÍSMENA – spodní řádek
         RowLayout {
             Layout.fillWidth: true
-            spacing: 6
+            Layout.fillHeight: true
+            spacing: 4
             visible: !osk.numericMode
 
             Loader {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.preferredWidth: 1.7
                 sourceComponent: keyButton
                 onLoaded: {
                     item.keyType = "mode"
                     item.keyText = "123"
-                    item.wide    = true
+                    item.wide = true
                 }
             }
 
             Loader {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.preferredWidth: 1.5
                 sourceComponent: keyButton
                 onLoaded: {
-                    item.keyType   = "space"
-                    item.keyText   = "Space"
+                    item.keyType = "locale"
+                    item.keyText = "äø"
+                    item.wide = true
+                    item.accent = true
+                }
+            }
+
+            Loader {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.preferredWidth: 4.8
+                sourceComponent: keyButton
+                onLoaded: {
+                    item.keyType = "space"
+                    item.keyText = "Space"
                     item.extraWide = true
                 }
             }
 
             Loader {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.preferredWidth: 1.8
                 sourceComponent: keyButton
                 onLoaded: {
-                    item.keyType  = "enter"
-                    item.keyText  = "⏎"
-                    item.wide     = true
-                    item.accent   = true
+                    item.keyType = "enter"
+                    item.keyText = "⏎"
+                    item.wide = true
+                    item.accent = true
                 }
             }
 
             Loader {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.preferredWidth: 1.5
                 sourceComponent: keyButton
                 onLoaded: {
                     item.keyType = "hide"
                     item.keyText = "▾"
-                    item.wide    = true
+                    item.wide = true
                 }
             }
         }
 
-        // ČÍSLA – 1. řádek
         RowLayout {
             Layout.fillWidth: true
-            spacing: 6
+            Layout.fillHeight: true
+            spacing: 4
             visible: osk.numericMode
 
             Repeater {
-                model: osk.numsRow1.length
+                model: osk.activeNumsRow1()
                 delegate: Loader {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.preferredWidth: 1.0
                     sourceComponent: keyButton
                     onLoaded: {
-                        item.keyText = osk.numsRow1[index]
+                        item.keyText = modelData
                         item.keyType = "char"
                     }
                 }
             }
         }
 
-        // ČÍSLA – 2. řádek
         RowLayout {
             Layout.fillWidth: true
-            spacing: 6
+            Layout.fillHeight: true
+            spacing: 4
             visible: osk.numericMode
 
             Repeater {
-                model: osk.numsRow2.length
+                model: osk.activeNumsRow2()
                 delegate: Loader {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.preferredWidth: 1.0
                     sourceComponent: keyButton
                     onLoaded: {
-                        item.keyText = osk.numsRow2[index]
+                        item.keyText = modelData
                         item.keyType = "char"
                     }
                 }
             }
         }
 
-        // ČÍSLA – 3. řádek
         RowLayout {
             Layout.fillWidth: true
-            spacing: 6
+            Layout.fillHeight: true
+            spacing: 4
             visible: osk.numericMode
 
             Repeater {
-                model: osk.numsRow3.length
+                model: osk.activeNumsRow3()
                 delegate: Loader {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.preferredWidth: 1.0
                     sourceComponent: keyButton
                     onLoaded: {
-                        item.keyText = osk.numsRow3[index]
+                        item.keyText = modelData
                         item.keyType = "char"
                     }
                 }
             }
 
             Loader {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.preferredWidth: 1.9
                 sourceComponent: keyButton
                 onLoaded: {
-                    item.keyType  = "backspace"
-                    item.keyText  = "⌫"
-                    item.wide     = true
-                    item.accent   = true
+                    item.keyType = "backspace"
+                    item.keyText = "⌫"
+                    item.wide = true
+                    item.accent = true
                 }
             }
         }
 
-        // ČÍSLA – spodní řádek
         RowLayout {
             Layout.fillWidth: true
-            spacing: 6
+            Layout.fillHeight: true
+            spacing: 4
             visible: osk.numericMode
 
             Loader {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.preferredWidth: 1.7
                 sourceComponent: keyButton
                 onLoaded: {
                     item.keyType = "mode"
                     item.keyText = "ABC"
-                    item.wide    = true
+                    item.wide = true
                 }
             }
 
             Loader {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.preferredWidth: 4.8
                 sourceComponent: keyButton
                 onLoaded: {
-                    item.keyType   = "space"
-                    item.keyText   = "Space"
+                    item.keyType = "space"
+                    item.keyText = "Space"
                     item.extraWide = true
                 }
             }
 
             Loader {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.preferredWidth: 1.8
                 sourceComponent: keyButton
                 onLoaded: {
-                    item.keyType  = "enter"
-                    item.keyText  = "⏎"
-                    item.wide     = true
-                    item.accent   = true
+                    item.keyType = "enter"
+                    item.keyText = "⏎"
+                    item.wide = true
+                    item.accent = true
                 }
             }
 
             Loader {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.preferredWidth: 1.5
                 sourceComponent: keyButton
                 onLoaded: {
                     item.keyType = "hide"
                     item.keyText = "▾"
-                    item.wide    = true
+                    item.wide = true
                 }
             }
         }
     }
-
-    // --- šablona klávesy ---
 
     Component {
         id: keyButton
@@ -371,39 +437,56 @@ Item {
             id: keyRect
 
             property string keyText: ""
-            property string keyType: "char"   // char/shift/backspace/mode/space/enter/hide
-            property bool   isLetter: false
-            property bool   wide: false
-            property bool   extraWide: false
-            property bool   accent: false
+            property string keyType: "char"
+            property bool isLetter: false
+            property bool wide: false
+            property bool extraWide: false
+            property bool accent: false
 
-            implicitWidth: 54
-            implicitHeight: 46
-            radius: 8
+            implicitWidth: 56
+            implicitHeight: 58
+            radius: keyType === "space" ? 16 : (accent ? 12 : 8)
 
             Layout.fillWidth: true
             Layout.fillHeight: true
-            Layout.preferredWidth: extraWide ? implicitWidth * 3
-                                             : (wide ? implicitWidth * 1.5 : implicitWidth)
+            Layout.margins: 1
+            Layout.preferredWidth: extraWide ? implicitWidth * 3.4
+                                             : (wide ? implicitWidth * 1.7 : implicitWidth)
 
             color: {
-                var base = accent ? "#d0d0d0" : "#f5f5f5"
-                if (keyRect.keyType === "shift" && osk.shift)
-                    base = "#c0c0c0"
+                var utility = keyRect.keyType === "shift"
+                           || keyRect.keyType === "locale"
+                           || keyRect.keyType === "mode"
+                           || keyRect.keyType === "enter"
+                           || keyRect.keyType === "backspace"
+                var base = utility ? "#313131" : "#414141"
                 return base
             }
-            border.color: "#a0a0a0"
+            border.color: "#A7A7A7"
+            border.width: 1
 
             Text {
                 anchors.centerIn: parent
-                font.pixelSize: 18
+                font.pixelSize: 34
+                font.bold: true
+                color: "#FFFFFF"
+                style: Text.Outline
+                styleColor: "#202020"
                 text: {
                     var t = keyRect.keyText
-                    if (keyRect.keyType === "mode")
-                        t = osk.numericMode ? "ABC" : "123"
-                    if (keyRect.isLetter) {
-                        t = osk.shift ? t.toUpperCase() : t.toLowerCase()
+                    if (keyRect.keyType === "space")
+                        t = "space"
+                    if (keyRect.keyType === "shift")
+                        t = (osk.shiftState === 2) ? "⬆" : "⇧"
+                    if (keyRect.keyType === "mode") {
+                        if (!osk.numericMode) t = "123"
+                        else if (osk.symbolPage === 0) t = "#+="
+                        else t = "ABC"
                     }
+                    if (keyRect.keyType === "locale")
+                        t = osk.localeMode ? "abc" : "äø"
+                    if (keyRect.isLetter)
+                        t = osk.shift ? t.toUpperCase() : t.toLowerCase()
                     return t
                 }
             }
@@ -412,13 +495,26 @@ Item {
                 anchors.fill: parent
                 onClicked: {
                     if (keyRect.keyType === "shift") {
-                        if (osk.shiftState === 0)       osk.shiftState = 1
-                        else if (osk.shiftState === 1)  osk.shiftState = 2
-                        else                            osk.shiftState = 0
+                        if (osk.shiftState === 0) osk.shiftState = 1
+                        else if (osk.shiftState === 1) osk.shiftState = 2
+                        else osk.shiftState = 0
                         return
                     }
                     if (keyRect.keyType === "mode") {
-                        osk.numericMode = !osk.numericMode
+                        if (!osk.numericMode) {
+                            osk.numericMode = true
+                            osk.symbolPage = 0
+                        } else if (osk.symbolPage === 0) {
+                            osk.symbolPage = 1
+                        } else {
+                            osk.numericMode = false
+                            osk.symbolPage = 0
+                        }
+                        osk.shiftState = 0
+                        return
+                    }
+                    if (keyRect.keyType === "locale") {
+                        osk.localeMode = !osk.localeMode
                         osk.shiftState = 0
                         return
                     }
@@ -427,7 +523,6 @@ Item {
                         return
                     }
 
-                    // ostatní klávesy už potřebují target
                     if (!osk.target)
                         return
 
@@ -450,112 +545,3 @@ Item {
         }
     }
 }
-
-
-// Item {
-//     id: osk
-//     property real uiScale: 1.0
-
-//     // --- pozice a rozměry ---
-
-//     anchors.left: parent ? parent.left : undefined
-//     anchors.right: parent ? parent.right : undefined
-//     anchors.bottom: parent ? parent.bottom : undefined
-
-//     width: parent ? parent.width : 800 * uiScale
-//     // výška max ~ půlka okna
-//     height: parent ? parent.height * 0.5 : 240 * uiScale
-
-//     // vysouvání odspodu podle exposedHeight
-//     y: parent ? parent.height - exposedHeight : 0
-//     z: 2000
-
-//     // API pro App.qml
-//     property bool show: false
-//     property real exposedHeight: show ? height : 0
-//     Behavior on exposedHeight {
-//         NumberAnimation {
-//             duration: 180
-//             easing.type: Easing.InOutQuad
-//         }
-//     }
-
-//     // vnitřek
-//     Rectangle {
-//         anchors.fill: parent
-//         color: "#000000DD"
-
-//         Column {
-//             anchors.fill: parent
-//             anchors.margins: 4 * uiScale
-//             spacing: 4 * uiScale
-
-//             // Pole pro text
-//             TextInput {
-//                 id: inputField
-//                 width: parent.width
-//                 height: 40 * uiScale
-//                 font.pixelSize: 20 * uiScale
-//                 color: "white"
-//                 focus: show
-//             }
-
-//             // řádky kláves
-//             Column {
-//                 id: rows
-//                 anchors.left: parent.left
-//                 anchors.right: parent.right
-//                 spacing: 4 * uiScale
-
-//                 // Příklad jednoho řádku (předpokládám, že ostatní máš podobně)
-//                 Row {
-//                     anchors.horizontalCenter: parent.horizontalCenter
-//                     spacing: 4 * uiScale
-
-//                     Repeater {
-//                         model: [
-//                             "Q","W","E","R","T","Y","U","I","O","P"
-//                         ]
-
-//                         Rectangle {
-//                             width: 40 * uiScale
-//                             height: 40 * uiScale
-//                             radius: 4 * uiScale
-//                             color: "#333333"
-//                             border.color: "#777777"
-//                             border.width: 1 * uiScale
-
-//                             property string keyText: modelData
-//                             property bool isLetter: true
-//                             property string keyType: "char"
-
-//                             Text {
-//                                 anchors.centerIn: parent
-//                                 text: parent.keyText
-//                                 color: "white"
-//                                 font.pixelSize: 18 * uiScale
-//                             }
-
-//                             MouseArea {
-//                                 anchors.fill: parent
-//                                 onClicked: {
-//                                     var ch = parent.keyText
-//                                     osk.commitText(ch)
-//                                 }
-//                             }
-//                         }
-//                     }
-//                 }
-
-//                 // ... zbytek řádků (čísla, mezerník, backspace, enter) 
-//                 // jenom stejný princip – šířky/výšky/radius/font.pixelSize 
-//                 // přenásobit * uiScale
-//             }
-//         }
-//     }
-
-//     // API pro zbytek aplikace
-//     signal commitText(string text)
-//     signal backspace()
-//     signal doEnter()
-// }

@@ -78,4 +78,8 @@ void setReclaimOrderNumber(const QString& number);
 QString reclaimEmail();
 void setReclaimEmail(const QString& email);
 
+// App language (e.g. "cs", "en", "de", "pl")
+QString appLanguage();
+void setAppLanguage(const QString& lang);
+
 } // namespace RuntimeConfig

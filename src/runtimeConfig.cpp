@@ -146,6 +146,16 @@ void setReclaimEmail(const QString& email) {
     s.setValue("reclaim/email", email);
 }
 
+QString appLanguage() {
+    QSettings s = makeSettings();
+    return s.value("app/language", QStringLiteral("cs")).toString();
+}
+
+void setAppLanguage(const QString& lang) {
+    QSettings s = makeSettings();
+    s.setValue("app/language", lang);
+}
+
 static std::string getId(const char* key, const char* def) {
     QSettings s = makeSettings();
     const QString id = s.value(key, QString::fromUtf8(def)).toString();

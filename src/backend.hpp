@@ -34,6 +34,7 @@ class Backend : public QObject {
 
     Q_PROPERTY(int softwareType READ softwareType WRITE setSoftwareType NOTIFY softwareTypeChanged)
     Q_PROPERTY(QString softwareTypeLabel READ softwareTypeLabel NOTIFY softwareTypeChanged)
+    Q_PROPERTY(QString appLanguage READ appLanguage NOTIFY appLanguageChanged)
 
     Q_PROPERTY(double targetTemp READ targetTemp WRITE setTargetTemp NOTIFY targetTempChanged)
     // Jen typ 2+2
@@ -101,6 +102,7 @@ class Backend : public QObject {
 
     int softwareType() const { return swType_; }
     QString softwareTypeLabel() const { return swType_ == 22 ? QStringLiteral("Vana typ-2+2") : QStringLiteral("Vana typ-3"); }
+    QString appLanguage() const { return appLanguage_; }
 
     double value1() const { return value1_; }
     double value2() const { return value2_; }
@@ -240,6 +242,7 @@ class Backend : public QObject {
     void targetTempChanged();
     void targetTemp2Changed();
     void softwareTypeChanged();
+    void appLanguageChanged();
 
     void mqttConnectedChanged();
     void serialNumberChanged();
@@ -322,6 +325,7 @@ class Backend : public QObject {
     double targetTemp2_ = 5.0;
 
     int swType_ = 3;
+    QString appLanguage_ = QStringLiteral("cs");
 
     std::mt19937 rng_;
     bool mqttConnected_ = false;
