@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import "I18n.js" as I18n
 
 ApplicationWindow {
     id: win
@@ -20,6 +21,7 @@ ApplicationWindow {
     // property real uiScale: 2.0
     property real uiScale: Math.min(width / designWidth,
                                     height / designHeight)
+    readonly property string lang: (backend && backend.appLanguage) ? backend.appLanguage : "cs"
 
     // Bootstrap Icons font
     FontLoader {
@@ -88,19 +90,19 @@ ApplicationWindow {
                 if (overlay.depth > 0) overlay.clear()
                 overlay.push(Qt.resolvedUrl("WifiPage.qml"), { pageStack: overlay, floatEditorRef: floatEditor })
                 topbar.overlayMode = true
-                topbar.overlayTitle = "Wi-Fi"
+                topbar.overlayTitle = I18n.t(win.lang, "overlay.wifi")
             }
             onOpenSettings: {
                 if (overlay.depth > 0) overlay.clear()
                 overlay.push(Qt.resolvedUrl("SettingsPage.qml"), { pageStack: overlay })
                 topbar.overlayMode = true
-                topbar.overlayTitle = "Nastavení"
+                topbar.overlayTitle = I18n.t(win.lang, "overlay.settings")
             }
             onOpenLogin: {
                 if (overlay.depth > 0) overlay.clear()
-                overlay.push(Qt.resolvedUrl("LoginPage.qml"), { pageStack: overlay })
+                overlay.push(Qt.resolvedUrl("PersonPage.qml"), { pageStack: overlay, floatEditorRef: floatEditor })
                 topbar.overlayMode = true
-                topbar.overlayTitle = "Přihlášení"
+                topbar.overlayTitle = I18n.t(win.lang, "overlay.person")
             }
             onNavigateBack: {
                 if (overlay.depth > 1) overlay.pop()
@@ -144,7 +146,7 @@ ApplicationWindow {
             onDotClicked: function(i) { pages.currentIndex = i }
         }
 
-        // --- ROUTER pro overlay stránky (Wifi/Settings/Login) ---
+        // --- ROUTER pro overlay stránky (Wifi/Settings/Person) ---
         StackView {
             id: overlay
             anchors.left: parent.left
@@ -166,6 +168,15 @@ ApplicationWindow {
                 }
                 topbar.overlayMode = true
                 if (currentItem && currentItem.title !== undefined) topbar.overlayTitle = currentItem.title
+            }
+        }
+
+        Connections {
+            target: overlay.currentItem
+            ignoreUnknownSignals: true
+            function onTitleChanged() {
+                if (overlay.depth > 0 && overlay.currentItem && overlay.currentItem.title !== undefined)
+                    topbar.overlayTitle = overlay.currentItem.title
             }
         }
 

@@ -2,15 +2,12 @@
 
 #include <QSettings>
 
-// Linux ubuntu: ~/.config/gastroConf/lnvg_app.conf
-// Linux rpi: /root/.config/gastroConf/lnvg_app.conf
-static constexpr const char* ORG_NAME = "gastroConf";
-static constexpr const char* APP_NAME = "lnvg_app";
+static constexpr const char* CONFIG_PATH = "/etc/lnvg/lnvg.conf";
 
 namespace RuntimeConfig {
 
 static QSettings makeSettings() {
-    return QSettings(ORG_NAME, APP_NAME);
+    return QSettings(QString::fromUtf8(CONFIG_PATH), QSettings::IniFormat);
 }
 
 // ===== Device serial =====

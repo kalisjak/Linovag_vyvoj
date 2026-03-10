@@ -147,13 +147,13 @@ void CoolingWorker::tick() {
     
     // Optional: condenser warning (no control change, just debug)
     if (condenserTemp_ >= AppConfig::CRITICAL_TEMPERATURE_KONDENZ) {
-        qWarning() << "[CoolingWorker]" << heartbeatName_ << "Condenser temp is too high:" << condenserTemp_;
+        // qWarning() << "[CoolingWorker]" << heartbeatName_ << "Condenser temp is too high:" << condenserTemp_;
         coolingActive_ = false;
         setCompressor(false);
         publishStateIfChanged();
         return;
     } else if (condenserTemp_ <= AppConfig::CRITICAL_TEMPERATURE_KONDENZ && condenserTemp_ >= AppConfig::WARNING_TEMPERATURE_KONDENZ) {
-        qWarning() << "[CoolingWorker]" << heartbeatName_ << "Condenser temp warning level:" << condenserTemp_;
+        // qWarning() << "[CoolingWorker]" << heartbeatName_ << "Condenser temp warning level:" << condenserTemp_;
     }
 
     // Defrost mode overrides everything

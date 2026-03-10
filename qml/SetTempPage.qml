@@ -1,12 +1,14 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import "I18n.js" as I18n
 
 Page {
     id: setTP
     property real uiScale: 1.0
+    readonly property string lang: (backend && backend.appLanguage) ? backend.appLanguage : "cs"
 
-    title: "Nastavení teploty"
+    title: I18n.t(lang, "settemp.title")
     background: Item {}
     visible: SwipeView.isCurrentItem
 
@@ -34,7 +36,7 @@ Page {
     function tempText(v, defr) {
 
         if (defr)
-            return "def"
+            return I18n.t(setTP.lang, "settemp.def")
         // show dashes when sensor value is NaN / invalid
         return isBadNumber(v) ? "- -" : Number(v).toFixed(1)
     }
@@ -77,7 +79,7 @@ Page {
 
                 Text {
                     anchors.centerIn: parent
-                    text: "ON"
+                    text: I18n.t(setTP.lang, "settemp.on")
                     color: enabledValue ? "#000000" : "#c6c5df"
                     font.pixelSize: 14 * setTP.uiScale
                     font.bold: true
@@ -99,7 +101,7 @@ Page {
 
                 Text {
                     anchors.centerIn: parent
-                    text: "OFF"
+                    text: I18n.t(setTP.lang, "settemp.off")
                     color: !enabledValue ? "#000000" : "#c6c5df"
                     font.pixelSize: 14 * setTP.uiScale
                     font.bold: true
@@ -212,7 +214,7 @@ Page {
                             id: upArea
                             anchors.fill: parent
                             enabled: bathEnabled
-                            onClicked: backend.targetTemp = backend.targetTemp + 0.5
+                            onClicked: backend.targetTemp <= 12.0 ? backend.targetTemp = backend.targetTemp + 0.5 : backend.targetTemp = backend.targetTemp 
                         }
                     }
 
@@ -261,7 +263,7 @@ Page {
                             id: downArea
                             anchors.fill: parent
                             enabled: bathEnabled
-                            onClicked: backend.targetTemp = backend.targetTemp - 0.5
+                            onClicked: backend.targetTemp >= 0.0 ? backend.targetTemp = backend.targetTemp - 0.5 : backend.targetTemp = backend.targetTemp 
                         }
                     }
                 }
@@ -390,7 +392,7 @@ Page {
                                 }
 
                                 Text {
-                                    text: "edit"
+                                    text: I18n.t(setTP.lang, "settemp.edit")
                                     visible: setTP.activeTarget === 1
                                     color: "orange"
                                     font.pixelSize: 20 * uiScale
@@ -629,7 +631,7 @@ Page {
                             }
 
                             Text {
-                                text: "edit"
+                                text: I18n.t(setTP.lang, "settemp.edit")
                                 visible: setTP.activeTarget === 2
                                 color: "orange"
                                 font.pixelSize: 20 * uiScale

@@ -12,10 +12,11 @@
     <file>OverlayPage.qml</file>
     <file>WifiPage.qml</file>
     <file>SettingsPage.qml</file>
-    <file>LoginPage.qml</file>
+    <file>PersonPage.qml</file>
     <file>TestPage.qml</file>
     <file>SensorConfigPage.qml</file>
     <file>KeyboardPanel.qml</file>
+    <file>I18n.js</file>
     <file>fonts/bootstrap-icons.ttf</file>
 
     <!-- Obrázky -->

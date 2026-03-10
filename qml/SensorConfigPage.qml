@@ -1,10 +1,12 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import "I18n.js" as I18n
 
 Page {
     id: page
-    title: "Senzory"
+    readonly property string lang: (backend && backend.appLanguage) ? backend.appLanguage : "cs"
+    title: I18n.t(lang, "sensor.title")
     background: Rectangle { color: "transparent" }
 
     // POUŽIJU PŘÍMO globální uiScale z projektu.
@@ -110,7 +112,7 @@ Page {
                 spacing: 10 * s
 
                 Text {
-                    text: "VIDITELNÉ 1-WIRE"
+                    text: I18n.t(page.lang, "sensor.visible")
                     color: page.assignUnlocked ? "#c6c5df" : "#77c6c5df"
                     font.pixelSize: 18 * s
                     font.bold: true
@@ -197,7 +199,7 @@ Page {
 
             Text {
                 width: parent.width
-                text: selectedAddr === "" ? "Klikni na adresu a pak na roli uprostřed." : ("Vybraná: " + selectedAddr)
+                text: selectedAddr === "" ? I18n.t(page.lang, "sensor.select_hint") : (I18n.t(page.lang, "sensor.selected_prefix") + selectedAddr)
                 color: selectedAddr === "" ? "#666666" : "#c6c5df"
                 font.pixelSize: 16 * s
                 horizontalAlignment: Text.AlignHCenter
@@ -225,7 +227,7 @@ Page {
 
             Text {
                 width: parent.width
-                text: is22 ? "PŘIŘAZENÍ + OFFSETY (2+2)" : "PŘIŘAZENÍ + OFFSETY (TYP-3)"
+                text: is22 ? I18n.t(page.lang, "sensor.assign22") : I18n.t(page.lang, "sensor.assign3")
                 color: "white"
                 font.pixelSize: 18 * s
                 font.bold: true
@@ -334,7 +336,7 @@ Page {
             }
 
             Text {
-                text: page.canAdjust ? ("krok " + Number(page.step).toFixed(1) + "°C") : "VYBER ČIDLO"
+                text: page.canAdjust ? I18n.format(page.lang, "sensor.step", Number(page.step).toFixed(1)) : I18n.t(page.lang, "sensor.select_sensor")
                 color: page.canAdjust ? "#c6c5df" : "#666666"
                 font.pixelSize: 18 * s
                 horizontalAlignment: Text.AlignHCenter

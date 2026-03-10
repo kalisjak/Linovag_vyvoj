@@ -1,12 +1,14 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import "I18n.js" as I18n
 
 Page {
     id: page
     property real uiScale: 1.0
+    readonly property string lang: (backend && backend.appLanguage) ? backend.appLanguage : "cs"
 
-    title: "Test"
+    title: I18n.t(lang, "test.title")
     background: Item {}
     visible: SwipeView.isCurrentItem
 
@@ -111,7 +113,7 @@ Page {
                             spacing: 10 * uiScale
 
                             Text {
-                                text: "LIVE"
+                                text: I18n.t(page.lang, "test.live")
                                 color: "#EDEFF2"
                                 font.pixelSize: 24 * uiScale
                                 font.bold: true
@@ -173,13 +175,13 @@ Page {
                             Row {
                                 spacing: 10 * uiScale
                                 Text {
-                                    text: "FORCED"
+                                    text: I18n.t(page.lang, "test.forced")
                                     color: backend.forcedSensors ? "orange" : "#c6c5df"
                                     font.pixelSize: 24 * uiScale
                                     font.bold: true
                                 }
                                 Text {
-                                    text: backend.forcedSensors ? "ON" : "OFF"
+                                    text: backend.forcedSensors ? I18n.t(page.lang, "test.on") : I18n.t(page.lang, "test.off")
                                     color: backend.forcedSensors ? "orange" : "#c6c5df"
                                     font.pixelSize: 24 * uiScale
                                     font.bold: true
@@ -230,7 +232,7 @@ Page {
 
                                         Item { width: 1; Layout.fillWidth: true }
                                         Text {
-                                            text: isSelected ? "EDIT" : ""
+                                            text: isSelected ? I18n.t(page.lang, "test.edit") : ""
                                             color: "orange"
                                             font.pixelSize: 16 * uiScale
                                             font.bold: true
@@ -242,7 +244,7 @@ Page {
                             Text {
                                 width: parent.width
                                 wrapMode: Text.WordWrap
-                                text: "Click on the temperature (FORCED) and adjust it using the arrow keys. Step" + Number(page.step).toFixed(1) + "°C. Outside of FORCED everything is locked."
+                                text: I18n.format(page.lang, "test.hint", Number(page.step).toFixed(1))
                                 color: "#c6c5df"
                                 font.pixelSize: 14 * uiScale
                             }
@@ -281,7 +283,7 @@ Page {
                     }
 
                     Text {
-                        text: backend.forcedSensors ? ("krok " + Number(page.step).toFixed(1) + "°C") : "FORCED OFF"
+                        text: backend.forcedSensors ? I18n.format(page.lang, "test.step", Number(page.step).toFixed(1)) : I18n.t(page.lang, "test.forced_off")
                         color: backend.forcedSensors ? "#c6c5df" : "#666666"
                         font.pixelSize: 18 * uiScale
                         horizontalAlignment: Text.AlignHCenter
@@ -329,7 +331,7 @@ Page {
 
                         Text {
                             anchors.centerIn: parent
-                            text: backend.softwareType == 22 ? "SOFT: TYP 2+2" : "SOFT: TYP 3"
+                            text: backend.softwareType == 22 ? I18n.t(page.lang, "test.soft22") : I18n.t(page.lang, "test.soft3")
                             color: "#EDEFF2"
                             font.pixelSize: 24 * uiScale
                             font.bold: true
@@ -349,7 +351,7 @@ Page {
 
                         Text {
                             anchors.centerIn: parent
-                            text: backend.forcedSensors ? "FORCED TEPLOTY ON" : "FORCED TEPLOTY OFF"
+                            text: backend.forcedSensors ? I18n.t(page.lang, "test.forced_temps_on") : I18n.t(page.lang, "test.forced_temps_off")
                             color: backend.forcedSensors ? "orange" : "#EDEFF2"
                             font.pixelSize: 22 * uiScale
                             font.bold: true

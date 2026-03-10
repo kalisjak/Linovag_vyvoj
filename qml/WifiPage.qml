@@ -26,6 +26,7 @@ OverlayPage {
     property string pendingConnectUser: ""
     property string pendingConnectPass: ""
     property bool pendingConnectEnterprise: false
+    property bool showLargeStatus: false
     property bool initialScanDone: false
     property bool refreshInProgress: false
 
@@ -55,6 +56,12 @@ OverlayPage {
         if (typeof floatEditor !== "undefined" && floatEditor.openFor) {
             floatEditor.openFor(field)
         }
+    }
+
+    function clearStatusMessage() {
+        largeStatusHideTimer.stop()
+        showLargeStatus = false
+        uiStatusText = ""
     }
 
     function needsCredential(net) {
@@ -94,6 +101,7 @@ OverlayPage {
 
     function triggerConnectFlow() {
         if (!selectedNetwork) return
+        clearStatusMessage()
 
         if (needsCredential(selectedNetwork)) {
             pendingSsid = selectedNetwork.ssid
@@ -155,6 +163,7 @@ OverlayPage {
 
     function doConnect(ssid, username, password, enterpriseMode) {
         if (!backend || !backend.wifiConnect) return
+        clearStatusMessage()
         pendingConnectSsid = ssid
         pendingConnectUser = username
         pendingConnectPass = password
@@ -162,20 +171,23 @@ OverlayPage {
                                ? (selectedNetwork ? !!selectedNetwork.requiresUsernamePassword : false)
                                : !!enterpriseMode
         busyConnecting = true
-        uiStatusText = tt("Připojuji k síti: ", "Connecting to network: ", "Verbinde mit Netzwerk: ", "Forbinder til netværk: ") + ssid
         connectStartTimer.start()
     }
 
     function doConnectNow() {
         var bssid = selectedNetwork && selectedNetwork.bssid ? selectedNetwork.bssid : ""
         var ok = backend.wifiConnect(pendingConnectSsid, pendingConnectUser, pendingConnectPass, pendingConnectEnterprise, bssid)
-        if (backend.wifiLastMessage !== undefined && backend.wifiLastMessage !== "") {
-            uiStatusText = backend.wifiLastMessage
+        showLargeStatus = !!backend.wifiAuthFailure
+        if (!ok && backend.wifiAuthFailure) {
+            uiStatusText = tt("Špatné heslo. Síť nebyla uložena.",
+                              "Wrong password. Network was not saved.",
+                              "Falsches Passwort. Das Netzwerk wurde nicht gespeichert.",
+                              "Forkert adgangskode. Netværket blev ikke gemt.")
+            largeStatusHideTimer.restart()
+        } else if (backend.wifiLastMessage !== undefined && backend.wifiLastMessage !== "") {
+            clearStatusMessage()
         } else {
-            uiStatusText = ok ? tt("Připojeno: ", "Connected: ", "Verbunden: ", "Forbundet: ")
-                                + pendingConnectSsid
-                              : tt("Připojení selhalo: ", "Connect failed: ", "Verbindung fehlgeschlagen: ", "Forbindelse mislykkedes: ")
-                                + pendingConnectSsid
+            clearStatusMessage()
         }
         busyConnecting = false
         pendingConnectUser = ""
@@ -196,31 +208,20 @@ OverlayPage {
 
     function doDisconnect(ssid) {
         if (!backend || !backend.wifiDisconnect) return
-        var ok = backend.wifiDisconnect(ssid)
-        if (backend.wifiLastMessage !== undefined && backend.wifiLastMessage !== "") {
-            uiStatusText = backend.wifiLastMessage
-        } else {
-            uiStatusText = ok ? tt("Odpojeno.", "Disconnected.", "Getrennt.", "Afbrudt.")
-                              : tt("Odpojení selhalo.", "Disconnect failed.", "Trennen fehlgeschlagen.", "Afbrydelse mislykkedes.")
-        }
+        backend.wifiDisconnect(ssid)
+        clearStatusMessage()
         refreshNetworks(true)
     }
 
     function doForget(ssid) {
         if (!backend || !backend.wifiForget) return
-        var ok = backend.wifiForget(ssid)
-        if (backend.wifiLastMessage !== undefined && backend.wifiLastMessage !== "") {
-            uiStatusText = backend.wifiLastMessage
-        } else {
-            uiStatusText = ok ? tt("Síť zapomenuta.", "Network forgotten.", "Netzwerk vergessen.", "Netværk glemt.")
-                              : tt("Nepodařilo se zapomenout síť.", "Failed to forget network.", "Netzwerk konnte nicht vergessen werden.",
-                                   "Kunne ikke glemme netværket.")
-        }
+        backend.wifiForget(ssid)
+        clearStatusMessage()
         refreshNetworks(true)
     }
 
     Component.onCompleted: {
-        uiStatusText = searchingNetworksLabel()
+        clearStatusMessage()
     }
 
     Timer {
@@ -238,6 +239,13 @@ OverlayPage {
         interval: 30
         repeat: false
         onTriggered: wifi.doConnectNow()
+    }
+
+    Timer {
+        id: largeStatusHideTimer
+        interval: 7000
+        repeat: false
+        onTriggered: wifi.clearStatusMessage()
     }
 
     Timer {
@@ -635,17 +643,29 @@ OverlayPage {
                                 }
                             }
 
-                            Text {
+                            Rectangle {
                                 width: parent.width
-                                text: uiStatusText === "" ? tt("Akce jsou připravené pro backend napojení (nmcli).",
-                                                               "Actions are ready for backend connection (nmcli).",
-                                                               "Aktionen sind fur die Backend-Anbindung bereit (nmcli).",
-                                                               "Handlinger er klar til backend-forbindelse (nmcli).")
-                                                     : uiStatusText
-                                color: "#c6c5df"
-                                font.pixelSize: 20 * s
-                                wrapMode: Text.WordWrap
+                                visible: showLargeStatus && uiStatusText !== ""
+                                radius: 18 * s
+                                color: "#7a1616"
+                                border.width: 2 * s
+                                border.color: "#ffb3b3"
+                                implicitHeight: errorStatusText.implicitHeight + 28 * s
+
+                                Text {
+                                    id: errorStatusText
+                                    anchors.fill: parent
+                                    anchors.margins: 14 * s
+                                    text: uiStatusText
+                                    color: "#FFF1F1"
+                                    font.pixelSize: 30 * s
+                                    font.bold: true
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                    wrapMode: Text.WordWrap
+                                }
                             }
+
                         }
                     }
                 }
@@ -817,24 +837,36 @@ OverlayPage {
 
         Rectangle {
             anchors.fill: parent
-            color: "#00000088"
+            color: "#aa000000"
         }
 
-        Column {
+        Rectangle {
             anchors.centerIn: parent
-            spacing: 12 * s
+            width: 240 * s
+            height: 180 * s
+            radius: 24 * s
+            color: "#161c27dd"
+            border.width: 0
+            border.color: "#7cc8ff"
 
-            BusyIndicator {
-                running: busyConnecting
-                width: 84 * s
-                height: 84 * s
-            }
+            Column {
+                anchors.centerIn: parent
+                spacing: 14 * s
 
-            Text {
-                text: tt("Připojuji…", "Connecting…", "Verbinde…", "Forbinder…")
-                color: "#EDEFF2"
-                font.pixelSize: 24 * s
-                font.bold: true
+                BusyIndicator {
+                    running: busyConnecting
+                    width: 92 * s
+                    height: 92 * s
+                    palette.dark: "#5a5a5a"
+                    palette.light: "#d3d3d3"
+                }
+
+                Text {
+                    text: tt("Připojuji…", "Connecting…", "Verbinde…", "Forbinder…")
+                    color: "#F3FAFF"
+                    font.pixelSize: 25 * s
+                    font.bold: true
+                }
             }
         }
     }

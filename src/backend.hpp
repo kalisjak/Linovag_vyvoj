@@ -36,9 +36,11 @@ class Backend : public QObject {
 
     Q_PROPERTY(int softwareType READ softwareType WRITE setSoftwareType NOTIFY softwareTypeChanged)
     Q_PROPERTY(QString softwareTypeLabel READ softwareTypeLabel NOTIFY softwareTypeChanged)
-    Q_PROPERTY(QString appLanguage READ appLanguage NOTIFY appLanguageChanged)
+    Q_PROPERTY(QString appLanguage READ appLanguage WRITE setAppLanguage NOTIFY appLanguageChanged)
     Q_PROPERTY(QString wifiLastMessage READ wifiLastMessage NOTIFY wifiLastMessageChanged)
     Q_PROPERTY(bool wifiConnected READ wifiConnected NOTIFY wifiConnectedChanged)
+    Q_PROPERTY(bool ethernetConnected READ ethernetConnected NOTIFY ethernetConnectedChanged)
+    Q_PROPERTY(bool wifiAuthFailure READ wifiAuthFailure NOTIFY wifiAuthFailureChanged)
 
     Q_PROPERTY(double targetTemp READ targetTemp WRITE setTargetTemp NOTIFY targetTempChanged)
     // Jen typ 2+2
@@ -109,6 +111,8 @@ class Backend : public QObject {
     QString appLanguage() const { return appLanguage_; }
     QString wifiLastMessage() const { return wifiLastMessage_; }
     bool wifiConnected() const { return wifiConnected_; }
+    bool ethernetConnected() const { return ethernetConnected_; }
+    bool wifiAuthFailure() const { return wifiAuthFailure_; }
 
     double value1() const { return value1_; }
     double value2() const { return value2_; }
@@ -188,6 +192,7 @@ class Backend : public QObject {
     void setTargetTemp2(double t);
 
     void setSoftwareType(int type);
+    void setAppLanguage(const QString& lang);
 
     void onMqttTimerTick();
 
@@ -256,6 +261,8 @@ class Backend : public QObject {
     void appLanguageChanged();
     void wifiLastMessageChanged();
     void wifiConnectedChanged();
+    void ethernetConnectedChanged();
+    void wifiAuthFailureChanged();
 
     void mqttConnectedChanged();
     void serialNumberChanged();
@@ -334,13 +341,15 @@ class Backend : public QObject {
     double value6_ = 22.2;
     double humidity_ = 50.0;
 
-    double targetTemp_ = 5.0;
-    double targetTemp2_ = 5.0;
+    double targetTemp_ = 3.0;
+    double targetTemp2_ = 3.0;
 
     int swType_ = 3;
     QString appLanguage_ = QStringLiteral("cs");
     QString wifiLastMessage_;
     bool wifiConnected_ = false;
+    bool ethernetConnected_ = false;
+    bool wifiAuthFailure_ = false;
 
     std::mt19937 rng_;
     bool mqttConnected_ = false;
@@ -384,6 +393,9 @@ class Backend : public QObject {
     void initLogManager();
     void setWifiLastMessage(const QString& msg);
     void setWifiConnected(bool connected);
+    void setEthernetConnected(bool connected);
+    void setWifiAuthFailure(bool failed);
+    void refreshNetworkLinkState();
     void onWifiMonitorTick();
 
     QTimer* wifiMonitorTimer_ = nullptr;

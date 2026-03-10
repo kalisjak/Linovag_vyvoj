@@ -4,10 +4,12 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import "I18n.js" as I18n
 
 OverlayPage {
     id: page
-    title: "Nastavení"
+    readonly property string lang: (backend && backend.appLanguage) ? backend.appLanguage : "cs"
+    title: I18n.t(lang, "settings.title")
 
     readonly property real s: uiScale
 
@@ -100,7 +102,7 @@ OverlayPage {
                             spacing: 15 * s
 
                             Text {
-                                text: "Nastavení automatického\nčasového odtávání"
+                                text: I18n.t(page.lang, "settings.main")
                                 color: "#EDEFF2"
                                 font.pixelSize: 32 * s
                                 font.bold: true
@@ -114,18 +116,18 @@ OverlayPage {
                                 spacing: 10 * s
 
                                 Rectangle {
-                                    width: 120 * s
-                                    height: 46 * s
-                                    radius: 18 * s
+                                    width: 156 * s
+                                    height: 62 * s
+                                    radius: 22 * s
                                     color: backend.autoDefrostEnabled ? "#00ff00" : "#00000099"
                                     border.width: 2 * s
                                     border.color: "#c6c5df"
 
                                     Text {
                                         anchors.centerIn: parent
-                                        text: "ZAP"
+                                        text: I18n.t(page.lang, "settings.on")
                                         color: backend.autoDefrostEnabled ? "#000000" : "#c6c5df"
-                                        font.pixelSize: 20 * s
+                                        font.pixelSize: 26 * s
                                         font.bold: true
                                     }
                                     MouseArea {
@@ -135,18 +137,18 @@ OverlayPage {
                                 }
 
                                 Rectangle {
-                                    width: 120 * s
-                                    height: 46 * s
-                                    radius: 18 * s
+                                    width: 156 * s
+                                    height: 62 * s
+                                    radius: 22 * s
                                     color: !backend.autoDefrostEnabled ? "orange" : "#00000099"
                                     border.width: 2 * s
                                     border.color: "#c6c5df"
 
                                     Text {
                                         anchors.centerIn: parent
-                                        text: "VYP"
+                                        text: I18n.t(page.lang, "settings.off")
                                         color: !backend.autoDefrostEnabled ? "#000000" : "#c6c5df"
-                                        font.pixelSize: 20 * s
+                                        font.pixelSize: 26 * s
                                         font.bold: true
                                     }
 
@@ -164,8 +166,8 @@ OverlayPage {
                                 width: parent.width
                                 wrapMode: Text.WordWrap
                                 text: backend.autoDefrostEnabled ?
-                                      "Funkce je zapnutá. Defrost se spustí v nastavených časech pouze pokud zařízení běží alespoň 4 hodiny a poslední defrost byl min. 4 hodiny zpět." :
-                                      "Funkce je vypnutá."
+                                      I18n.t(page.lang, "settings.enabled_desc") :
+                                      I18n.t(page.lang, "settings.disabled_desc")
                                 color: backend.autoDefrostEnabled ? "#c6c5df" : "#666666"
                                 font.pixelSize: 16 * s
                             }
@@ -192,7 +194,7 @@ OverlayPage {
                                 spacing: 16 * s
 
                                 Text {
-                                    text: "Časy automatického\nodtávání"
+                                    text: I18n.t(page.lang, "settings.times")
                                     color: "#EDEFF2"
                                     font.pixelSize: 30 * s
                                     font.bold: true
@@ -203,8 +205,8 @@ OverlayPage {
                                 // Time 1
                                 Rectangle {
                                     width: parent.width
-                                    height: 96 * s
-                                    radius: 20 * s
+                                    height: 118 * s
+                                    radius: 24 * s
                                     color: (activeTimeIdx === 1) ? "#1f3a66" : "#00000099"
                                     border.width: 2 * s
                                     border.color: (activeTimeIdx === 1) ? "orange" : "#c6c5df"
@@ -215,20 +217,20 @@ OverlayPage {
                                         anchors.margins: 14 * s
                                         spacing: 12 * s
 
-                                        Text { text: "Čas 1"; color: "#EDEFF2"; font.pixelSize: 20 * s; font.bold: true; anchors.verticalCenter: parent.verticalCenter }
+                                        Text { text: I18n.t(page.lang, "settings.time1"); color: "#EDEFF2"; font.pixelSize: 24 * s; font.bold: true; anchors.verticalCenter: parent.verticalCenter }
                                         Item { width: 1; height: 1; }
                                         Text {
                                             text: fmt(backend.autoDefrostTime1Min)
                                             color: "#EDEFF2"
-                                            font.pixelSize: 30 * s
+                                            font.pixelSize: 38 * s
                                             font.bold: true
                                             anchors.verticalCenter: parent.verticalCenter
                                         }
                                         Item { width: 1; Layout.fillWidth: true }
                                         Text {
-                                            text: (activeTimeIdx === 1) ? "EDIT" : ""
+                                            text: (activeTimeIdx === 1) ? I18n.t(page.lang, "settings.edit") : ""
                                             color: "orange"
-                                            font.pixelSize: 16 * uiScale
+                                            font.pixelSize: 20 * uiScale
                                             font.bold: true
                                         }
                                     }
@@ -243,8 +245,8 @@ OverlayPage {
                                 // Time 2
                                 Rectangle {
                                     width: parent.width
-                                    height: 96 * s
-                                    radius: 20 * s
+                                    height: 118 * s
+                                    radius: 24 * s
                                     color: (activeTimeIdx === 2) ? "#1f3a66" : "#00000099"
                                     border.width: 2 * s
                                     border.color: (activeTimeIdx === 2) ? "orange" : "#c6c5df"
@@ -255,20 +257,20 @@ OverlayPage {
                                         anchors.margins: 14 * s
                                         spacing: 12 * s
 
-                                        Text { text: "Čas 2"; color: "#EDEFF2"; font.pixelSize: 20 * s; font.bold: true; anchors.verticalCenter: parent.verticalCenter }
+                                        Text { text: I18n.t(page.lang, "settings.time2"); color: "#EDEFF2"; font.pixelSize: 24 * s; font.bold: true; anchors.verticalCenter: parent.verticalCenter }
                                         Item { width: 1; height: 1; }
                                         Text {
                                             text: fmt(backend.autoDefrostTime2Min)
                                             color: "#EDEFF2"
-                                            font.pixelSize: 30 * s
+                                            font.pixelSize: 38 * s
                                             font.bold: true
                                             anchors.verticalCenter: parent.verticalCenter
                                         }
                                         Item { width: 1; Layout.fillWidth: true }
                                         Text {
-                                            text: (activeTimeIdx === 2) ? "EDIT" : ""
+                                            text: (activeTimeIdx === 2) ? I18n.t(page.lang, "settings.edit") : ""
                                             color: "orange"
-                                            font.pixelSize: 16 * uiScale
+                                            font.pixelSize: 20 * uiScale
                                             font.bold: true
                                         }
                                     }
@@ -314,7 +316,8 @@ OverlayPage {
                                     }
 
                                     Text {
-                                        text: backend.autoDefrostEnabled ? ("krok " + page.stepMin + " min") : "AUTO OFF"
+                                        text: backend.autoDefrostEnabled ? I18n.format(page.lang, "settings.step_min", page.stepMin)
+                                                                        : I18n.t(page.lang, "settings.auto_off")
                                         color: backend.autoDefrostEnabled ? "#c6c5df" : "#666666"
                                         font.pixelSize: 18 * s
                                         horizontalAlignment: Text.AlignHCenter
@@ -386,7 +389,7 @@ OverlayPage {
                 spacing: 24 * s
 
                 Text {
-                    text: "Vypnout auto odtávání?"
+                    text: I18n.t(page.lang, "settings.confirm_title")
                     color: "#EDEFF2"
                     font.pixelSize: 24 * s
                     font.bold: true
@@ -397,7 +400,7 @@ OverlayPage {
                     wrapMode: Text.WordWrap
                     color: "#EDEFF2"
                     font.pixelSize: 22 * s
-                    text: "Pokud časový defrost vypneš, zařízení nemusí správně fungovat a může zamrznout výparník.\n\nOpravdu chceš pokračovat?"
+                    text: I18n.t(page.lang, "settings.confirm_body")
                 }
 
                 Rectangle {
@@ -419,7 +422,7 @@ OverlayPage {
                         border.width: 2 * s
                         border.color: "#c6c5df"
 
-                        Text { anchors.centerIn: parent; text: "Zrušit"; color: "#EDEFF2"; font.pixelSize: 20 * s; font.bold: true }
+                        Text { anchors.centerIn: parent; text: I18n.t(page.lang, "common.cancel"); color: "#EDEFF2"; font.pixelSize: 20 * s; font.bold: true }
                         MouseArea { id: cancelArea; anchors.fill: parent; onClicked: confirmOff.visible = false }
                     }
 
@@ -431,7 +434,7 @@ OverlayPage {
                         border.width: 2 * s
                         border.color: "#c6c5df"
 
-                        Text { anchors.centerIn: parent; text: "OK"; color: "#EDEFF2"; font.pixelSize: 20 * s; font.bold: true }
+                        Text { anchors.centerIn: parent; text: I18n.t(page.lang, "common.ok"); color: "#EDEFF2"; font.pixelSize: 20 * s; font.bold: true }
                         MouseArea {
                             id: okArea
                             anchors.fill: parent

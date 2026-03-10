@@ -1,12 +1,14 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import "I18n.js" as I18n
 
 Page {
     id: histP
     property real uiScale: 1.0
+    readonly property string lang: (backend && backend.appLanguage) ? backend.appLanguage : "cs"
 
-    title: "Historie teplot"
+    title: I18n.t(lang, "hist.title")
     background: Item {}
     visible: SwipeView.isCurrentItem
 
@@ -49,7 +51,7 @@ Page {
                 }
 
                 Text {
-                    text: "Web-Übersicht der Temperaturhistorie" // (DE) / Webový přehled historie teplot (CZ) / Web overview of temp. history (EN) / Web-Übersicht der Temperaturhistorie (DE) / Weboversigt over temphistorik (DK)
+                    text: I18n.t(histP.lang, "hist.qr_caption")
                     color: "#EDEFF2"
                     // font.pixelSize: Math.min(histP.width, histP.height) * 0.05
                     font.pixelSize: 34 * uiScale
@@ -91,7 +93,7 @@ Page {
                 spacing: Math.min(parent.width, parent.height) * 0.01
 
                 Text {
-                    text: "Temperaturmessung" // (DE) / Měření teploty (CZ) / Temperature Measurement (EN) / Temperaturmessung (DE) / Temperaturmåling (DK)
+                    text: I18n.t(histP.lang, "hist.measurement")
                     color: "#EDEFF2"
                     font.pixelSize: Math.min(histP.width, histP.height) * 0.08
                     font.bold: true

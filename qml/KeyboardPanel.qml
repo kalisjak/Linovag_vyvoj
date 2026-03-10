@@ -1,10 +1,12 @@
 import QtQuick 2.15
 import QtQuick.Layouts 1.15
 import QtQuick.Controls 2.15
+import "I18n.js" as I18n
 
 Item {
     id: osk
     property real uiScale: 1.0
+    readonly property string lang: (backend && backend.appLanguage) ? backend.appLanguage : "cs"
     readonly property real edgeInset: 6
 
     width: parent ? (parent.width - (2 * edgeInset)) : 800 * uiScale
@@ -475,7 +477,7 @@ Item {
                 text: {
                     var t = keyRect.keyText
                     if (keyRect.keyType === "space")
-                        t = "space"
+                        t = I18n.t(osk.lang, "keyboard.space")
                     if (keyRect.keyType === "shift")
                         t = (osk.shiftState === 2) ? "⬆" : "⇧"
                     if (keyRect.keyType === "mode") {

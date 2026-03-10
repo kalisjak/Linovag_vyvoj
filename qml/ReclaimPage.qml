@@ -1,12 +1,14 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import "I18n.js" as I18n
 
 Page {
     id: reclP
     property real uiScale: 1.0
+    readonly property string lang: (backend && backend.appLanguage) ? backend.appLanguage : "cs"
 
-    title: "Reklamacni stranka"
+    title: I18n.t(lang, "reclaim.title")
     background: Item {}
     visible: SwipeView.isCurrentItem
 
@@ -42,8 +44,7 @@ Page {
                 }
 
                 Text {
-                    text: "E-mail mit vorausgefülltem Reklmationsantrag öffnen" // (DE) / Otevřít email s předvyplněnou reklamační žádostí (CZ) / 
-                    // Open email with pre-filled warranty claim (EN) / Åbn e-mail med forudfyldt reklamationsanmodning (DK)
+                    text: I18n.t(reclP.lang, "reclaim.qr_caption")
                     color: "#EDEFF2"
                     font.pixelSize: 28 * uiScale
                     horizontalAlignment: Text.AlignHCenter
@@ -83,7 +84,7 @@ Page {
                 spacing: 12
 
                 Text {
-                    text: "Reklamationsantrag" // (DE) / Reklamační žádost (CZ) / Warranty Claim (EN) / Reklamationsanmodning (DK)
+                    text: I18n.t(reclP.lang, "reclaim.header")
                     color: "#EDEFF2"
                     font.pixelSize: 45 * uiScale
                     font.bold: true
@@ -112,7 +113,7 @@ Page {
                         }
 
                         Text {
-                            text: "E-mail:"
+                            text: I18n.t(reclP.lang, "reclaim.email")
                             color: "#EDEFF2"
                             font.pixelSize: 28 * uiScale
                             font.bold: true
@@ -143,7 +144,7 @@ Page {
                         }
 
                         Text {
-                            text: "Bestellnummer:" // (DE) / Číslo objednávky: (CZ) / Order Number: (EN) / Ordrenummer: (DK)
+                            text: I18n.t(reclP.lang, "reclaim.order")
                             color: "#EDEFF2"
                             font.pixelSize: 28 * uiScale
                             font.bold: true
@@ -174,7 +175,7 @@ Page {
                         }
 
                         Text {
-                            text: "Geräte-ID:" // (DE) / ID zařízení: (CZ) / Device ID: (EN) / Enheds-ID: (DK)
+                            text: I18n.t(reclP.lang, "reclaim.device")
                             color: "#EDEFF2"
                             font.pixelSize: 28 * uiScale
                             font.bold: true
@@ -195,7 +196,7 @@ Page {
 
                 // NÁPIS NAD OKÉNKEM S CHYBAMI
                 Text {
-                    text: "Gefundene Fehler:" // (DE) / Nalezené chyby: (CZ) / Detected Errors: (EN) / Fundne fejl: (DK)
+                    text: I18n.t(reclP.lang, "reclaim.errors")
                     color: "#EDEFF2"
                     font.pixelSize: 28 * uiScale
                     font.bold: true
@@ -222,7 +223,7 @@ Page {
                         clip: true
 
                         // v C++ jako Q_PROPERTY(QStringList reclaimErrors ...)
-                        model: [backend.reclaimErrorsText || "Bisher kein Fehler erkannt"] // (DE) / Zatím nebyla detekována žádná chyba. (CZ) / No errors detected so far. (EN) / Der er endnu ikke registreret nogen fejl (DK)
+                        model: [backend.reclaimErrorsText || I18n.t(reclP.lang, "reclaim.no_errors")]
                         // model: [backend.reclaimErrorsText || "Hej nic ještě nebylo nahlášeno, vše vypadá OK! \nAle tohle je testovací text, který simuluje nějaké chyby, které by mohly být zobrazeny v tomto okně. Může to být delší text, který se bude zalamovat podle šířky okna a bude potřeba scrollovat, pokud je ho hodně. \nTakže tady přidávám ještě nějaký další text, aby to opravdu vypadalo jako reálný scénář."]
 
                         delegate: Text {

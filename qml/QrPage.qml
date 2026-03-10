@@ -1,12 +1,14 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import "I18n.js" as I18n
 
 Page {
     id: qrP
     property real uiScale: 1.0
+    readonly property string lang: (backend && backend.appLanguage) ? backend.appLanguage : "cs"
 
-    title: "QR kód"
+    title: I18n.t(lang, "qr.title")
     background: Item {}
     visible: SwipeView.isCurrentItem
 
@@ -47,7 +49,7 @@ Page {
                 }
 
                 Text {
-                    text: "Produktwebseite öffnen" // (DE) / Otevřít webové stránky produktu (CZ) / Open product website (EN) / Produktwebseite öffnen (DE) / Åbn produktets webside (DK)
+                    text: I18n.t(qrP.lang, "qr.product")
                     color: "#EDEFF2"
                     font.pixelSize: 30 * uiScale
                     horizontalAlignment: Text.AlignHCenter
@@ -95,7 +97,7 @@ Page {
                 }
 
                 Text {
-                    text: "Wartungsanleitung öffnen" // (DE) / Otevřít tutoriál k údržbě (CZ) / Open maintenance tutorial (EN) / Wartungsanleitung öffnen (DE) / Åben vedligeholdelsevejledning (DK)
+                    text: I18n.t(qrP.lang, "qr.maintenance")
                     color: "#EDEFF2"
                     font.pixelSize: 30 * uiScale
                     horizontalAlignment: Text.AlignHCenter

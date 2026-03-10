@@ -1,12 +1,14 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import "I18n.js" as I18n
 
 Rectangle {
     id: bar
     property real uiScale: 1.0
     property bool overlayMode: false
     property string overlayTitle: ""
+    readonly property string lang: (backend && backend.appLanguage) ? backend.appLanguage : "cs"
 
     readonly property int swType: backend.softwareType
     readonly property bool isDual: swType === 22
@@ -87,7 +89,7 @@ Rectangle {
 
                     Text {
                         anchors.centerIn: parent
-                        text: "← Zpět"
+                        text: I18n.t(bar.lang, "topbar.back")
                         color: "#EDEFF2"
                         font.pixelSize: 24 * uiScale
                         font.bold: true
@@ -103,7 +105,7 @@ Rectangle {
                 Label {
                     text: bar.overlayTitle
                     color: "#EDEFF2"
-                    font.pixelSize: 30 * uiScale
+                    font.pixelSize: 36 * uiScale
                     font.bold: true
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -112,26 +114,26 @@ Rectangle {
             Label {
                 id: typeLabel
                 visible: !bar.overlayMode
-                text: bar.isDual ? "Type 2+2" : "Type - 3"
+                text: bar.isDual ? I18n.t(bar.lang, "topbar.type22") : I18n.t(bar.lang, "topbar.type3")
                 color: "#E0E0E0"
-                font.pixelSize: 26 * uiScale
+                font.pixelSize: 30 * uiScale
                 Layout.alignment: Qt.AlignVCenter
             }
 
             Label {
                 visible: !bar.overlayMode && bar.forcedActive
-                text: "FORCED"
+                text: I18n.t(bar.lang, "topbar.forced")
                 color: "#FFD54F"
-                font.pixelSize: 22 * uiScale
+                font.pixelSize: 33 * uiScale
                 font.bold: true
                 Layout.alignment: Qt.AlignVCenter
             }
 
             Label {
                 visible: !bar.overlayMode && bar.condensHot
-                text: "CONDENS"
+                text: I18n.t(bar.lang, "topbar.condens")
                 color: "#FF8A65"
-                font.pixelSize: 22 * uiScale
+                font.pixelSize: 33 * uiScale
                 font.bold: true
                 Layout.alignment: Qt.AlignVCenter
             }
@@ -410,7 +412,10 @@ Rectangle {
                 id: wifiBtn
                 onClicked: bar.openWifi()
                 contentItem: biIcon.createObject(this, {
-                    "code": Qt.binding(function() { return backend.wifiConnected ? "\uF61C" : "\uF3EF"; }),
+                    "code": Qt.binding(function() {
+                        if (backend.ethernetConnected) return "\uF6D5"
+                        return backend.wifiConnected ? "\uF61C" : "\uF3EF"
+                    }),
                     "px": 48 * uiScale,
                     "iconColor": Qt.binding(function() { return wifiBtn.down ? "#C0C3C8" : "#EDEFF2"; })
                 })

@@ -1,0 +1,18 @@
+[Unit]
+Description=LNVG application
+After=local-fs.target systemd-udev-settle.service
+Wants=systemd-udev-settle.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/lnvg/build
+Environment=XDG_RUNTIME_DIR=/tmp/runtime-root
+ExecStartPre=/usr/bin/mkdir -p /tmp/runtime-root
+ExecStart=/opt/lnvg/build/lnvg_app -platform eglfs
+Restart=always
+RestartSec=3
+StandardOutput=null
+StandardError=null
+
+[Install]
+WantedBy=multi-user.target

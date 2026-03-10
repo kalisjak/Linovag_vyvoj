@@ -57,7 +57,7 @@ class CoolingWorker : public QObject {
     double bathTemp_ = 0.0;
     double evapTemp_ = 0.0;
     double condenserTemp_ = 0.0;
-    double targetTemp_ = 5.0;
+    double targetTemp_ = 3.0;
 
     // state flags requested by user
     bool compressorOn_ = false;

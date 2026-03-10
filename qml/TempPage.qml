@@ -1,9 +1,12 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import "I18n.js" as I18n
 
 Page {
-    title: "Temp"
+    id: tempPage
+    readonly property string lang: (backend && backend.appLanguage) ? backend.appLanguage : "cs"
+    title: I18n.t(lang, "temp.title")
     background: Item {}
     visible: SwipeView.isCurrentItem
 
@@ -44,7 +47,7 @@ Page {
     
                 GroupBox {
                     label: Label {
-                        text: "Live data"
+                        text: I18n.t(tempPage.lang, "temp.live_data")
                         color: "white"
                         font.bold: true
                     }
@@ -56,7 +59,7 @@ Page {
 
                         ColumnLayout {
                             spacing: 4
-                            Label { text: "Value 1:"; color: "white" }
+                            Label { text: I18n.t(tempPage.lang, "temp.value1"); color: "white" }
                             Label {
                                 text: Number(backend.value1).toLocaleString(Qt.locale(), 'f', 3)
                                 color: "orange"
@@ -67,7 +70,7 @@ Page {
 
                         ColumnLayout {
                             spacing: 4
-                            Label { text: "Value 2:"; color: "white" }
+                            Label { text: I18n.t(tempPage.lang, "temp.value2"); color: "white" }
                             Label {
                                 text: Number(backend.value2).toLocaleString(Qt.locale(), 'f', 3)
                                 color: "orange"
@@ -80,7 +83,7 @@ Page {
 
                 GroupBox {
                     label: Label {
-                        text: "Poslat zprávu do C++"
+                        text: I18n.t(tempPage.lang, "temp.send_to_cpp")
                         color: "white"
                         font.bold: true
                     }
@@ -94,7 +97,7 @@ Page {
                         TextField {
                                 id: input
                                 Layout.fillWidth: true
-                                placeholderText: "zapiš teplotu…"
+                                placeholderText: I18n.t(tempPage.lang, "temp.placeholder")
                                 color: "white"
                                 placeholderTextColor: "#CCCCCC"
                             
@@ -112,7 +115,7 @@ Page {
 
                         Button {
                             id: sendBtn
-                            text: "Send temp."
+                            text: I18n.t(parent.lang, "temp.send")
                             background: Rectangle {
                                 implicitWidth: 100
                                 implicitHeight: 30

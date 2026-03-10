@@ -1,13 +1,15 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import "I18n.js" as I18n
 
     
 Page {
     id: homeP
     property real uiScale: 1.0
+    readonly property string lang: (backend && backend.appLanguage) ? backend.appLanguage : "cs"
 
-    title: "Homepage"
+    title: I18n.t(lang, "home.title")
     background: Item {}
     visible: SwipeView.isCurrentItem
 
@@ -40,7 +42,7 @@ Page {
                         }
                     }
                     Text { 
-                        text: "Temperatur" // (DE) / Teplota (CZ) / Temperatur (EN) / Temperatur (DK)
+                        text: I18n.t(homeP.lang, "home.temp")
                         color: "#EDEFF2"
                         font.bold: true
                         font.pixelSize: 20 * uiScale
@@ -74,7 +76,7 @@ Page {
                         }
                     }
                     Text { 
-                        text: "Historie" // (DE) / History (EN) / Historie (CZ) / Historik (DK)
+                        text: I18n.t(homeP.lang, "home.history")
                         color: "#EDEFF2"
                         font.bold: true
                         font.pixelSize: 20 * uiScale
@@ -108,7 +110,7 @@ Page {
                         }
                     }
                     Text { 
-                        text: "QR-Code" // (DE) / QR Code (EN) / QR kód (CZ) / QR-kode (DK)
+                        text: I18n.t(homeP.lang, "home.qr")
                         color: "#EDEFF2"
                         font.bold: true
                         font.pixelSize: 20 * uiScale
@@ -141,7 +143,7 @@ Page {
                         }
                     }
                     Text { 
-                        text: "Reklmationsantrag" // (DE) / Warranty claim (EN) / Reklamační žádost (CZ) / Reklamation (DK)
+                        text: I18n.t(homeP.lang, "home.reclaim")
                         color: "#EDEFF2"
                         font.bold: true
                         font.pixelSize: 20 * uiScale
