@@ -71,6 +71,7 @@ class Backend : public QObject {
 
     Q_PROPERTY(QString reclaimOrderNumber READ reclaimOrderNumber NOTIFY reclaimInfoChanged)
     Q_PROPERTY(QString reclaimEmail READ reclaimEmail NOTIFY reclaimInfoChanged)
+    Q_PROPERTY(bool serviceModeEnabled READ serviceModeEnabled NOTIFY serviceModeEnabledChanged)
 
     // forced sensors for testing
     Q_PROPERTY(bool forcedSensors READ forcedSensors WRITE setForcedSensors NOTIFY forcedSensorsChanged)
@@ -159,6 +160,7 @@ class Backend : public QObject {
     QString serialNumber() const { return RuntimeConfig::deviceSerial(); }
     QString reclaimOrderNumber() const { return RuntimeConfig::reclaimOrderNumber(); };
     QString reclaimEmail() const { return RuntimeConfig::reclaimEmail(); };
+    bool serviceModeEnabled() const { return serviceModeEnabled_; }
     QStringList historyLog() const { return logManager_.tempsHistory(); }
 
     QStringList visibleOneWireIds() const { return visibleOneWireIds_; }
@@ -186,6 +188,8 @@ class Backend : public QObject {
                                  const QString& bssid = QString());
     Q_INVOKABLE bool wifiDisconnect(const QString& ssid = QString());
     Q_INVOKABLE bool wifiForget(const QString& ssid);
+    Q_INVOKABLE bool unlockServiceMode(const QString& pin);
+    Q_INVOKABLE void lockServiceMode();
 
    public slots:
     void setTargetTemp(double t);
@@ -290,6 +294,7 @@ class Backend : public QObject {
     void autoDefrostTimeChanged();
 
     void reclaimInfoChanged();
+    void serviceModeEnabledChanged();
 
     // forced sensors
     void forcedSensorsChanged();
@@ -383,6 +388,7 @@ class Backend : public QObject {
 
     bool bath1Enabled_ = true;
     bool bath2Enabled_ = true;
+    bool serviceModeEnabled_ = false;
 
     QStringList visibleOneWireIds_;
 

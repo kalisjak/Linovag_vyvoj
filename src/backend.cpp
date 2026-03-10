@@ -304,6 +304,23 @@ void Backend::setReclaimEmail(const QString& email) {
     emit reclaimInfoChanged();
 }
 
+bool Backend::unlockServiceMode(const QString& pin) {
+    const QString enteredPin = pin.trimmed();
+    if (enteredPin.isEmpty()) return false;
+    if (enteredPin != RuntimeConfig::servicePin()) return false;
+    if (serviceModeEnabled_) return true;
+
+    serviceModeEnabled_ = true;
+    emit serviceModeEnabledChanged();
+    return true;
+}
+
+void Backend::lockServiceMode() {
+    if (!serviceModeEnabled_) return;
+    serviceModeEnabled_ = false;
+    emit serviceModeEnabledChanged();
+}
+
 void Backend::setPower1On(bool on) {
     if (power1On_ == on) return;
     power1On_ = on;

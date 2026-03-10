@@ -51,6 +51,13 @@ var translations = {
     "reclaim.errors": { cs: "Nalezené chyby:", en: "Detected errors:", de: "Gefundene Fehler:", dk: "Fundne fejl:" },
     "reclaim.no_errors": { cs: "Zatím nebyla detekována žádná chyba", en: "No errors detected so far", de: "Bisher kein Fehler erkannt", dk: "Der er endnu ikke registreret nogen fejl" },
 
+    "service.title": { cs: "Servisní přístup", en: "Service access", de: "Servicezugang", dk: "Serviceadgang" },
+    "service.warning": { cs: "Tato část je určena pouze pro servisní techniky.", en: "This section is intended for service technicians only.", de: "Dieser Bereich ist nur für Servicetechniker bestimmt.", dk: "Dette område er kun beregnet til serviceteknikere." },
+    "service.prompt": { cs: "Zadejte servisní PIN", en: "Enter service PIN", de: "Service-PIN eingeben", dk: "Indtast service-PIN" },
+    "service.placeholder": { cs: "Servisní PIN", en: "Service PIN", de: "Service-PIN", dk: "Service-PIN" },
+    "service.unlock": { cs: "Odemknout", en: "Unlock", de: "Entsperren", dk: "Lås op" },
+    "service.invalid_pin": { cs: "Neplatný PIN.", en: "Invalid PIN.", de: "Ungültiger PIN.", dk: "Ugyldig PIN." },
+
     "settemp.title": { cs: "Nastavení teploty", en: "Temperature settings", de: "Temperatureinstellung", dk: "Temperaturindstilling" },
     "settemp.on": { cs: "ZAP", en: "ON", de: "AN", dk: "TIL" },
     "settemp.off": { cs: "VYP", en: "OFF", de: "AUS", dk: "FRA" },
@@ -77,8 +84,8 @@ var translations = {
     "test.forced_off": { cs: "FORCED VYP", en: "FORCED OFF", de: "FORCED AUS", dk: "FORCED FRA" },
     "test.soft22": { cs: "SOFT: TYP 2+2", en: "SOFT: TYPE 2+2", de: "SOFT: TYP 2+2", dk: "SOFT: TYPE 2+2" },
     "test.soft3": { cs: "SOFT: TYP 3", en: "SOFT: TYPE 3", de: "SOFT: TYP 3", dk: "SOFT: TYPE 3" },
-    "test.forced_temps_on": { cs: "FORCED TEPLOTY ZAP", en: "FORCED TEMPS ON", de: "FORCED TEMp AN", dk: "FORCED TEMP TIL" },
-    "test.forced_temps_off": { cs: "FORCED TEPLOTY VYP", en: "FORCED TEMPS OFF", de: "FORCED TEMp AUS", dk: "FORCED TEMP FRA" },
+    "test.forced_temps_on": { cs: "FORCED TEPLOTY ZAP", en: "FORCED TEMPS ON", de: "FORCED TEMP AN", dk: "FORCED TEMP TIL" },
+    "test.forced_temps_off": { cs: "FORCED TEPLOTY VYP", en: "FORCED TEMPS OFF", de: "FORCED TEMP AUS", dk: "FORCED TEMP FRA" },
 
     "temp.title": { cs: "Teploty", en: "Temperatures", de: "Temperaturen", dk: "Temperaturer" },
     "temp.live_data": { cs: "Živá data", en: "Live data", de: "Live-Daten", dk: "Live-data" },

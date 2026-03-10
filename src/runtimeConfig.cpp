@@ -143,6 +143,11 @@ void setReclaimEmail(const QString& email) {
     s.setValue("reclaim/email", email);
 }
 
+QString servicePin() {
+    QSettings s = makeSettings();
+    return s.value("service/pin", QStringLiteral("12345")).toString().trimmed();
+}
+
 QString appLanguage() {
     QSettings s = makeSettings();
     return s.value("app/language", QStringLiteral("cs")).toString();

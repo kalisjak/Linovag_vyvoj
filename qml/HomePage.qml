@@ -8,6 +8,7 @@ Page {
     id: homeP
     property real uiScale: 1.0
     readonly property string lang: (backend && backend.appLanguage) ? backend.appLanguage : "cs"
+    signal serviceRequested()
 
     title: I18n.t(lang, "home.title")
     background: Item {}
@@ -279,7 +280,7 @@ Page {
                     anchors.fill: parent
                     hoverEnabled: true
                     onClicked: {
-                        dock.dotClicked(5)
+                        homeP.serviceRequested()
                         console.log("HomePage repair icon clicked")
                     }
                 }

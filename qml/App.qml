@@ -22,6 +22,43 @@ ApplicationWindow {
     property real uiScale: Math.min(width / designWidth,
                                     height / designHeight)
     readonly property string lang: (backend && backend.appLanguage) ? backend.appLanguage : "cs"
+    readonly property int publicPageCount: 5
+    readonly property int firstServicePageIndex: 5
+    readonly property bool serviceModeEnabled: backend ? backend.serviceModeEnabled : false
+    property bool serviceUnlockOpen: false
+
+    function openServiceUnlock() {
+        if (serviceModeEnabled) {
+            pages.currentIndex = firstServicePageIndex
+            return
+        }
+        servicePinField.text = ""
+        serviceUnlockError.text = ""
+        serviceUnlockOpen = true
+        if (floatEditor.active)
+            floatEditor.close()
+    }
+
+    function closeServiceUnlock() {
+        serviceUnlockOpen = false
+        servicePinField.text = ""
+        serviceUnlockError.text = ""
+        if (floatEditor.active)
+            floatEditor.close()
+    }
+
+    function submitServiceUnlock() {
+        if (!backend)
+            return
+        if (backend.unlockServiceMode(servicePinField.text)) {
+            closeServiceUnlock()
+            pages.currentIndex = firstServicePageIndex
+            return
+        }
+        serviceUnlockError.text = I18n.t(lang, "service.invalid_pin")
+        if (floatEditor.active)
+            floatEditor.close()
+    }
 
     // Bootstrap Icons font
     FontLoader {
@@ -120,10 +157,17 @@ ApplicationWindow {
                 right: parent.right
                 bottom: dock.top
             }
-            interactive: true
+            interactive: !serviceUnlockOpen
             clip: true
+            onCurrentIndexChanged: {
+                if (!win.serviceModeEnabled && currentIndex >= win.publicPageCount)
+                    currentIndex = win.publicPageCount - 1
+            }
 
-            HomePage   { uiScale: win.uiScale }
+            HomePage {
+                uiScale: win.uiScale
+                onServiceRequested: win.openServiceUnlock()
+            }
             SetTempPage { uiScale: win.uiScale }  // index 1
             HistPage { uiScale: win.uiScale }     // index 2
             QrPage   { uiScale: win.uiScale }     // index 3
@@ -140,10 +184,19 @@ ApplicationWindow {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 10 // + osk.exposedHeight
-            count: pages.count
+            count: win.serviceModeEnabled ? pages.count : win.publicPageCount
             currentIndex: pages.currentIndex
             onGoHome: pages.currentIndex = 0
             onDotClicked: function(i) { pages.currentIndex = i }
+        }
+
+        Connections {
+            target: backend
+            ignoreUnknownSignals: true
+            function onServiceModeEnabledChanged() {
+                if (!backend.serviceModeEnabled && pages.currentIndex >= win.publicPageCount)
+                    pages.currentIndex = 0
+            }
         }
 
         // --- ROUTER pro overlay stránky (Wifi/Settings/Person) ---
@@ -184,6 +237,147 @@ ApplicationWindow {
             id: osk
             uiScale: win.uiScale
             z: 240
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            z: 230
+            visible: win.serviceUnlockOpen
+            color: "#C0000000"
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {}
+            }
+
+            Rectangle {
+                width: Math.min(parent.width * 0.72, 760 * win.uiScale)
+                height: 420 * win.uiScale
+                anchors.centerIn: parent
+                radius: 28 * win.uiScale
+                color: "#171A20"
+                border.width: 2 * win.uiScale
+                border.color: "#EDEFF2"
+
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 34 * win.uiScale
+                    spacing: 24 * win.uiScale
+
+                    Text {
+                        text: I18n.t(win.lang, "service.title")
+                        color: "#EDEFF2"
+                        font.pixelSize: 34 * win.uiScale
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                        width: parent.width
+                    }
+
+                    Text {
+                        text: I18n.t(win.lang, "service.warning")
+                        color: "#EDEFF2"
+                        font.pixelSize: 24 * win.uiScale
+                        wrapMode: Text.WordWrap
+                        horizontalAlignment: Text.AlignHCenter
+                        width: parent.width
+                    }
+
+                    Text {
+                        text: I18n.t(win.lang, "service.prompt")
+                        color: "#C9CDD3"
+                        font.pixelSize: 20 * win.uiScale
+                        horizontalAlignment: Text.AlignHCenter
+                        width: parent.width
+                    }
+
+                    TextField {
+                        id: servicePinField
+                        width: parent.width
+                        height: 68 * win.uiScale
+                        color: "#EDEFF2"
+                        placeholderText: I18n.t(win.lang, "service.placeholder")
+                        placeholderTextColor: "#7F8895"
+                        echoMode: TextInput.Password
+                        horizontalAlignment: Text.AlignHCenter
+                        font.pixelSize: 28 * win.uiScale
+                        inputMethodHints: Qt.ImhDigitsOnly | Qt.ImhSensitiveData | Qt.ImhNoPredictiveText
+                        validator: RegularExpressionValidator { regularExpression: /[0-9]*/ }
+                        readOnly: true
+                        background: Rectangle {
+                            radius: 18 * win.uiScale
+                            color: "#0E1116"
+                            border.width: 2 * win.uiScale
+                            border.color: serviceUnlockError.text.length > 0 ? "#C84C4C" : "#EDEFF2"
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: floatEditor.openFor(servicePinField)
+                        }
+                    }
+
+                    Text {
+                        id: serviceUnlockError
+                        text: ""
+                        color: "#FF7B7B"
+                        font.pixelSize: 18 * win.uiScale
+                        horizontalAlignment: Text.AlignHCenter
+                        width: parent.width
+                        visible: text.length > 0
+                    }
+
+                    Row {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        spacing: 18 * win.uiScale
+
+                        Rectangle {
+                            width: 210 * win.uiScale
+                            height: 62 * win.uiScale
+                            radius: 18 * win.uiScale
+                            color: cancelServiceArea.pressed ? "#E6E8EB" : "#F6F7F9"
+                            border.width: 2 * win.uiScale
+                            border.color: "#EDEFF2"
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: I18n.t(win.lang, "common.cancel")
+                                color: "#171A20"
+                                font.pixelSize: 20 * win.uiScale
+                                font.bold: true
+                            }
+
+                            MouseArea {
+                                id: cancelServiceArea
+                                anchors.fill: parent
+                                onClicked: win.closeServiceUnlock()
+                            }
+                        }
+
+                        Rectangle {
+                            width: 210 * win.uiScale
+                            height: 62 * win.uiScale
+                            radius: 18 * win.uiScale
+                            color: unlockServiceArea.pressed ? "#E6E8EB" : "#F6F7F9"
+                            border.width: 2 * win.uiScale
+                            border.color: "#EDEFF2"
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: I18n.t(win.lang, "service.unlock")
+                                color: "#171A20"
+                                font.pixelSize: 20 * win.uiScale
+                                font.bold: true
+                            }
+
+                            MouseArea {
+                                id: unlockServiceArea
+                                anchors.fill: parent
+                                onClicked: win.submitServiceUnlock()
+                            }
+                        }
+                    }
+                }
+            }
         }
 
     Item {
