@@ -5,6 +5,8 @@ import QtQuick.Layouts 1.15
 Rectangle {
     id: bar
     property real uiScale: 1.0
+    property bool overlayMode: false
+    property string overlayTitle: ""
 
     readonly property int swType: backend.softwareType
     readonly property bool isDual: swType === 22
@@ -26,7 +28,7 @@ Rectangle {
     readonly property bool compressor2On: backend.compressor2On
     readonly property bool drip2Active: backend.dripHold2Active
 
-    implicitHeight: 70 * uiScale
+    implicitHeight: 78 * uiScale
     height: implicitHeight
     color: "transparent"
     anchors.left: parent.left
@@ -55,6 +57,7 @@ Rectangle {
     signal openWifi()
     signal openSettings()
     signal openLogin()
+    signal navigateBack()
 
     RowLayout {
         anchors.fill: parent
@@ -69,8 +72,46 @@ Rectangle {
             Layout.fillWidth: true
             spacing: 12 * uiScale
 
+            Row {
+                visible: bar.overlayMode
+                spacing: 14 * uiScale
+                Layout.alignment: Qt.AlignVCenter | Qt.AlignLeft
+
+                Rectangle {
+                    width: 132 * uiScale
+                    height: 48 * uiScale
+                    radius: 14 * uiScale
+                    color: backArea.pressed ? "#5a5a5ac4" : "#33000000"
+                    border.width: 2 * uiScale
+                    border.color: "#c6c5df"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "← Zpět"
+                        color: "#EDEFF2"
+                        font.pixelSize: 24 * uiScale
+                        font.bold: true
+                    }
+
+                    MouseArea {
+                        id: backArea
+                        anchors.fill: parent
+                        onClicked: bar.navigateBack()
+                    }
+                }
+
+                Label {
+                    text: bar.overlayTitle
+                    color: "#EDEFF2"
+                    font.pixelSize: 30 * uiScale
+                    font.bold: true
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+
             Label {
                 id: typeLabel
+                visible: !bar.overlayMode
                 text: bar.isDual ? "Type 2+2" : "Type - 3"
                 color: "#E0E0E0"
                 font.pixelSize: 26 * uiScale
@@ -78,7 +119,7 @@ Rectangle {
             }
 
             Label {
-                visible: bar.forcedActive
+                visible: !bar.overlayMode && bar.forcedActive
                 text: "FORCED"
                 color: "#FFD54F"
                 font.pixelSize: 22 * uiScale
@@ -87,7 +128,7 @@ Rectangle {
             }
 
             Label {
-                visible: bar.condensHot
+                visible: !bar.overlayMode && bar.condensHot
                 text: "CONDENS"
                 color: "#FF8A65"
                 font.pixelSize: 22 * uiScale
@@ -122,14 +163,14 @@ Rectangle {
                 visible: bar.errorActive
                 contentItem: biIcon.createObject(this, {
                     "code": "\uF33A",
-                    "px": 44 * uiScale,
+                    "px": 48 * uiScale,
                     "iconColor": "#FFD54F"
                 })
                 background: Rectangle {
                     radius: 7 * uiScale
                     color: "transparent"
-                    implicitWidth: 52 * uiScale
-                    implicitHeight: 52 * uiScale
+                    implicitWidth: 58 * uiScale
+                    implicitHeight: 58 * uiScale
                 }
                 SequentialAnimation on opacity {
                     running: bar.errorActive
@@ -146,14 +187,14 @@ Rectangle {
                 visible: !bar.isDual && bar.cooling1Active
                 contentItem: biIcon.createObject(this, {
                     "code": "\uF56E",
-                    "px": 44 * uiScale,
+                    "px": 48 * uiScale,
                     "iconColor": "#4FC3F7"
                 })
                 background: Rectangle {
                     radius: 7 * uiScale
                     color: "#00000033"
-                    implicitWidth: 52 * uiScale
-                    implicitHeight: 52 * uiScale
+                    implicitWidth: 58 * uiScale
+                    implicitHeight: 58 * uiScale
                 }
             }
             
@@ -162,14 +203,14 @@ Rectangle {
                 visible: !bar.isDual && bar.defrost1Active
                 contentItem: biIcon.createObject(this, {
                     "code": "\uF30C",
-                    "px": 44 * uiScale,
+                    "px": 48 * uiScale,
                     "iconColor": "#EF5350"
                 })
                 background: Rectangle {
                     radius: 7 * uiScale
                     color: "#00000033"
-                    implicitWidth: 52 * uiScale
-                    implicitHeight: 52 * uiScale
+                    implicitWidth: 58 * uiScale
+                    implicitHeight: 58 * uiScale
                 }
                 SequentialAnimation on opacity {
                     running: bar.defrost1Active
@@ -185,14 +226,14 @@ Rectangle {
                 visible: !bar.isDual && bar.drip1Active && !bar.defrost1Active
                 contentItem: biIcon.createObject(this, {
                     "code": "\uF30B",
-                    "px": 44 * uiScale,
+                    "px": 48 * uiScale,
                     "iconColor": "#EF5350"
                 })
                 background: Rectangle {
                     radius: 7 * uiScale
                     color: "#00000033"
-                    implicitWidth: 52 * uiScale
-                    implicitHeight: 52 * uiScale
+                    implicitWidth: 58 * uiScale
+                    implicitHeight: 58 * uiScale
                 }
             }
 
@@ -201,14 +242,14 @@ Rectangle {
                 visible: !bar.isDual
                 contentItem: biIcon.createObject(this, {
                     "code": "\uF670",
-                    "px": 44 * uiScale,
+                    "px": 48 * uiScale,
                     "iconColor": Qt.binding(function() { return bar.compressor1On ? "#3abb41" : "#EF5350"; })
                 })
                 background: Rectangle {
                     radius: 7 * uiScale
                     color: "#00000033"
-                    implicitWidth: 52 * uiScale
-                    implicitHeight: 52 * uiScale
+                    implicitWidth: 58 * uiScale
+                    implicitHeight: 58 * uiScale
                 }
             }
 
@@ -218,14 +259,14 @@ Rectangle {
                 visible: bar.isDual && bar.cooling1Active
                 contentItem: biIcon.createObject(this, {
                     "code": "\uF56E",
-                    "px": 44 * uiScale,
+                    "px": 48 * uiScale,
                     "iconColor": "#4FC3F7"
                 })
                 background: Rectangle {
                     radius: 7 * uiScale
                     color: "#00000033"
-                    implicitWidth: 52 * uiScale
-                    implicitHeight: 52 * uiScale
+                    implicitWidth: 58 * uiScale
+                    implicitHeight: 58 * uiScale
                 }
             }
 
@@ -234,14 +275,14 @@ Rectangle {
                 visible: bar.isDual && bar.defrost1Active
                 contentItem: biIcon.createObject(this, {
                     "code": "\uF30C",
-                    "px": 44 * uiScale,
+                    "px": 48 * uiScale,
                     "iconColor": "#EF5350"
                 })
                 background: Rectangle {
                     radius: 7 * uiScale
                     color: "#00000033"
-                    implicitWidth: 52 * uiScale
-                    implicitHeight: 52 * uiScale
+                    implicitWidth: 58 * uiScale
+                    implicitHeight: 58 * uiScale
                 }
                 SequentialAnimation on opacity {
                     running: bar.defrost1Active
@@ -257,14 +298,14 @@ Rectangle {
                 visible: bar.isDual && bar.drip1Active && !bar.defrost1Active
                 contentItem: biIcon.createObject(this, {
                     "code": "\uF30B",
-                    "px": 44 * uiScale,
+                    "px": 48 * uiScale,
                     "iconColor": "#EF5350"
                 })
                 background: Rectangle {
                     radius: 7 * uiScale
                     color: "#00000033"
-                    implicitWidth: 52 * uiScale
-                    implicitHeight: 52 * uiScale
+                    implicitWidth: 58 * uiScale
+                    implicitHeight: 58 * uiScale
                 }
             }
 
@@ -273,21 +314,21 @@ Rectangle {
                 visible: bar.isDual
                 contentItem: biIcon.createObject(this, {
                     "code": "\uF670",
-                    "px": 44 * uiScale,
+                    "px": 48 * uiScale,
                     "iconColor": Qt.binding(function() { return bar.compressor1On ? "#3abb41" : "#EF5350"; })
                 })
                 background: Rectangle {
                     radius: 7 * uiScale
                     color: "#00000033"
-                    implicitWidth: 52 * uiScale
-                    implicitHeight: 52 * uiScale
+                    implicitWidth: 58 * uiScale
+                    implicitHeight: 58 * uiScale
                 }
             }
 
             Rectangle {
                 visible: bar.isDual
                 width: 2
-                height: 44 * uiScale
+                height: 48 * uiScale
                 radius: 1
                 color: "#c7c7c7bd"
                 anchors.verticalCenter: parent.verticalCenter
@@ -298,14 +339,14 @@ Rectangle {
                 visible: bar.isDual && bar.cooling2Active
                 contentItem: biIcon.createObject(this, {
                     "code": "\uF56E",
-                    "px": 44 * uiScale,
+                    "px": 48 * uiScale,
                     "iconColor": "#4FC3F7"
                 })
                 background: Rectangle {
                     radius: 7 * uiScale
                     color: "#00000033"
-                    implicitWidth: 52 * uiScale
-                    implicitHeight: 52 * uiScale
+                    implicitWidth: 58 * uiScale
+                    implicitHeight: 58 * uiScale
                 }
             }
 
@@ -314,14 +355,14 @@ Rectangle {
                 visible: bar.isDual && bar.defrost2Active
                 contentItem: biIcon.createObject(this, {
                     "code": "\uF30C",
-                    "px": 44 * uiScale,
+                    "px": 48 * uiScale,
                     "iconColor": "#EF5350"
                 })
                 background: Rectangle {
                     radius: 7 * uiScale
                     color: "#00000033"
-                    implicitWidth: 52 * uiScale
-                    implicitHeight: 52 * uiScale
+                    implicitWidth: 58 * uiScale
+                    implicitHeight: 58 * uiScale
                 }
                 SequentialAnimation on opacity {
                     running: bar.defrost2Active
@@ -337,14 +378,14 @@ Rectangle {
                 visible: bar.isDual && bar.drip2Active && !bar.defrost2Active
                 contentItem: biIcon.createObject(this, {
                     "code": "\uF30B",
-                    "px": 44 * uiScale,
+                    "px": 48 * uiScale,
                     "iconColor": "#EF5350"
                 })
                 background: Rectangle {
                     radius: 7 * uiScale
                     color: "#00000033"
-                    implicitWidth: 52 * uiScale
-                    implicitHeight: 52 * uiScale
+                    implicitWidth: 58 * uiScale
+                    implicitHeight: 58 * uiScale
                 }
             }
 
@@ -353,14 +394,14 @@ Rectangle {
                 visible: bar.isDual
                 contentItem: biIcon.createObject(this, {
                     "code": "\uF670",
-                    "px": 44 * uiScale,
+                    "px": 48 * uiScale,
                     "iconColor": Qt.binding(function() { return bar.compressor2On ? "#3abb41" : "#EF5350"; })
                 })
                 background: Rectangle {
                     radius: 7 * uiScale
                     color: "#00000033"
-                    implicitWidth: 52 * uiScale
-                    implicitHeight: 52 * uiScale
+                    implicitWidth: 58 * uiScale
+                    implicitHeight: 58 * uiScale
                 }
             }
 
@@ -369,15 +410,15 @@ Rectangle {
                 id: wifiBtn
                 onClicked: bar.openWifi()
                 contentItem: biIcon.createObject(this, {
-                    "code": "\uF61C",
-                    "px": 44 * uiScale,
+                    "code": Qt.binding(function() { return backend.wifiConnected ? "\uF61C" : "\uF3EF"; }),
+                    "px": 48 * uiScale,
                     "iconColor": Qt.binding(function() { return wifiBtn.down ? "#C0C3C8" : "#EDEFF2"; })
                 })
                 background: Rectangle {
                     radius: 7 * uiScale
                     color: wifiBtn.down ? "#66000000" : "transparent"
-                    implicitWidth: 52 * uiScale
-                    implicitHeight: 52 * uiScale
+                    implicitWidth: 58 * uiScale
+                    implicitHeight: 58 * uiScale
                 }
             }
 
@@ -386,14 +427,14 @@ Rectangle {
                 onClicked: bar.openSettings()
                 contentItem: biIcon.createObject(this, {
                     "code": Qt.binding(function() { return settingsBtn.down ? "\uF3E2" : "\uF3E5"; }),
-                    "px": 44 * uiScale,
+                    "px": 48 * uiScale,
                     "iconColor": "#EDEFF2"
                 })
                 background: Rectangle {
                     radius: 7 * uiScale
                     color: settingsBtn.down ? "#66000000" : "transparent"
-                    implicitWidth: 52 * uiScale
-                    implicitHeight: 52 * uiScale
+                    implicitWidth: 58 * uiScale
+                    implicitHeight: 58 * uiScale
                 }
             }
 
@@ -402,14 +443,14 @@ Rectangle {
                 onClicked: bar.openLogin()
                 contentItem: biIcon.createObject(this, {
                     "code": Qt.binding(function() { return loginBtn.down ? "\uF4DA" : "\uF4E1"; }),
-                    "px": 44 * uiScale,
+                    "px": 48 * uiScale,
                     "iconColor": "#EDEFF2"
                 })
                 background: Rectangle {
                     radius: 7 * uiScale
                     color: loginBtn.down ? "#66000000" : "transparent"
-                    implicitWidth: 52 * uiScale
-                    implicitHeight: 52 * uiScale
+                    implicitWidth: 58 * uiScale
+                    implicitHeight: 58 * uiScale
                 }
             }
         }

@@ -43,78 +43,10 @@ OverlayPage {
         setCurrentMin(activeTimeIdx, currentMin(activeTimeIdx) + deltaMin)
     }
 
-    // ---------------- DIM + SCROLLABLE CONTENT ----------------
-    // Dim overlay: cover whole screen, but keep the RIGHT part of TopBar visible/active.
-    // Adjust keep width if your TopBar right area is larger/smaller.
-    readonly property real topBarH: 70 * s
-    readonly property real topBarRightKeepW: 900 * s
-
     Rectangle {
-        // TopBar area - only LEFT part is dimmed
-        x: 0
-        y: 0
-        width: Math.max(0, parent.width - topBarRightKeepW)
-        height: topBarH - 3
-        color: "#882e2e2e"
-        z: -10
-    }
-
-    Rectangle {
-        // Everything below TopBar is dimmed fully
-        x: 0
-        y: topBarH
-        width: parent.width
-        height: Math.max(0, parent.height - topBarH)
+        anchors.fill: parent
         color: "#dd2e2e2e"
         z: -10
-    }
-
-    // left overlay "header" (sits where TopBar is on the left)
-    // If StackView area is already below TopBar, this may render partly above;
-    // that's intentional per request.
-    Rectangle {
-        id: topLeftOverlay
-        x: 0
-        y: 0
-        width: 520 * s
-        height: topBarH -5
-        radius: 0
-        color: "#00000066"
-        z: 50
-
-        Row {
-            anchors.fill: parent
-            anchors.leftMargin: 14 * s
-            anchors.rightMargin: 14 * s
-            spacing: 25 * s
-
-            Rectangle {
-                width: 110 * s
-                height: 46 * s
-                radius: 14 * s
-                color: backArea.pressed ? "#5a5a5ac4" : "#bb000000"
-                border.width: 2 * s
-                border.color: "#c6c5df"
-                anchors.verticalCenter: parent.verticalCenter
-
-                Text {
-                    anchors.centerIn: parent
-                    text: "← Zpět"
-                    color: "#EDEFF2"
-                    font.pixelSize: 20 * s
-                    font.bold: true
-                }
-                MouseArea { id: backArea; anchors.fill: parent; onClicked: page.goBack() }
-            }
-
-            Text {
-                text: "Nastavení"
-                color: "#EDEFF2"
-                font.pixelSize: 26 * s
-                font.bold: true
-                anchors.verticalCenter: parent.verticalCenter
-            }
-        }
     }
 
     Flickable {
@@ -123,7 +55,7 @@ OverlayPage {
         anchors.leftMargin: 14 * s
         anchors.rightMargin: 14 * s
         anchors.bottomMargin: 14 * s
-        anchors.topMargin: topBarH + (14 * s)
+        anchors.topMargin: 14 * s
         clip: true
         contentWidth: contentItem.width
         contentHeight: contentCol.implicitHeight
@@ -170,7 +102,7 @@ OverlayPage {
                             Text {
                                 text: "Nastavení automatického\nčasového odtávání"
                                 color: "#EDEFF2"
-                                font.pixelSize: 24 * s
+                                font.pixelSize: 32 * s
                                 font.bold: true
                             }
 
@@ -262,7 +194,7 @@ OverlayPage {
                                 Text {
                                     text: "Časy automatického\nodtávání"
                                     color: "#EDEFF2"
-                                    font.pixelSize: 22 * s
+                                    font.pixelSize: 30 * s
                                     font.bold: true
                                 }
 

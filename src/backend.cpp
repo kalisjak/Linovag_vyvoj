@@ -6,12 +6,99 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QHash>
 #include <QMap>
+#include <QProcess>
+#include <QSet>
 #include <QSslCertificate>
 #include <QSslConfiguration>
 #include <QStandardPaths>
 #include <QTextStream>
 #include <QTimer>
+#include <QVariantMap>
+#include <algorithm>
+
+namespace {
+
+QStringList splitBySep(const QString& line, QChar sep) {
+    QStringList out;
+    QString cur;
+    bool esc = false;
+    for (const QChar c : line) {
+        if (esc) {
+            cur += c;
+            esc = false;
+            continue;
+        }
+        if (c == '\\') {
+            esc = true;
+            continue;
+        }
+        if (c == sep) {
+            out << cur;
+            cur.clear();
+            continue;
+        }
+        cur += c;
+    }
+    out << cur;
+    return out;
+}
+
+bool runNmcli(const QStringList& args, QString* outStd, QString* outErr, int timeoutMs = 4000) {
+    QProcess p;
+    p.start(QStringLiteral("nmcli"), args);
+    if (!p.waitForFinished(timeoutMs)) {
+        p.terminate();
+        if (!p.waitForFinished(1500)) {
+            p.kill();
+            p.waitForFinished(1500);
+        }
+        if (outErr) *outErr = QStringLiteral("nmcli timeout");
+        if (outStd) outStd->clear();
+        return false;
+    }
+    if (outStd) *outStd = QString::fromUtf8(p.readAllStandardOutput());
+    if (outErr) *outErr = QString::fromUtf8(p.readAllStandardError());
+    return p.exitStatus() == QProcess::NormalExit && p.exitCode() == 0;
+}
+
+bool hasConnectedWifi(QString* activeSsid = nullptr) {
+    if (activeSsid) activeSsid->clear();
+
+    QString out;
+    QString err;
+    if (!runNmcli({QStringLiteral("-t"), QStringLiteral("-f"), QStringLiteral("DEVICE,TYPE,STATE,CONNECTION"),
+                   QStringLiteral("device"), QStringLiteral("status")},
+                  &out, &err, 1200)) {
+        return false;
+    }
+
+    const QStringList lines = out.split('\n', Qt::SkipEmptyParts);
+    for (const QString& line : lines) {
+        const QStringList p = splitBySep(line, ':');
+        if (p.size() < 3) continue;
+        const QString type = p[1].trimmed();
+        const QString state = p[2].trimmed();
+        if (type != QStringLiteral("wifi")) continue;
+        if (state == QStringLiteral("connected")) {
+            if (activeSsid && p.size() >= 4) *activeSsid = p[3].trimmed();
+            return true;
+        }
+    }
+    return false;
+}
+
+QString bandFromChannel(const QString& chStr) {
+    bool ok = false;
+    const int ch = chStr.toInt(&ok);
+    if (!ok) return QStringLiteral("-");
+    if (ch >= 1 && ch <= 14) return QStringLiteral("2.4 GHz");
+    if (ch >= 15 && ch <= 196) return QStringLiteral("5 GHz");
+    return QStringLiteral("6 GHz");
+}
+
+}  // namespace
 
 Backend::Backend(QObject* parent) : QObject(parent), rng_(std::random_device{}()) {
     swType_ = RuntimeConfig::softwareType();
@@ -27,6 +114,12 @@ Backend::Backend(QObject* parent) : QObject(parent), rng_(std::random_device{}()
     mqttTimer_->setInterval(mqtt_push_time);
     connect(mqttTimer_, &QTimer::timeout, this, &Backend::onMqttTimerTick);
     mqttTimer_->start();
+
+    wifiMonitorTimer_ = new QTimer(this);
+    wifiMonitorTimer_->setInterval(12000);
+    connect(wifiMonitorTimer_, &QTimer::timeout, this, &Backend::onWifiMonitorTick);
+    wifiMonitorTimer_->start();
+    setWifiConnected(hasConnectedWifi());
 
     initLogManager();
 }
@@ -359,6 +452,364 @@ void Backend::sendMessage(const QString&) {
 void Backend::onMqttTimerTick() { sendMessage(QString()); }
 
 //
+
+void Backend::setWifiLastMessage(const QString& msg) {
+    if (wifiLastMessage_ == msg) return;
+    wifiLastMessage_ = msg;
+    emit wifiLastMessageChanged();
+}
+
+void Backend::setWifiConnected(bool connected) {
+    if (wifiConnected_ == connected) return;
+    wifiConnected_ = connected;
+    emit wifiConnectedChanged();
+}
+
+QVariantList Backend::wifiScanNetworks(bool forceRescan) {
+    QString savedOut;
+    QString savedErr;
+    QSet<QString> savedNames;
+    if (runNmcli({QStringLiteral("-t"), QStringLiteral("-f"),
+                  QStringLiteral("NAME,TYPE"), QStringLiteral("connection"), QStringLiteral("show")},
+                 &savedOut, &savedErr, 1500)) {
+        const QStringList lines = savedOut.split('\n', Qt::SkipEmptyParts);
+        for (const QString& line : lines) {
+            const QStringList parts = splitBySep(line, ':');
+            if (parts.size() < 2) continue;
+            const QString type = parts[1].trimmed();
+            if (type == QStringLiteral("wifi") || type == QStringLiteral("802-11-wireless")) {
+                savedNames.insert(parts[0].trimmed());
+            }
+        }
+    }
+
+    QString ipAddr;
+    {
+        QString devOut;
+        QString devErr;
+        if (runNmcli({QStringLiteral("-t"), QStringLiteral("-f"),
+                      QStringLiteral("DEVICE,TYPE,STATE"), QStringLiteral("device"), QStringLiteral("status")},
+                     &devOut, &devErr, 1500)) {
+            const QStringList lines = devOut.split('\n', Qt::SkipEmptyParts);
+            QString activeDev;
+            for (const QString& line : lines) {
+                const QStringList p = splitBySep(line, ':');
+                if (p.size() < 3) continue;
+                if (p[1].trimmed() == QStringLiteral("wifi") && p[2].trimmed() == QStringLiteral("connected")) {
+                    activeDev = p[0].trimmed();
+                    break;
+                }
+            }
+            if (!activeDev.isEmpty()) {
+                QString ipOut;
+                QString ipErr;
+                if (runNmcli({QStringLiteral("-t"), QStringLiteral("-f"), QStringLiteral("IP4.ADDRESS"), QStringLiteral("device"),
+                              QStringLiteral("show"), activeDev},
+                             &ipOut, &ipErr, 1500)) {
+                    const QStringList ipLines = ipOut.split('\n', Qt::SkipEmptyParts);
+                    if (!ipLines.isEmpty()) {
+                        const int pos = ipLines.first().indexOf(':');
+                        if (pos >= 0) {
+                            ipAddr = ipLines.first().mid(pos + 1).trimmed();
+                            const int slash = ipAddr.indexOf('/');
+                            if (slash > 0) ipAddr = ipAddr.left(slash);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    QString out;
+    QString err;
+    if (!runNmcli({QStringLiteral("-t"), QStringLiteral("-f"),
+                   QStringLiteral("IN-USE,BSSID,SSID,SIGNAL,SECURITY,CHAN"), QStringLiteral("device"), QStringLiteral("wifi"),
+                   QStringLiteral("list"), QStringLiteral("--rescan"), forceRescan ? QStringLiteral("yes") : QStringLiteral("no")},
+                  &out, &err, forceRescan ? 5000 : 2000)) {
+        setWifiLastMessage(QStringLiteral("Wi-Fi scan failed: %1").arg(err.trimmed()));
+        return {};
+    }
+
+    QHash<QString, QVariantMap> bestBySsid;
+    const QStringList lines = out.split('\n', Qt::SkipEmptyParts);
+    for (const QString& line : lines) {
+        const QStringList p = splitBySep(line, ':');
+        if (p.size() < 6) continue;
+
+        const QString inUse = p[0].trimmed();
+        const QString bssid = p[1].trimmed();
+        const QString ssid = p[2].trimmed();
+        if (ssid.isEmpty()) continue;
+
+        const QString rawSecurity = p[4].trimmed();
+        const QString security = (rawSecurity.isEmpty() || rawSecurity == QStringLiteral("--")) ? QStringLiteral("Open") : rawSecurity;
+        const QString band = bandFromChannel(p[5].trimmed());
+        const bool connected = (inUse == QStringLiteral("*") || inUse.compare(QStringLiteral("yes"), Qt::CaseInsensitive) == 0);
+        const bool enterprise = security.contains(QStringLiteral("802.1X"), Qt::CaseInsensitive)
+                             || security.contains(QStringLiteral("WPA-EAP"), Qt::CaseInsensitive)
+                             || security.contains(QStringLiteral("EAP"), Qt::CaseInsensitive);
+        const bool requiresPassword = security.compare(QStringLiteral("Open"), Qt::CaseInsensitive) != 0;
+
+        QVariantMap m;
+        m.insert(QStringLiteral("ssid"), ssid);
+        m.insert(QStringLiteral("bssid"), bssid);
+        m.insert(QStringLiteral("connected"), connected);
+        m.insert(QStringLiteral("saved"), savedNames.contains(ssid));
+        m.insert(QStringLiteral("security"), security);
+        m.insert(QStringLiteral("band"), band);
+        m.insert(QStringLiteral("ipAddress"), connected ? ipAddr : QString());
+        m.insert(QStringLiteral("requiresPassword"), requiresPassword);
+        m.insert(QStringLiteral("requiresUsernamePassword"), enterprise);
+        m.insert(QStringLiteral("signal"), 0);
+        if (connected) m.insert(QStringLiteral("statusKey"), QStringLiteral("connected"));
+        else if (enterprise) m.insert(QStringLiteral("statusKey"), QStringLiteral("enterprise"));
+        else if (requiresPassword) m.insert(QStringLiteral("statusKey"), QStringLiteral("available"));
+        else m.insert(QStringLiteral("statusKey"), QStringLiteral("open"));
+
+        const bool hasExisting = bestBySsid.contains(ssid);
+        if (!hasExisting) {
+            bestBySsid.insert(ssid, m);
+            continue;
+        }
+
+        const QVariantMap existing = bestBySsid.value(ssid);
+        const bool existingConnected = existing.value(QStringLiteral("connected")).toBool();
+        const bool existingSaved = existing.value(QStringLiteral("saved")).toBool();
+        const bool saved = m.value(QStringLiteral("saved")).toBool();
+
+        bool replace = false;
+        if (connected && !existingConnected) replace = true;
+        else if (connected == existingConnected && saved && !existingSaved) replace = true;
+
+        if (replace) {
+            bestBySsid.insert(ssid, m);
+        }
+    }
+
+    QVector<QVariantMap> sorted = bestBySsid.values().toVector();
+    std::sort(sorted.begin(), sorted.end(), [](const QVariantMap& a, const QVariantMap& b) {
+        const bool ac = a.value(QStringLiteral("connected")).toBool();
+        const bool bc = b.value(QStringLiteral("connected")).toBool();
+        if (ac != bc) return ac > bc;
+        const QString as = a.value(QStringLiteral("ssid")).toString();
+        const QString bs = b.value(QStringLiteral("ssid")).toString();
+        return as.localeAwareCompare(bs) < 0;
+    });
+
+    QVariantList result;
+    bool connectedFound = false;
+    for (const QVariantMap& m : sorted) {
+        if (m.value(QStringLiteral("connected")).toBool()) connectedFound = true;
+        result.push_back(m);
+    }
+
+    if (result.isEmpty()) setWifiLastMessage(QStringLiteral("No Wi-Fi networks found."));
+    else setWifiLastMessage(QString());
+    setWifiConnected(connectedFound);
+    return result;
+}
+
+bool Backend::wifiDisconnect(const QString& ssid) {
+    QString out;
+    QString err;
+
+    if (!ssid.trimmed().isEmpty()) {
+        const bool ok = runNmcli({QStringLiteral("connection"), QStringLiteral("down"), ssid.trimmed()}, &out, &err, 10000);
+        setWifiLastMessage(ok ? QStringLiteral("Disconnected: %1").arg(ssid.trimmed())
+                              : QStringLiteral("Disconnect failed: %1").arg(err.trimmed()));
+        if (ok) autoReconnectSuppressedUntil_ = QDateTime::currentDateTime().addSecs(45);
+        if (ok) setWifiConnected(false);
+        return ok;
+    }
+
+    QString activeOut;
+    QString activeErr;
+    if (!runNmcli({QStringLiteral("-t"), QStringLiteral("-f"),
+                   QStringLiteral("NAME,TYPE"), QStringLiteral("connection"), QStringLiteral("show"), QStringLiteral("--active")},
+                  &activeOut, &activeErr, 2000)) {
+        setWifiLastMessage(QStringLiteral("Cannot read active connections: %1").arg(activeErr.trimmed()));
+        return false;
+    }
+
+    bool any = false;
+    bool allOk = true;
+    const QStringList lines = activeOut.split('\n', Qt::SkipEmptyParts);
+    for (const QString& line : lines) {
+        const QStringList p = splitBySep(line, ':');
+        if (p.size() < 2) continue;
+        const QString name = p[0].trimmed();
+        const QString type = p[1].trimmed();
+        if (name.isEmpty()) continue;
+        if (type != QStringLiteral("wifi") && type != QStringLiteral("802-11-wireless")) continue;
+        any = true;
+        QString downOut;
+        QString downErr;
+        const bool ok = runNmcli({QStringLiteral("connection"), QStringLiteral("down"), name}, &downOut, &downErr, 10000);
+        if (!ok) allOk = false;
+    }
+
+    if (!any) {
+        setWifiLastMessage(QStringLiteral("No active Wi-Fi connection."));
+        return true;
+    }
+    setWifiLastMessage(allOk ? QStringLiteral("Wi-Fi disconnected.") : QStringLiteral("Some Wi-Fi disconnects failed."));
+    if (allOk) autoReconnectSuppressedUntil_ = QDateTime::currentDateTime().addSecs(45);
+    if (allOk) setWifiConnected(false);
+    return allOk;
+}
+
+bool Backend::wifiConnect(const QString& ssid, const QString& username, const QString& password, bool enterprise, const QString& bssid) {
+    const QString s = ssid.trimmed();
+    if (s.isEmpty()) {
+        setWifiLastMessage(QStringLiteral("SSID is empty."));
+        return false;
+    }
+
+    QString out;
+    QString err;
+    bool ok = false;
+
+    if (username.trimmed().isEmpty() && password.isEmpty()) {
+        ok = runNmcli({QStringLiteral("connection"), QStringLiteral("up"), s}, &out, &err, 12000);
+        if (ok) {
+            setWifiLastMessage(QStringLiteral("Connected to: %1").arg(s));
+            setWifiConnected(true);
+            return true;
+        }
+    }
+
+    if (enterprise) {
+        if (username.trimmed().isEmpty() || password.isEmpty()) {
+            setWifiLastMessage(QStringLiteral("Username/password required for enterprise Wi-Fi."));
+            return false;
+        }
+
+        QString tmpName = QStringLiteral("lnvg_eap_%1").arg(s);
+        tmpName.replace('/', '_');
+        tmpName.replace('\\', '_');
+        tmpName.replace(' ', '_');
+
+        QString dropOut;
+        QString dropErr;
+        runNmcli({QStringLiteral("connection"), QStringLiteral("delete"), tmpName}, &dropOut, &dropErr, 4000);
+
+        ok = runNmcli({QStringLiteral("connection"), QStringLiteral("add"), QStringLiteral("type"), QStringLiteral("wifi"),
+                       QStringLiteral("ifname"), QStringLiteral("*"), QStringLiteral("con-name"), tmpName, QStringLiteral("ssid"), s},
+                      &out, &err, 12000);
+        if (!ok) {
+            setWifiLastMessage(QStringLiteral("Enterprise setup failed: %1").arg(err.trimmed()));
+            return false;
+        }
+
+        ok = runNmcli({QStringLiteral("connection"), QStringLiteral("modify"), tmpName, QStringLiteral("wifi-sec.key-mgmt"),
+                       QStringLiteral("wpa-eap"), QStringLiteral("802-1x.eap"), QStringLiteral("peap"),
+                       QStringLiteral("802-1x.identity"), username.trimmed(), QStringLiteral("802-1x.password"), password,
+                       QStringLiteral("802-1x.phase2-auth"), QStringLiteral("mschapv2")},
+                      &out, &err, 12000);
+        if (!ok) {
+            setWifiLastMessage(QStringLiteral("Enterprise credentials failed: %1").arg(err.trimmed()));
+            return false;
+        }
+
+        if (!bssid.trimmed().isEmpty()) {
+            runNmcli({QStringLiteral("connection"), QStringLiteral("modify"), tmpName, QStringLiteral("wifi.bssid"), bssid.trimmed()},
+                     &out, &err, 4000);
+        }
+
+        ok = runNmcli({QStringLiteral("connection"), QStringLiteral("up"), tmpName}, &out, &err, 12000);
+    } else {
+        QStringList args{QStringLiteral("device"), QStringLiteral("wifi"), QStringLiteral("connect"), s};
+        if (!bssid.trimmed().isEmpty()) {
+            args << QStringLiteral("bssid") << bssid.trimmed();
+        }
+        if (!password.isEmpty()) {
+            args << QStringLiteral("password") << password;
+        }
+        ok = runNmcli(args, &out, &err, 12000);
+    }
+
+    setWifiLastMessage(ok ? QStringLiteral("Connected to: %1").arg(s)
+                          : QStringLiteral("Connect failed: %1").arg(err.trimmed()));
+    if (ok) setWifiConnected(true);
+    return ok;
+}
+
+bool Backend::wifiForget(const QString& ssid) {
+    const QString s = ssid.trimmed();
+    if (s.isEmpty()) {
+        setWifiLastMessage(QStringLiteral("SSID is empty."));
+        return false;
+    }
+
+    QString out;
+    QString err;
+    const bool ok = runNmcli({QStringLiteral("connection"), QStringLiteral("delete"), s}, &out, &err, 10000);
+    setWifiLastMessage(ok ? QStringLiteral("Forgotten network: %1").arg(s)
+                          : QStringLiteral("Forget failed: %1").arg(err.trimmed()));
+    return ok;
+}
+
+void Backend::onWifiMonitorTick() {
+    if (autoReconnectSuppressedUntil_.isValid() && QDateTime::currentDateTime() < autoReconnectSuppressedUntil_) return;
+
+    if (hasConnectedWifi()) {
+        setWifiConnected(true);
+        return;
+    }
+
+    setWifiConnected(false);
+
+    QString savedOut;
+    QString savedErr;
+    if (!runNmcli({QStringLiteral("-t"), QStringLiteral("-f"), QStringLiteral("NAME,TYPE"), QStringLiteral("connection"),
+                   QStringLiteral("show")},
+                  &savedOut, &savedErr, 1200)) {
+        return;
+    }
+
+    QSet<QString> savedWifi;
+    const QStringList savedLines = savedOut.split('\n', Qt::SkipEmptyParts);
+    for (const QString& line : savedLines) {
+        const QStringList p = splitBySep(line, ':');
+        if (p.size() < 2) continue;
+        const QString name = p[0].trimmed();
+        const QString type = p[1].trimmed();
+        if (name.isEmpty()) continue;
+        if (type == QStringLiteral("wifi") || type == QStringLiteral("802-11-wireless")) savedWifi.insert(name);
+    }
+    if (savedWifi.isEmpty()) return;
+
+    QString scanOut;
+    QString scanErr;
+    if (!runNmcli({QStringLiteral("-t"), QStringLiteral("-f"), QStringLiteral("SSID"), QStringLiteral("device"),
+                   QStringLiteral("wifi"), QStringLiteral("list"), QStringLiteral("--rescan"), QStringLiteral("no")},
+                  &scanOut, &scanErr, 1500)) {
+        return;
+    }
+
+    QStringList candidates;
+    const QStringList scanLines = scanOut.split('\n', Qt::SkipEmptyParts);
+    for (const QString& line : scanLines) {
+        const QString ssid = splitBySep(line, ':').value(0).trimmed();
+        if (ssid.isEmpty() || !savedWifi.contains(ssid)) continue;
+        if (!candidates.contains(ssid)) candidates << ssid;
+    }
+
+    if (candidates.isEmpty()) return;
+
+    for (const QString& ssid : candidates) {
+        QString out;
+        QString err;
+        const bool ok = runNmcli({QStringLiteral("connection"), QStringLiteral("up"), ssid}, &out, &err, 5000);
+        if (ok) {
+            setWifiLastMessage(QStringLiteral("Auto reconnected: %1").arg(ssid));
+            setWifiConnected(true);
+            return;
+        }
+    }
+
+    autoReconnectSuppressedUntil_ = QDateTime::currentDateTime().addSecs(12);
+}
 
 QString Backend::buildTempsSnapshotLine() const {
     const QDateTime now = QDateTime::currentDateTime();

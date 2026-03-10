@@ -84,10 +84,28 @@ ApplicationWindow {
             width: parent.width
             anchors.top: parent.top
 
-            // signály z TopBaru – otevře overlay stránky
-            onOpenWifi:     overlay.push(Qt.resolvedUrl("WifiPage.qml"),     { pageStack: overlay, floatEditorRef: floatEditor })
-            onOpenSettings: overlay.push(Qt.resolvedUrl("SettingsPage.qml"), { pageStack: overlay })
-            onOpenLogin:    overlay.push(Qt.resolvedUrl("LoginPage.qml"),    { pageStack: overlay })
+            onOpenWifi: {
+                if (overlay.depth > 0) overlay.clear()
+                overlay.push(Qt.resolvedUrl("WifiPage.qml"), { pageStack: overlay, floatEditorRef: floatEditor })
+                topbar.overlayMode = true
+                topbar.overlayTitle = "Wi-Fi"
+            }
+            onOpenSettings: {
+                if (overlay.depth > 0) overlay.clear()
+                overlay.push(Qt.resolvedUrl("SettingsPage.qml"), { pageStack: overlay })
+                topbar.overlayMode = true
+                topbar.overlayTitle = "Nastavení"
+            }
+            onOpenLogin: {
+                if (overlay.depth > 0) overlay.clear()
+                overlay.push(Qt.resolvedUrl("LoginPage.qml"), { pageStack: overlay })
+                topbar.overlayMode = true
+                topbar.overlayTitle = "Přihlášení"
+            }
+            onNavigateBack: {
+                if (overlay.depth > 1) overlay.pop()
+                else if (overlay.depth === 1) overlay.clear()
+            }
         }
 
         // Hlavní "plovoucí" stránkování
@@ -129,13 +147,26 @@ ApplicationWindow {
         // --- ROUTER pro overlay stránky (Wifi/Settings/Login) ---
         StackView {
             id: overlay
-            anchors.fill: parent
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.top: topbar.bottom
             z: 50
             initialItem: null
 
             visible: depth > 0
             enabled: depth > 0
             focus: depth > 0
+
+            onDepthChanged: {
+                if (depth <= 0) {
+                    topbar.overlayMode = false
+                    topbar.overlayTitle = ""
+                    return
+                }
+                topbar.overlayMode = true
+                if (currentItem && currentItem.title !== undefined) topbar.overlayTitle = currentItem.title
+            }
         }
 
         KeyboardPanel {

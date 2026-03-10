@@ -139,16 +139,6 @@ Page {
                     anchors.centerIn: parent
                     spacing: 12 * uiScale
 
-                    // Bath 1 enable/disable
-                    Loader {
-                        sourceComponent: bathToggleRow
-                        opacity: 1.0
-                        onLoaded: {
-                            item.enabledValue = Qt.binding(function() { return backend.bath1Enabled })
-                            item.onChangedFn = function(v) { backend.bath1Enabled = v }
-                        }
-                    }
-
                     Row {
                         spacing: 8
 

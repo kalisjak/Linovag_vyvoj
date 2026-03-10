@@ -1,8 +1,10 @@
 #pragma once
 #include <QByteArray>
+#include <QDateTime>
 #include <QObject>
 #include <QString>
 #include <QStringList>
+#include <QVariantList>
 #include <QtGlobal>
 #include <fstream>
 #include <random>
@@ -35,6 +37,8 @@ class Backend : public QObject {
     Q_PROPERTY(int softwareType READ softwareType WRITE setSoftwareType NOTIFY softwareTypeChanged)
     Q_PROPERTY(QString softwareTypeLabel READ softwareTypeLabel NOTIFY softwareTypeChanged)
     Q_PROPERTY(QString appLanguage READ appLanguage NOTIFY appLanguageChanged)
+    Q_PROPERTY(QString wifiLastMessage READ wifiLastMessage NOTIFY wifiLastMessageChanged)
+    Q_PROPERTY(bool wifiConnected READ wifiConnected NOTIFY wifiConnectedChanged)
 
     Q_PROPERTY(double targetTemp READ targetTemp WRITE setTargetTemp NOTIFY targetTempChanged)
     // Jen typ 2+2
@@ -103,6 +107,8 @@ class Backend : public QObject {
     int softwareType() const { return swType_; }
     QString softwareTypeLabel() const { return swType_ == 22 ? QStringLiteral("Vana typ-2+2") : QStringLiteral("Vana typ-3"); }
     QString appLanguage() const { return appLanguage_; }
+    QString wifiLastMessage() const { return wifiLastMessage_; }
+    bool wifiConnected() const { return wifiConnected_; }
 
     double value1() const { return value1_; }
     double value2() const { return value2_; }
@@ -171,6 +177,11 @@ class Backend : public QObject {
     bool power2On() const { return power2On_; }
 
     Q_INVOKABLE void sendMessage(const QString& msg);
+    Q_INVOKABLE QVariantList wifiScanNetworks(bool forceRescan = false);
+    Q_INVOKABLE bool wifiConnect(const QString& ssid, const QString& username, const QString& password, bool enterprise,
+                                 const QString& bssid = QString());
+    Q_INVOKABLE bool wifiDisconnect(const QString& ssid = QString());
+    Q_INVOKABLE bool wifiForget(const QString& ssid);
 
    public slots:
     void setTargetTemp(double t);
@@ -243,6 +254,8 @@ class Backend : public QObject {
     void targetTemp2Changed();
     void softwareTypeChanged();
     void appLanguageChanged();
+    void wifiLastMessageChanged();
+    void wifiConnectedChanged();
 
     void mqttConnectedChanged();
     void serialNumberChanged();
@@ -326,6 +339,8 @@ class Backend : public QObject {
 
     int swType_ = 3;
     QString appLanguage_ = QStringLiteral("cs");
+    QString wifiLastMessage_;
+    bool wifiConnected_ = false;
 
     std::mt19937 rng_;
     bool mqttConnected_ = false;
@@ -367,6 +382,12 @@ class Backend : public QObject {
 
     LogManager logManager_;
     void initLogManager();
+    void setWifiLastMessage(const QString& msg);
+    void setWifiConnected(bool connected);
+    void onWifiMonitorTick();
+
+    QTimer* wifiMonitorTimer_ = nullptr;
+    QDateTime autoReconnectSuppressedUntil_;
 
     QString buildTempsSnapshotLine() const;
 };
