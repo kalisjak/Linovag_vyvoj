@@ -8,6 +8,8 @@ namespace RuntimeConfig {
 // Device serial (SN-xxxx)
 QString deviceSerial();
 void setDeviceSerial(const QString& serial);
+QString deviceSecret();
+void setDeviceSecret(const QString& secret);
 
 // Software type: 3 nebo 22
 int softwareType();
@@ -34,7 +36,7 @@ void setSensor4Id(const QString& id);
 std::string sensor5Id();
 void setSensor5Id(const QString& id);
 
-// DHT22 sensor ID (může být DS18B20 pro simulaci)
+// DHT22 sensor ID  (může být DS18B20 pro simulaci)
 std::string sensor6Id();
 void setSensor6Id(const QString& id);
 
@@ -74,6 +76,8 @@ static void setId(const char* key, const QString& id);
 
 QString reclaimOrderNumber();
 void setReclaimOrderNumber(const QString& number);
+QString reclaimObpNumber();
+void setReclaimObpNumber(const QString& number);
 
 QString reclaimEmail();
 QString customEmail();

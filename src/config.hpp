@@ -57,12 +57,13 @@ inline constexpr int COOLING_CONTROL_INTERVAL_MS = 1000;
 
 // hysteréze a defrost
 inline constexpr double COOLING_HYSTERESIS_DELTA      = 2.0;   // X / X+2 °C
-inline constexpr double COOLING_DEFROST_START_TEMP    = -16.0; // začátek defrostu
-inline constexpr double COOLING_DEFROST_STOP_TEMP     = 8.0;   // konec defrostu
+inline constexpr double COOLING_DEFROST_START_TEMP    = -18.0; // začátek defrostu
+inline constexpr double COOLING_DEFROST_STOP_TEMP     = 7.0;   // konec defrostu
+inline constexpr int COOLING_DEFROST_MAX_DURATION_MS  = 30 * 60 * 1000; // max. délka defrostu 30 min
 
 // teplota kondenzátoru pro varování
-inline constexpr double CRITICAL_TEMPERATURE_KONDENZ  = 45.0;
-inline constexpr double WARNING_TEMPERATURE_KONDENZ   = 40.0;
+inline constexpr double CRITICAL_TEMPERATURE_KONDENZ  = 50.0;
+inline constexpr double WARNING_TEMPERATURE_KONDENZ   = 45.0;
 
 // PWM duty hodnoty
 inline constexpr double COOLING_FAN_DUTY_NORMAL  = 0.2; // 80 %

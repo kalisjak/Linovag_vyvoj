@@ -37,6 +37,8 @@ add_executable(lnvg_app
     
     src/runtimeConfig.cpp
     src/runtimeConfig.hpp
+    src/qrcodegen.cpp
+    src/qrcodegen.hpp
     src/config.hpp
     
     qml/qml.qrc

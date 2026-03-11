@@ -31,6 +31,7 @@ void CoolingWorker::start() {
     startupDelayActive_ = true;
     dripHoldActive_ = false;
     defrostMode_ = false;
+    condenserOverheatLockout_ = false;
     coolingActive_ = false;
     enabledSince_ = QDateTime::currentDateTime();
 
@@ -71,6 +72,7 @@ void CoolingWorker::stop() {
     defrostMode_ = false;
     startupDelayActive_ = false;
     dripHoldActive_ = false;
+    condenserOverheatLockout_ = false;
 
     publishStateIfChanged(true);
 }
@@ -87,6 +89,7 @@ void CoolingWorker::setEnabled(bool en) {
         defrostMode_ = false;
         dripHoldActive_ = false;
         startupDelayActive_ = false;
+        condenserOverheatLockout_ = false;
         publishStateIfChanged(true);
         return;
     }
@@ -97,6 +100,7 @@ void CoolingWorker::setEnabled(bool en) {
     coolingActive_ = false;
     defrostMode_ = false;
     dripHoldActive_ = false;
+    condenserOverheatLockout_ = false;
     // startupDelayActive_ = true;
     // startupTimer_.restart();
     publishStateIfChanged(true);
@@ -125,6 +129,7 @@ void CoolingWorker::tick() {
         defrostMode_ = false;
         dripHoldActive_ = false;
         startupDelayActive_ = false;
+        condenserOverheatLockout_ = false;
         publishStateIfChanged();
         return;
     }
@@ -145,15 +150,22 @@ void CoolingWorker::tick() {
         return;
     }
     
-    // Optional: condenser warning (no control change, just debug)
     if (condenserTemp_ >= AppConfig::CRITICAL_TEMPERATURE_KONDENZ) {
-        // qWarning() << "[CoolingWorker]" << heartbeatName_ << "Condenser temp is too high:" << condenserTemp_;
+        condenserOverheatLockout_ = true;
         coolingActive_ = false;
         setCompressor(false);
         publishStateIfChanged();
         return;
-    } else if (condenserTemp_ <= AppConfig::CRITICAL_TEMPERATURE_KONDENZ && condenserTemp_ >= AppConfig::WARNING_TEMPERATURE_KONDENZ) {
-        // qWarning() << "[CoolingWorker]" << heartbeatName_ << "Condenser temp warning level:" << condenserTemp_;
+    }
+
+    if (condenserOverheatLockout_) {
+        if (condenserTemp_ > AppConfig::WARNING_TEMPERATURE_KONDENZ) {
+            coolingActive_ = false;
+            setCompressor(false);
+            publishStateIfChanged();
+            return;
+        }
+        condenserOverheatLockout_ = false;
     }
 
     // Defrost mode overrides everything
@@ -162,7 +174,10 @@ void CoolingWorker::tick() {
         setFanDuty(AppConfig::COOLING_FAN_DUTY_DEFROST); // 100%
         coolingActive_ = false;
 
-        if (evapTemp_ >= AppConfig::COOLING_DEFROST_STOP_TEMP) {
+        const bool defrostFinishedByTemp = evapTemp_ >= AppConfig::COOLING_DEFROST_STOP_TEMP;
+        const bool defrostFinishedByTimeout = defrostTimer_.isValid() &&
+                                             defrostTimer_.elapsed() >= AppConfig::COOLING_DEFROST_MAX_DURATION_MS;
+        if (defrostFinishedByTemp || defrostFinishedByTimeout) {
             qDebug() << "[CoolingWorker]" << "Defrost ended. Evap temp:" << evapTemp_;
             defrostMode_ = false;
             dripHoldActive_ = true;
@@ -190,6 +205,8 @@ void CoolingWorker::tick() {
     // Enter defrost when evaporator gets too cold
     if (evapTemp_ <= AppConfig::COOLING_DEFROST_START_TEMP) {
         defrostMode_ = true;
+        defrostTimer_.restart();
+        lastDefrostAt_ = QDateTime::currentDateTime();
         setCompressor(false);
         setFanDuty(AppConfig::COOLING_FAN_DUTY_DEFROST);
         coolingActive_ = false;
@@ -291,6 +308,7 @@ void CoolingWorker::checkScheduledDefrost() {
     }
 
     defrostMode_ = true;
+    defrostTimer_.restart();
     lastDefrostAt_ = now;
     lastScheduledFire_ = now;
 }

@@ -70,8 +70,11 @@ class Backend : public QObject {
     Q_PROPERTY(bool bath2Enabled READ bath2Enabled WRITE setBath2Enabled NOTIFY bath2EnabledChanged)
 
     Q_PROPERTY(QString reclaimOrderNumber READ reclaimOrderNumber NOTIFY reclaimInfoChanged)
+    Q_PROPERTY(QString reclaimObpNumber READ reclaimObpNumber NOTIFY reclaimInfoChanged)
     Q_PROPERTY(QString reclaimEmail READ reclaimEmail NOTIFY reclaimInfoChanged)
     Q_PROPERTY(QString customEmail READ customEmail NOTIFY reclaimInfoChanged)
+    Q_PROPERTY(QString histQrSource READ histQrSource NOTIFY qrSourcesChanged)
+    Q_PROPERTY(QString reclaimQrSource READ reclaimQrSource NOTIFY qrSourcesChanged)
     Q_PROPERTY(bool customerScreenLocked READ customerScreenLocked NOTIFY customerScreenLockChanged)
     Q_PROPERTY(bool customerAutoLockEnabled READ customerAutoLockEnabled WRITE setCustomerAutoLockEnabled NOTIFY customerLockConfigChanged)
     Q_PROPERTY(QString customerLockPin READ customerLockPin NOTIFY customerLockConfigChanged)
@@ -163,8 +166,11 @@ class Backend : public QObject {
 
     QString serialNumber() const { return RuntimeConfig::deviceSerial(); }
     QString reclaimOrderNumber() const { return RuntimeConfig::reclaimOrderNumber(); };
+    QString reclaimObpNumber() const { return RuntimeConfig::reclaimObpNumber(); };
     QString reclaimEmail() const { return RuntimeConfig::reclaimEmail(); };
     QString customEmail() const { return RuntimeConfig::customEmail(); };
+    QString histQrSource() const { return histQrSource_; }
+    QString reclaimQrSource() const { return reclaimQrSource_; }
     bool customerScreenLocked() const { return customerScreenLocked_; }
     bool customerAutoLockEnabled() const { return customerAutoLockEnabled_; }
     QString customerLockPin() const { return customerLockPin_; }
@@ -306,6 +312,7 @@ class Backend : public QObject {
     void autoDefrostTimeChanged();
 
     void reclaimInfoChanged();
+    void qrSourcesChanged();
     void customerScreenLockChanged();
     void customerLockConfigChanged();
     void serviceModeEnabledChanged();
@@ -414,6 +421,11 @@ class Backend : public QObject {
 
     LogManager logManager_;
     void initLogManager();
+    void refreshQrCodes();
+    void refreshHistoryQrCode();
+    void refreshReclaimQrCode();
+    QString qrOutputDir() const;
+    QString toFileUrlWithRevision(const QString& absolutePath) const;
     void setWifiLastMessage(const QString& msg);
     void setWifiConnected(bool connected);
     void setEthernetConnected(bool connected);
@@ -422,7 +434,10 @@ class Backend : public QObject {
     void onWifiMonitorTick();
 
     QTimer* wifiMonitorTimer_ = nullptr;
+    QTimer* historyQrRefreshTimer_ = nullptr;
     QDateTime autoReconnectSuppressedUntil_;
+    QString histQrSource_;
+    QString reclaimQrSource_;
 
     QString buildTempsSnapshotLine() const;
 };

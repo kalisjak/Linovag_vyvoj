@@ -36,11 +36,11 @@ Page {
 
                 Image {
                     id: qrImage
-                    source: "qrc:/qml/qr_reklam.png"
+                    source: backend.reclaimQrSource
                     fillMode: Image.PreserveAspectFit
                     sourceSize.width: 340 * uiScale
                     sourceSize.height: 340 * uiScale
-                    cache: true
+                    cache: false
                 }
 
                 Text {

@@ -22,6 +22,16 @@ void setDeviceSerial(const QString& serial) {
     s.setValue("device/serial", serial);
 }
 
+QString deviceSecret() {
+    QSettings s = makeSettings();
+    return s.value("device/secret", QStringLiteral("F2AB391C")).toString();
+}
+
+void setDeviceSecret(const QString& secret) {
+    QSettings s = makeSettings();
+    s.setValue("device/secret", secret);
+}
+
 // ===== Software type =====
 int softwareType() {
     QSettings s = makeSettings();
@@ -131,6 +141,16 @@ QString reclaimOrderNumber() {
 void setReclaimOrderNumber(const QString& number) {
     QSettings s = makeSettings();
     s.setValue("reclaim/order_number", number);
+}
+
+QString reclaimObpNumber() {
+    QSettings s = makeSettings();
+    return s.value("reclaim/obp_number", QStringLiteral("OBP-0012345 / VNE 1234567")).toString();
+}
+
+void setReclaimObpNumber(const QString& number) {
+    QSettings s = makeSettings();
+    s.setValue("reclaim/obp_number", number);
 }
 
 QString reclaimEmail() {

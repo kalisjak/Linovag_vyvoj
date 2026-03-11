@@ -72,6 +72,7 @@ class CoolingWorker : public QObject {
 
     QElapsedTimer startupTimer_;
     QElapsedTimer dripTimer_;
+    QElapsedTimer defrostTimer_;
 
     void publishStateIfChanged(bool force = false);
     bool lastCoolingActive_ = false;
@@ -84,6 +85,7 @@ class CoolingWorker : public QObject {
     int autoDefrostTime2Min_ = 20 * 60;
 
     uint minTimeAutoDefrostS_ = AppConfig::MIN_TIME_BEETWEEN_AUTODEFROST_S;
+    bool condenserOverheatLockout_ = false;
 
     QDateTime enabledSince_;       // kdy byla vana zapnutá (setEnabled(true))
     QDateTime lastDefrostAt_;      // start defrostu (jakýkoliv)

@@ -4,10 +4,14 @@
 #include <QDateTime>
 #include <QDebug>
 #include <QDir>
+#include <QFileDevice>
 #include <QFile>
 #include <QFileInfo>
 #include <QHash>
+#include <QImage>
 #include <QMap>
+#include <QMessageAuthenticationCode>
+#include <QPainter>
 #include <QProcess>
 #include <QSet>
 #include <QSslCertificate>
@@ -15,10 +19,19 @@
 #include <QStandardPaths>
 #include <QTextStream>
 #include <QTimer>
+#include <QUrl>
+#include <QUrlQuery>
 #include <QVariantMap>
 #include <algorithm>
 
+#include "qrcodegen.hpp"
+
 namespace {
+
+constexpr int kQrCanvasSize = 350;
+constexpr int kQrQuietZoneModules = 4;
+constexpr qint64 kHistoryQrRefreshIntervalMs = 60LL * 60 * 1000;
+constexpr qint64 kHistoryQrTokenLifetimeSecs = 7LL * 24 * 3600;
 
 QStringList splitBySep(const QString& line, QChar sep) {
     QStringList out;
@@ -221,6 +234,155 @@ bool isWifiAuthFailure(const QString& stdOut, const QString& stdErr) {
         || text.contains(QStringLiteral("password is required"));
 }
 
+QString normalizeLang(const QString& lang) {
+    const QString normalized = lang.trimmed().toLower();
+    if (normalized == QStringLiteral("en") || normalized == QStringLiteral("de") || normalized == QStringLiteral("dk")) {
+        return normalized;
+    }
+    return QStringLiteral("cs");
+}
+
+QString base64UrlNoPadding(const QByteArray& data) {
+    QByteArray out = data.toBase64(QByteArray::Base64UrlEncoding);
+    while (out.endsWith('=')) {
+        out.chop(1);
+    }
+    return QString::fromLatin1(out);
+}
+
+bool saveQrPng(const QString& payload, const QString& outPath) {
+    try {
+        const qrcodegen::QrCode qr = qrcodegen::QrCode::encodeText(payload.toUtf8().constData(),
+                                                                   qrcodegen::QrCode::Ecc::MEDIUM);
+        const int qrSize = qr.getSize();
+        const int totalModules = qrSize + 2 * kQrQuietZoneModules;
+        if (totalModules <= 0) return false;
+
+        QImage image(kQrCanvasSize, kQrCanvasSize, QImage::Format_ARGB32_Premultiplied);
+        image.fill(Qt::transparent);
+
+        QPainter painter(&image);
+        painter.setRenderHint(QPainter::Antialiasing, false);
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(Qt::white);
+
+        const double scale = static_cast<double>(kQrCanvasSize) / static_cast<double>(totalModules);
+        for (int y = 0; y < qrSize; ++y) {
+            for (int x = 0; x < qrSize; ++x) {
+                if (!qr.getModule(x, y)) continue;
+                const int left = qRound((x + kQrQuietZoneModules) * scale);
+                const int top = qRound((y + kQrQuietZoneModules) * scale);
+                const int right = qRound((x + kQrQuietZoneModules + 1) * scale);
+                const int bottom = qRound((y + kQrQuietZoneModules + 1) * scale);
+                painter.drawRect(left, top, std::max(1, right - left), std::max(1, bottom - top));
+            }
+        }
+        painter.end();
+
+        QDir().mkpath(QFileInfo(outPath).absolutePath());
+        return image.save(outPath, "PNG");
+    } catch (const std::exception& ex) {
+        qWarning() << "[Backend] Failed to generate QR:" << ex.what();
+        return false;
+    }
+}
+
+QString reclaimMailSubject() {
+    const QString obp = RuntimeConfig::reclaimObpNumber().trimmed();
+    if (!obp.isEmpty()) return obp;
+    return RuntimeConfig::reclaimOrderNumber().trimmed();
+}
+
+QString reclaimMailBody(const QString& lang) {
+    const QString normalizedLang = normalizeLang(lang);
+    const QString customerEmail = RuntimeConfig::customEmail().trimmed();
+    const QString serial = RuntimeConfig::deviceSerial().trimmed();
+    const QString order = RuntimeConfig::reclaimOrderNumber().trimmed();
+    const QString obp = RuntimeConfig::reclaimObpNumber().trimmed();
+
+    QString intro;
+    QString request;
+    QString closing;
+    QString contactLabel;
+    QString serialLabel;
+    QString orderLabel;
+    QString obpLabel;
+
+    if (normalizedLang == QStringLiteral("en")) {
+        intro = QStringLiteral("Hello,");
+        request = QStringLiteral("I would like to report a complaint regarding the ventilated cooling unit.");
+        closing = QStringLiteral("Best regards");
+        contactLabel = QStringLiteral("Customer e-mail");
+        serialLabel = QStringLiteral("Device serial");
+        orderLabel = QStringLiteral("Order number");
+        obpLabel = QStringLiteral("OBP / VNE");
+    } else if (normalizedLang == QStringLiteral("de")) {
+        intro = QStringLiteral("Guten Tag,");
+        request = QStringLiteral("ich moechte eine Reklamation zur beluefteten Kuehlwanne melden.");
+        closing = QStringLiteral("Mit freundlichen Gruessen");
+        contactLabel = QStringLiteral("Kunden-E-Mail");
+        serialLabel = QStringLiteral("Seriennummer");
+        orderLabel = QStringLiteral("Bestellnummer");
+        obpLabel = QStringLiteral("OBP / VNE");
+    } else if (normalizedLang == QStringLiteral("dk")) {
+        intro = QStringLiteral("Hej,");
+        request = QStringLiteral("jeg vil gerne anmelde en reklamation vedrorerende den ventilerede koelvitrine.");
+        closing = QStringLiteral("Med venlig hilsen");
+        contactLabel = QStringLiteral("Kundens e-mail");
+        serialLabel = QStringLiteral("Serienummer");
+        orderLabel = QStringLiteral("Ordrenummer");
+        obpLabel = QStringLiteral("OBP / VNE");
+    } else {
+        intro = QStringLiteral("Dobrý den,");
+        request = QStringLiteral("chtěl bych nahlásit reklamaci k odvětrávané chladicí vaně.");
+        closing = QStringLiteral("S pozdravem");
+        contactLabel = QStringLiteral("E-mail zákazníka");
+        serialLabel = QStringLiteral("Sériové číslo zařízení");
+        orderLabel = QStringLiteral("Číslo objednávky");
+        obpLabel = QStringLiteral("OBP / VNE");
+    }
+
+    QStringList lines{intro, QString(), request, QString()};
+    if (!customerEmail.isEmpty()) lines << QStringLiteral("%1: %2").arg(contactLabel, customerEmail);
+    if (!serial.isEmpty()) lines << QStringLiteral("%1: %2").arg(serialLabel, serial);
+    if (!order.isEmpty()) lines << QStringLiteral("%1: %2").arg(orderLabel, order);
+    if (!obp.isEmpty()) lines << QStringLiteral("%1: %2").arg(obpLabel, obp);
+    lines << QString() << closing;
+    return lines.join(QStringLiteral("\r\n"));
+}
+
+QString buildReclaimMailtoUrl(const QString& lang) {
+    QUrl url;
+    url.setScheme(QStringLiteral("mailto"));
+    url.setPath(RuntimeConfig::reclaimEmail().trimmed());
+
+    QUrlQuery query;
+    const QString subject = reclaimMailSubject();
+    if (!subject.isEmpty()) query.addQueryItem(QStringLiteral("subject"), subject);
+    query.addQueryItem(QStringLiteral("body"), reclaimMailBody(lang));
+    url.setQuery(query);
+    return url.toString(QUrl::FullyEncoded);
+}
+
+QString buildHistoryUrl() {
+    const QString deviceId = RuntimeConfig::deviceSerial().trimmed();
+    const QString secret = RuntimeConfig::deviceSecret().trimmed();
+    if (deviceId.isEmpty() || secret.isEmpty()) return QString();
+
+    const qint64 exp = QDateTime::currentSecsSinceEpoch() + kHistoryQrTokenLifetimeSecs;
+    const QByteArray payload = QStringLiteral("%1:%2").arg(deviceId).arg(exp).toUtf8();
+    const QByteArray signature = QMessageAuthenticationCode::hash(payload, secret.toUtf8(), QCryptographicHash::Sha256);
+    const QString token = base64UrlNoPadding(payload) + QStringLiteral(".") + base64UrlNoPadding(signature);
+
+    QUrl url(QStringLiteral("https://servicedesk.gastro.cz/devices/%1/temperature-log.csv").arg(deviceId));
+    QUrlQuery query;
+    query.addQueryItem(QStringLiteral("token"), token);
+    query.addQueryItem(QStringLiteral("range"), QStringLiteral("-7d"));
+    query.addQueryItem(QStringLiteral("ts"), QStringLiteral("iso"));
+    url.setQuery(query);
+    return url.toString(QUrl::FullyEncoded);
+}
+
 }  // namespace
 
 Backend::Backend(QObject* parent) : QObject(parent), rng_(std::random_device{}()) {
@@ -247,7 +409,13 @@ Backend::Backend(QObject* parent) : QObject(parent), rng_(std::random_device{}()
     wifiMonitorTimer_->start();
     refreshNetworkLinkState();
 
+    historyQrRefreshTimer_ = new QTimer(this);
+    historyQrRefreshTimer_->setInterval(static_cast<int>(kHistoryQrRefreshIntervalMs));
+    connect(historyQrRefreshTimer_, &QTimer::timeout, this, &Backend::refreshHistoryQrCode);
+    historyQrRefreshTimer_->start();
+
     initLogManager();
+    refreshQrCodes();
 }
 
 void Backend::initLogManager() {
@@ -277,6 +445,7 @@ void Backend::setAppLanguage(const QString& lang) {
     appLanguage_ = normalized;
     RuntimeConfig::setAppLanguage(appLanguage_);
     emit appLanguageChanged();
+    refreshReclaimQrCode();
 }
 
 void Backend::setTargetTemp(double t) {
@@ -300,11 +469,58 @@ void Backend::setErrorActive(bool active) {
 void Backend::setReclaimOrderNumber(const QString& number) {
     RuntimeConfig::setReclaimOrderNumber(number);
     emit reclaimInfoChanged();
+    refreshReclaimQrCode();
 }
 
 void Backend::setCustomEmail(const QString& email) {
     RuntimeConfig::setCustomEmail(email);
     emit reclaimInfoChanged();
+    refreshReclaimQrCode();
+}
+
+QString Backend::qrOutputDir() const {
+    QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (dir.isEmpty()) dir = QStringLiteral("/tmp/lnvg_app");
+    QDir().mkpath(dir);
+    return dir;
+}
+
+QString Backend::toFileUrlWithRevision(const QString& absolutePath) const {
+    QFileInfo info(absolutePath);
+    QString url = QUrl::fromLocalFile(info.absoluteFilePath()).toString();
+    if (info.exists()) {
+        url += QStringLiteral("?v=%1").arg(info.lastModified().toMSecsSinceEpoch());
+    }
+    return url;
+}
+
+void Backend::refreshQrCodes() {
+    refreshHistoryQrCode();
+    refreshReclaimQrCode();
+}
+
+void Backend::refreshHistoryQrCode() {
+    const QString historyUrl = buildHistoryUrl();
+    const QString outPath = qrOutputDir() + QStringLiteral("/qr_hist.png");
+    if (!historyUrl.isEmpty() && saveQrPng(historyUrl, outPath)) {
+        const QString newSource = toFileUrlWithRevision(outPath);
+        if (histQrSource_ != newSource) {
+            histQrSource_ = newSource;
+            emit qrSourcesChanged();
+        }
+    }
+}
+
+void Backend::refreshReclaimQrCode() {
+    const QString mailtoUrl = buildReclaimMailtoUrl(appLanguage_);
+    const QString outPath = qrOutputDir() + QStringLiteral("/qr_reklam.png");
+    if (!mailtoUrl.isEmpty() && saveQrPng(mailtoUrl, outPath)) {
+        const QString newSource = toFileUrlWithRevision(outPath);
+        if (reclaimQrSource_ != newSource) {
+            reclaimQrSource_ = newSource;
+            emit qrSourcesChanged();
+        }
+    }
 }
 
 bool Backend::unlockCustomerScreen(const QString& pin) {

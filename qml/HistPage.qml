@@ -8,9 +8,34 @@ Page {
     property real uiScale: 1.0
     readonly property string lang: (backend && backend.appLanguage) ? backend.appLanguage : "cs"
 
+    function formatHistoryLine(line) {
+        if (!line || line.length === 0)
+            return ""
+
+        var m = line.match(/^(\d{2}:\d{2}) (\d{2}\.\d{2})\.\d{2} - .*?vana-t1: ([^,]+)/)
+        if (m)
+            return m[1] + " " + m[2] + " - room: " + m[3].trim() + " °C"
+
+        return line
+    }
+
+    function scrollHistoryToLatest() {
+        if (!logView || logView.count <= 0)
+            return
+
+        logView.positionViewAtIndex(logView.count - 1, ListView.End)
+    }
+
     title: I18n.t(lang, "hist.title")
     background: Item {}
     visible: SwipeView.isCurrentItem
+
+    onVisibleChanged: {
+        if (visible) {
+            logView.autoFollow = true
+            Qt.callLater(scrollHistoryToLatest)
+        }
+    }
 
     contentItem: Item {
         anchors.fill: parent
@@ -40,14 +65,14 @@ Page {
 
                 Image {
                     id: qrImage
-                    source: "qrc:/qml/qr_hist.png"
+                    source: backend.histQrSource
                     fillMode: Image.PreserveAspectFit
                     // velikost relativně k menšímu rozměru
                     sourceSize.width: Math.min(histP.width, histP.height) * 0.6
                     sourceSize.height: Math.min(histP.width, histP.height) * 0.6
                     // sourceSize.width: 320 * uiScale
                     // sourceSize.height: 320 * uiScale
-                    cache: true
+                    cache: false
                 }
 
                 Text {
@@ -124,7 +149,7 @@ Page {
                         property bool autoFollow: true
 
                         delegate: Text {
-                            text: modelData
+                            text: histP.formatHistoryLine(modelData)
                             color: "#EDEFF2"
                             font.pixelSize: Math.min(histP.width, histP.height) * 0.052
                             font.family: "monospace"
@@ -132,15 +157,12 @@ Page {
                         }
 
                         Component.onCompleted: {
-                            // po načtení skoč na konec
-                            positionViewAtEnd()
+                            Qt.callLater(histP.scrollHistoryToLatest)
                         }
 
                         onCountChanged: {
-                            // když přibude nový log a autoFollow je zapnutý,
-                            // drž se na nejnovější hodnotě
                             if (autoFollow) {
-                                positionViewAtEnd()
+                                Qt.callLater(histP.scrollHistoryToLatest)
                             }
                         }
 
@@ -151,8 +173,6 @@ Page {
                         }
 
                         onMovementEnded: {
-                            // až uživatel přestane skrolovat, za 10 s se vrátíme
-                            // na autoFollow a skočíme na konec
                             followTimer.restart()
                         }
                     }
@@ -165,7 +185,7 @@ Page {
                         running: false
                         onTriggered: {
                             logView.autoFollow = true
-                            logView.positionViewAtEnd()
+                            histP.scrollHistoryToLatest()
                         }
                     }
                 }
