@@ -5,10 +5,12 @@
 #include <QFileInfo>
 #include <QMap>
 #include <QObject>
+#include <QDateTime>
 #include <QString>
 #include <QStringList>
 #include <QTextStream>
 #include <QTimer>
+#include <QVector>
 
 #include <functional>
 
@@ -80,4 +82,17 @@ class LogManager : public QObject {
 
     void appendTempsLineCached(const QString& line);
     void flushTempsIfNeeded();
+    void consumeTempsSnapshot(const QString& line);
+    void flushCompletedTempsBucket();
+
+    struct TempsBucket {
+        bool active = false;
+        QDateTime bucketStart;
+        QDateTime lastTimestamp;
+        QStringList keys;
+        QVector<double> sums;
+        int sampleCount = 0;
+    };
+
+    TempsBucket tempsBucket_;
 };

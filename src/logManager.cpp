@@ -2,8 +2,16 @@
 
 #include <QCoreApplication>
 #include <QDateTime>
+#include <QVector>
 
 namespace {
+
+struct ParsedTempsSnapshot {
+    bool valid = false;
+    QDateTime timestamp;
+    QStringList keys;
+    QVector<double> values;
+};
 
 QString indexedFileName(const QString& prefix, int index) {
     return QStringLiteral("%1%2.txt").arg(prefix, QStringLiteral("%1").arg(index, 3, 10, QChar('0')));
@@ -28,6 +36,54 @@ QMap<int, QString> enumerateIndexedFiles(const QDir& dir, const QString& prefix)
     }
 
     return indexToFile;
+}
+
+QDateTime bucketStartFor(const QDateTime& ts) {
+    const QDate date = ts.date();
+    const QTime time = ts.time();
+    const int bucketMinute = (time.minute() / AppConfig::TEMPS_LOG_AGGREGATION_MIN) * AppConfig::TEMPS_LOG_AGGREGATION_MIN;
+    return QDateTime(date, QTime(time.hour(), bucketMinute), ts.timeSpec());
+}
+
+ParsedTempsSnapshot parseTempsSnapshot(const QString& line) {
+    ParsedTempsSnapshot snapshot;
+    const QString trimmed = line.trimmed();
+    if (trimmed.isEmpty()) return snapshot;
+
+    const int sepIdx = trimmed.indexOf(QStringLiteral(" - "));
+    if (sepIdx <= 0) return snapshot;
+
+    const QString tsText = trimmed.left(sepIdx).trimmed();
+    const QString payload = trimmed.mid(sepIdx + 3).trimmed();
+    const QDateTime ts = QDateTime::fromString(tsText, QStringLiteral("HH:mm dd.MM.yy"));
+    if (!ts.isValid() || payload.isEmpty()) return snapshot;
+
+    const QStringList parts = payload.split(QStringLiteral(", "), Qt::SkipEmptyParts);
+    if (parts.isEmpty()) return snapshot;
+
+    QStringList keys;
+    QVector<double> values;
+    keys.reserve(parts.size());
+    values.reserve(parts.size());
+
+    for (const QString& part : parts) {
+        const int colonIdx = part.indexOf(QStringLiteral(": "));
+        if (colonIdx <= 0) return ParsedTempsSnapshot{};
+
+        bool ok = false;
+        const QString key = part.left(colonIdx).trimmed();
+        const double value = part.mid(colonIdx + 2).trimmed().toDouble(&ok);
+        if (!ok || key.isEmpty()) return ParsedTempsSnapshot{};
+
+        keys.append(key);
+        values.append(value);
+    }
+
+    snapshot.valid = true;
+    snapshot.timestamp = ts;
+    snapshot.keys = keys;
+    snapshot.values = values;
+    return snapshot;
 }
 
 }  // namespace
@@ -91,8 +147,7 @@ void LogManager::appendTempsSnapshotNow() {
     const QString line = tempsSnapshotProvider_();
     if (line.isEmpty()) return;
 
-    appendTempsLineCached(line);
-    flushTempsIfNeeded();
+    consumeTempsSnapshot(line);
 }
 
 void LogManager::appendAppLogLine(const QString& line) {
@@ -212,4 +267,63 @@ void LogManager::flushTempsIfNeeded() {
 
     flushCache(tempsCache_, tempsFilePath_);
     rotateIfNeeded(QStringLiteral("temps_log_"), tempsFilePath_, tempsIndex_);
+}
+
+void LogManager::consumeTempsSnapshot(const QString& line) {
+    const ParsedTempsSnapshot snapshot = parseTempsSnapshot(line);
+    if (!snapshot.valid) return;
+
+    const QDateTime bucketStart = bucketStartFor(snapshot.timestamp);
+
+    if (!tempsBucket_.active) {
+        tempsBucket_.active = true;
+        tempsBucket_.bucketStart = bucketStart;
+        tempsBucket_.lastTimestamp = snapshot.timestamp;
+        tempsBucket_.keys = snapshot.keys;
+        tempsBucket_.sums = snapshot.values;
+        tempsBucket_.sampleCount = 1;
+        return;
+    }
+
+    const bool sameBucket = tempsBucket_.bucketStart == bucketStart;
+    const bool sameShape = tempsBucket_.keys == snapshot.keys && tempsBucket_.sums.size() == snapshot.values.size();
+
+    if (!sameBucket || !sameShape) {
+        flushCompletedTempsBucket();
+        tempsBucket_.active = true;
+        tempsBucket_.bucketStart = bucketStart;
+        tempsBucket_.lastTimestamp = snapshot.timestamp;
+        tempsBucket_.keys = snapshot.keys;
+        tempsBucket_.sums = snapshot.values;
+        tempsBucket_.sampleCount = 1;
+        return;
+    }
+
+    tempsBucket_.lastTimestamp = snapshot.timestamp;
+    ++tempsBucket_.sampleCount;
+    for (int i = 0; i < tempsBucket_.sums.size(); ++i) {
+        tempsBucket_.sums[i] += snapshot.values[i];
+    }
+}
+
+void LogManager::flushCompletedTempsBucket() {
+    if (!tempsBucket_.active || tempsBucket_.sampleCount <= 0 || tempsBucket_.keys.size() != tempsBucket_.sums.size()) {
+        tempsBucket_ = TempsBucket{};
+        return;
+    }
+
+    QStringList values;
+    values.reserve(tempsBucket_.keys.size());
+    for (int i = 0; i < tempsBucket_.keys.size(); ++i) {
+        const double avg = tempsBucket_.sums[i] / static_cast<double>(tempsBucket_.sampleCount);
+        values.append(QStringLiteral("%1: %2").arg(tempsBucket_.keys[i], QString::number(avg, 'f', 1)));
+    }
+
+    const QString line = QStringLiteral("%1 - %2")
+                             .arg(tempsBucket_.lastTimestamp.toString(QStringLiteral("HH:mm dd.MM.yy")),
+                                  values.join(QStringLiteral(", ")));
+    appendTempsLineCached(line);
+    flushTempsIfNeeded();
+
+    tempsBucket_ = TempsBucket{};
 }

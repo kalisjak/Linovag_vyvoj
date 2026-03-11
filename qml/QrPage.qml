@@ -7,6 +7,14 @@ Page {
     id: qrP
     property real uiScale: 1.0
     readonly property string lang: (backend && backend.appLanguage) ? backend.appLanguage : "cs"
+    readonly property var qrItems: [
+        { title: I18n.t(lang, "qr.history"), source: backend.histQrSource },
+        { title: I18n.t(lang, "qr.reclaim"), source: backend.reclaimQrSource },
+        { title: I18n.t(lang, "qr.tutorial"), source: backend.tutorialQrSource },
+        { title: I18n.t(lang, "qr.datasheet"), source: "qrc:/qml/qr_datasheet.png" },
+        { title: I18n.t(lang, "qr.manual"), source: "qrc:/qml/qr_manual.png" },
+        { title: I18n.t(lang, "qr.spares"), source: "qrc:/qml/qr_spares.png" }
+    ]
 
     title: I18n.t(lang, "qr.title")
     background: Item {}
@@ -14,95 +22,73 @@ Page {
 
     contentItem: Item {
         anchors.fill: parent
-        anchors.margins: 19 * uiScale
+        anchors.margins: 28 * uiScale
 
-        // LEVÁ ČÁST
-        Rectangle {
-            id: leftPane
-            anchors {
-                left: parent.left
-                top: parent.top
-                bottom: parent.bottom
-            }
-            width: parent.width * 0.5   // cca 1/2
-            color: "transparent"
+        Column {
+            anchors.fill: parent
+            spacing: 20 * uiScale
 
-            Column {
-                id: qrCol01
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.horizontalCenter: parent.horizontalCenter
-                // anchors.bottom: parent.bottom
-                anchors.top: parent.top
-                anchors.topMargin: 100 * uiScale
-                // anchors.bottomMargin: parent.height * 0.05
-                spacing: 16
+            // Text {
+            //     text: I18n.t(qrP.lang, "qr.subtitle")
+            //     color: "#EDEFF2"
+            //     font.pixelSize: 34 * uiScale
+            //     font.bold: true
+            //     wrapMode: Text.WordWrap
+            //     width: parent.width
+            // }
 
-                Image {
-                    id: qrWeb
-                    source: "qrc:/qml/qr_web.png"
-                    fillMode: Image.PreserveAspectFit
-                    sourceSize.width: 340 * uiScale
-                    sourceSize.height: 340 * uiScale
-                    // sourceSize.width: Math.min(qrP.width, qrP.height) * 0.6
-                    // sourceSize.height: Math.min(qrP.width, qrP.height) * 0.6
-                    cache: true
-                }
+            GridLayout {
+                width: parent.width
+                height: parent.height
+                columns: 3
+                rowSpacing: 18 * uiScale
+                columnSpacing: 18 * uiScale
 
-                Text {
-                    text: I18n.t(qrP.lang, "qr.product")
-                    color: "#EDEFF2"
-                    font.pixelSize: 30 * uiScale
-                    horizontalAlignment: Text.AlignHCenter
-                    wrapMode: Text.WordWrap
-                    width: parent.width * 0.9
-                }
-            }
-        }
-        // SVISLÁ ČÁRA MEZI PANELY
-        Rectangle {
-            id: divider
-            anchors.left: leftPane.right
-            anchors.verticalCenter: parent.verticalCenter
-            width: 2
-            height: parent.height * 0.7
-            color: "#b9b9b9ff"
-        }
+                Repeater {
+                    model: qrP.qrItems
 
-        // PRAVÁ ČÁST
-        Rectangle {
-            id: rightPane
-            anchors {
-                left: divider.right
-                right: parent.right
-                top: parent.top
-                bottom: parent.bottom
-            }
-            color: "transparent"
+                    delegate: Rectangle {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        radius: 26 * uiScale
+                        color: "#091421"
+                        border.width: 2
+                        border.color: "#29445f"
 
-            Column {
-                id: qrCol02
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.top: parent.top
-                anchors.topMargin: 100 * uiScale
-                spacing: 16
+                        Column {
+                            anchors.fill: parent
+                            anchors.margins: 18 * uiScale
+                            spacing: 20 * uiScale
 
-                Image {
-                    id: qrApp
-                    source: "qrc:/qml/qr_tutor.png"
-                    fillMode: Image.PreserveAspectFit
-                    sourceSize.width: 340 * uiScale
-                    sourceSize.height: 340 * uiScale
-                    cache: true
-                }
+                            Text {
+                                text: modelData.title
+                                color: "#ffffff"
+                                font.pixelSize: 26 * uiScale
+                                font.bold: true
+                                wrapMode: Text.WordWrap
+                                width: parent.width
+                                height: 72 * uiScale
+                            }
 
-                Text {
-                    text: I18n.t(qrP.lang, "qr.maintenance")
-                    color: "#EDEFF2"
-                    font.pixelSize: 30 * uiScale
-                    horizontalAlignment: Text.AlignHCenter
-                    wrapMode: Text.WordWrap
-                    width: parent.width * 0.9
+                            Item {
+                                width: parent.width
+                                height: 80
+
+                                ExpandableQrTile {
+                                    anchors.centerIn: parent
+                                    source: modelData.source
+                                    title: modelData.title
+                                    biFamily: (typeof win !== "undefined") ? win.biFamily : ""
+                                    previewWidth: 180
+                                    previewHeight: previewWidth
+                                    expandedMaxSize: 1040
+                                    showButton: false
+                                    previewUsesImage: false
+                                    previewIcon: "\uF6AE"
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

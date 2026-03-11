@@ -35,6 +35,7 @@ inline constexpr int        LOG_CACHE_LINES          = 15;
 
 // interval pro snapshot teplot do temps_log_*.txt (nezávislé na SENSOR_POLL_INTERVAL_MS)
 inline constexpr int        TEMPS_LOG_INTERVAL_MS    = 30000;
+inline constexpr int        TEMPS_LOG_AGGREGATION_MIN = 10;
 
 
 // ========== Chlazení ==========

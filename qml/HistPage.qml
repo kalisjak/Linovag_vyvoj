@@ -58,21 +58,19 @@ Page {
                 anchors.horizontalCenter: parent.horizontalCenter
                 // posunout QR trochu níž
                 anchors.bottom: parent.bottom
-                anchors.bottomMargin: parent.height * 0.05
+                anchors.bottomMargin: 10
                 // anchors.topMargin: 10 * uiScale
                 // anchors.bottomMargin: 70 * uiScale
                 spacing: 16
 
-                Image {
+                ExpandableQrTile {
                     id: qrImage
                     source: backend.histQrSource
-                    fillMode: Image.PreserveAspectFit
-                    // velikost relativně k menšímu rozměru
-                    sourceSize.width: Math.min(histP.width, histP.height) * 0.6
-                    sourceSize.height: Math.min(histP.width, histP.height) * 0.6
-                    // sourceSize.width: 320 * uiScale
-                    // sourceSize.height: 320 * uiScale
-                    cache: false
+                    title: I18n.t(histP.lang, "hist.qr_caption")
+                    biFamily: (typeof win !== "undefined") ? win.biFamily : ""
+                    previewWidth: 440
+                    previewHeight: 440
+                    showButton: false
                 }
 
                 Text {

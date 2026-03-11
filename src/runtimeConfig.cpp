@@ -32,6 +32,16 @@ void setDeviceSecret(const QString& secret) {
     s.setValue("device/secret", secret);
 }
 
+QString tutorialUrl() {
+    QSettings s = makeSettings();
+    return s.value("qr/tutorial_url", QStringLiteral("https://servicedesk.gastro.cz")).toString();
+}
+
+void setTutorialUrl(const QString& url) {
+    QSettings s = makeSettings();
+    s.setValue("qr/tutorial_url", url);
+}
+
 // ===== Software type =====
 int softwareType() {
     QSettings s = makeSettings();

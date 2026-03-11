@@ -28,7 +28,7 @@
 
 namespace {
 
-constexpr int kQrCanvasSize = 350;
+constexpr int kQrCanvasSize = 900;
 constexpr int kQrQuietZoneModules = 4;
 constexpr qint64 kHistoryQrRefreshIntervalMs = 60LL * 60 * 1000;
 constexpr qint64 kHistoryQrTokenLifetimeSecs = 7LL * 24 * 3600;
@@ -383,6 +383,10 @@ QString buildHistoryUrl() {
     return url.toString(QUrl::FullyEncoded);
 }
 
+QString buildTutorialUrl() {
+    return RuntimeConfig::tutorialUrl().trimmed();
+}
+
 }  // namespace
 
 Backend::Backend(QObject* parent) : QObject(parent), rng_(std::random_device{}()) {
@@ -497,6 +501,15 @@ QString Backend::toFileUrlWithRevision(const QString& absolutePath) const {
 void Backend::refreshQrCodes() {
     refreshHistoryQrCode();
     refreshReclaimQrCode();
+    const QString tutorialUrl = buildTutorialUrl();
+    const QString outPath = qrOutputDir() + QStringLiteral("/qr_tutorial.png");
+    if (!tutorialUrl.isEmpty() && saveQrPng(tutorialUrl, outPath)) {
+        const QString newSource = toFileUrlWithRevision(outPath);
+        if (tutorialQrSource_ != newSource) {
+            tutorialQrSource_ = newSource;
+            emit qrSourcesChanged();
+        }
+    }
 }
 
 void Backend::refreshHistoryQrCode() {

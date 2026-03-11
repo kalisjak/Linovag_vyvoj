@@ -10,6 +10,8 @@ QString deviceSerial();
 void setDeviceSerial(const QString& serial);
 QString deviceSecret();
 void setDeviceSecret(const QString& secret);
+QString tutorialUrl();
+void setTutorialUrl(const QString& url);
 
 // Software type: 3 nebo 22
 int softwareType();

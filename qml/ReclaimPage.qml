@@ -31,16 +31,16 @@ Page {
                 id: qrColumn
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.top: parent.top
-                anchors.topMargin: 70 * uiScale
                 spacing: 16
 
-                Image {
+                ExpandableQrTile {
                     id: qrImage
                     source: backend.reclaimQrSource
-                    fillMode: Image.PreserveAspectFit
-                    sourceSize.width: 340 * uiScale
-                    sourceSize.height: 340 * uiScale
-                    cache: false
+                    title: I18n.t(reclP.lang, "reclaim.qr_caption")
+                    biFamily: (typeof win !== "undefined") ? win.biFamily : ""
+                    previewWidth: 440
+                    previewHeight: 440
+                    showButton: false
                 }
 
                 Text {

@@ -75,6 +75,7 @@ class Backend : public QObject {
     Q_PROPERTY(QString customEmail READ customEmail NOTIFY reclaimInfoChanged)
     Q_PROPERTY(QString histQrSource READ histQrSource NOTIFY qrSourcesChanged)
     Q_PROPERTY(QString reclaimQrSource READ reclaimQrSource NOTIFY qrSourcesChanged)
+    Q_PROPERTY(QString tutorialQrSource READ tutorialQrSource NOTIFY qrSourcesChanged)
     Q_PROPERTY(bool customerScreenLocked READ customerScreenLocked NOTIFY customerScreenLockChanged)
     Q_PROPERTY(bool customerAutoLockEnabled READ customerAutoLockEnabled WRITE setCustomerAutoLockEnabled NOTIFY customerLockConfigChanged)
     Q_PROPERTY(QString customerLockPin READ customerLockPin NOTIFY customerLockConfigChanged)
@@ -171,6 +172,7 @@ class Backend : public QObject {
     QString customEmail() const { return RuntimeConfig::customEmail(); };
     QString histQrSource() const { return histQrSource_; }
     QString reclaimQrSource() const { return reclaimQrSource_; }
+    QString tutorialQrSource() const { return tutorialQrSource_; }
     bool customerScreenLocked() const { return customerScreenLocked_; }
     bool customerAutoLockEnabled() const { return customerAutoLockEnabled_; }
     QString customerLockPin() const { return customerLockPin_; }
@@ -438,6 +440,7 @@ class Backend : public QObject {
     QDateTime autoReconnectSuppressedUntil_;
     QString histQrSource_;
     QString reclaimQrSource_;
+    QString tutorialQrSource_;
 
     QString buildTempsSnapshotLine() const;
 };

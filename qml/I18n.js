@@ -53,8 +53,15 @@ var translations = {
     "hist.measurement": { cs: "Měření teploty", en: "Temperature measurement", de: "Temperaturmessung", dk: "Temperaturmåling" },
 
     "qr.title": { cs: "QR kód", en: "QR code", de: "QR-Code", dk: "QR-kode" },
+    "qr.subtitle": { cs: "Vyber QR a klepnutím ho zvětši přes celou obrazovku", en: "Choose a QR code and tap it to enlarge full screen", de: "QR-Code auswählen und antippen, um ihn bildschirmfüllend zu vergrößern", dk: "Vælg en QR-kode og tryk for at forstørre den i fuld skærm" },
     "qr.product": { cs: "Otevřít webové stránky produktu", en: "Open product website", de: "Produktwebseite öffnen", dk: "Åbn produktets webside" },
     "qr.maintenance": { cs: "Otevřít návod k údržbě", en: "Open maintenance guide", de: "Wartungsanleitung öffnen", dk: "Åbn vedligeholdelsesvejledning" },
+    "qr.history": { cs: "Historie teplot", en: "Temperature history", de: "Temperaturverlauf", dk: "Temperaturhistorik" },
+    "qr.reclaim": { cs: "Reklamace", en: "Warranty claim", de: "Reklamation", dk: "Reklamation" },
+    "qr.tutorial": { cs: "Video tutorial", en: "Video tutorial", de: "Video-Tutorial", dk: "Video tutorial" },
+    "qr.datasheet": { cs: "Datasheet", en: "Datasheet", de: "Datenblatt", dk: "Datablad" },
+    "qr.manual": { cs: "Manuál", en: "Manual", de: "Handbuch", dk: "Manual" },
+    "qr.spares": { cs: "Náhradní díly", en: "Spare parts", de: "Ersatzteile", dk: "Reservedele" },
 
     "reclaim.title": { cs: "Reklamační stránka", en: "Warranty claim page", de: "Reklamationsseite", dk: "Reklamationsside" },
     "reclaim.qr_caption": { cs: "Otevřít e-mail s předvyplněnou reklamační žádostí", en: "Open e-mail with pre-filled warranty claim", de: "E-Mail mit vorausgefülltem Reklamationsantrag öffnen", dk: "Åbn e-mail med forudfyldt reklamationsanmodning" },
