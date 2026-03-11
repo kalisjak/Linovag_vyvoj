@@ -7,6 +7,7 @@ Page {
     id: setTP
     property real uiScale: 1.0
     readonly property string lang: (backend && backend.appLanguage) ? backend.appLanguage : "cs"
+    signal userActivity()
 
     title: I18n.t(lang, "settemp.title")
     background: Item {}
@@ -26,7 +27,10 @@ Page {
 
     // 1 = target1, 2 = target2 (pouze pro type 22)
     property int activeTarget: 1
-    property bool lockToggled: false
+
+    function noteActivity() {
+        userActivity()
+    }
 
     function isBadNumber(v) {
         // JS NaN check that works in QML
@@ -87,7 +91,10 @@ Page {
 
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: onChangedFn(true)
+                    onClicked: {
+                        setTP.noteActivity()
+                        onChangedFn(true)
+                    }
                 }
             }
 
@@ -109,7 +116,10 @@ Page {
 
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: onChangedFn(false)
+                    onClicked: {
+                        setTP.noteActivity()
+                        onChangedFn(false)
+                    }
                 }
             }
         }
@@ -140,6 +150,35 @@ Page {
                 Column {
                     anchors.centerIn: parent
                     spacing: 12 * uiScale
+
+                    Rectangle {
+                        width: 120 * uiScale
+                        height: 110 * uiScale
+                        radius: 22 * uiScale
+                        color: singleLockArea.pressed ? "#5a5a5ac4" : "#00000099"
+                        anchors.horizontalCenter: parent.horizontalCenter
+
+                        Loader {
+                            anchors.centerIn: parent
+                            sourceComponent: biIcon
+                            onLoaded: {
+                                item.code = Qt.binding(function() {
+                                    return backend.customerScreenLocked ? "\uF47B" : "\uF600"
+                                })
+                                item.px = 92 * uiScale
+                                item.iconColor = "#EDEFF2"
+                            }
+                        }
+
+                        MouseArea {
+                            id: singleLockArea
+                            anchors.fill: parent
+                            onClicked: {
+                                setTP.noteActivity()
+                                backend.lockCustomerScreen()
+                            }
+                        }
+                    }
 
                     Row {
                         spacing: 8
@@ -214,7 +253,10 @@ Page {
                             id: upArea
                             anchors.fill: parent
                             enabled: bathEnabled
-                            onClicked: backend.targetTemp <= 12.0 ? backend.targetTemp = backend.targetTemp + 0.5 : backend.targetTemp = backend.targetTemp 
+                            onClicked: {
+                                setTP.noteActivity()
+                                backend.targetTemp <= 12.0 ? backend.targetTemp = backend.targetTemp + 0.5 : backend.targetTemp = backend.targetTemp
+                            }
                         }
                     }
 
@@ -263,7 +305,10 @@ Page {
                             id: downArea
                             anchors.fill: parent
                             enabled: bathEnabled
-                            onClicked: backend.targetTemp >= 0.0 ? backend.targetTemp = backend.targetTemp - 0.5 : backend.targetTemp = backend.targetTemp 
+                            onClicked: {
+                                setTP.noteActivity()
+                                backend.targetTemp >= 0.0 ? backend.targetTemp = backend.targetTemp - 0.5 : backend.targetTemp = backend.targetTemp
+                            }
                         }
                     }
                 }
@@ -292,7 +337,10 @@ Page {
                     // větší přepínací plocha pro Target1
                     MouseArea {
                         anchors.fill: parent
-                        onClicked: setTP.activeTarget = 1
+                        onClicked: {
+                            setTP.noteActivity()
+                            setTP.activeTarget = 1
+                        }
                         enabled: backend.bath1Enabled
                         z: 0
                     }
@@ -387,7 +435,10 @@ Page {
                                     MouseArea {
                                         anchors.fill: parent
                                         enabled: backend.bath1Enabled
-                                        onClicked: setTP.activeTarget = 1
+                                        onClicked: {
+                                            setTP.noteActivity()
+                                            setTP.activeTarget = 1
+                                        }
                                     }
                                 }
 
@@ -454,6 +505,7 @@ Page {
                                         anchors.fill: parent
                                         enabled: (setTP.activeTarget === 1) ? backend.bath1Enabled : backend.bath2Enabled
                                         onClicked: {
+                                            setTP.noteActivity()
                                             if (setTP.activeTarget === 1) backend.targetTemp = backend.targetTemp + 0.5
                                             else backend.targetTemp2 = backend.targetTemp2 + 0.5
                                         }
@@ -481,6 +533,7 @@ Page {
                                         anchors.fill: parent
                                         enabled: (setTP.activeTarget === 1) ? backend.bath1Enabled : backend.bath2Enabled
                                         onClicked: {
+                                            setTP.noteActivity()
                                             if (setTP.activeTarget === 1) backend.targetTemp = backend.targetTemp - 0.5
                                             else backend.targetTemp2 = backend.targetTemp2 - 0.5
                                         }
@@ -498,11 +551,12 @@ Page {
                             color: lockArea.pressed ? "#5a5a5ac4" : "#00000099"
 
                             Loader {
-                                id: lockIcon
                                 anchors.centerIn: parent
                                 sourceComponent: biIcon
                                 onLoaded: {
-                                    item.code = setTP.lockToggled ? "\uF47B" : "\uF600"
+                                    item.code = Qt.binding(function() {
+                                        return backend.customerScreenLocked ? "\uF47B" : "\uF600"
+                                    })
                                     item.px = 100 * uiScale
                                     item.iconColor = "#EDEFF2"
                                 }
@@ -512,8 +566,8 @@ Page {
                                 id: lockArea
                                 anchors.fill: parent
                                 onClicked: {
-                                    setTP.lockToggled = !setTP.lockToggled
-                                    if (lockIcon.item) lockIcon.item.code = setTP.lockToggled ? "\uF47B" : "\uF600"
+                                    setTP.noteActivity()
+                                    backend.lockCustomerScreen()
                                 }
                             }
                         }
@@ -538,7 +592,10 @@ Page {
                     // větší přepínací plocha pro Target2
                     MouseArea {
                         anchors.fill: parent
-                        onClicked: setTP.activeTarget = 2
+                        onClicked: {
+                            setTP.noteActivity()
+                            setTP.activeTarget = 2
+                        }
                         enabled: backend.bath2Enabled
                         z: 0
                     }
@@ -626,7 +683,10 @@ Page {
 
                                 MouseArea {
                                     anchors.fill: parent
-                                    onClicked: setTP.activeTarget = 2
+                                    onClicked: {
+                                        setTP.noteActivity()
+                                        setTP.activeTarget = 2
+                                    }
                                 }
                             }
 

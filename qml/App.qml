@@ -24,8 +24,74 @@ ApplicationWindow {
     readonly property string lang: (backend && backend.appLanguage) ? backend.appLanguage : "cs"
     readonly property int publicPageCount: 5
     readonly property int firstServicePageIndex: 5
+    readonly property int setTempPageIndex: 1
+    readonly property bool customerScreenLocked: backend ? backend.customerScreenLocked : false
     readonly property bool serviceModeEnabled: backend ? backend.serviceModeEnabled : false
     property bool serviceUnlockOpen: false
+    property bool customerUnlockOpen: false
+    property string customerPinEntry: ""
+    property string customerUnlockError: ""
+
+    function canAutoLockCustomer() {
+        return !!backend
+            && backend.customerAutoLockEnabled
+            && !backend.customerScreenLocked
+            && !serviceUnlockOpen
+            && !customerUnlockOpen
+            && overlay.depth === 0
+            && pages.currentIndex === setTempPageIndex
+    }
+
+    function resetCustomerAutoLock() {
+        customerAutoLockTimer.stop()
+        if (canAutoLockCustomer())
+            customerAutoLockTimer.restart()
+    }
+
+    function openCustomerUnlock() {
+        if (!customerScreenLocked)
+            return
+        customerPinEntry = ""
+        customerUnlockError = ""
+        customerUnlockOpen = true
+        customerUnlockTimeout.restart()
+    }
+
+    function closeCustomerUnlock() {
+        customerUnlockOpen = false
+        customerPinEntry = ""
+        customerUnlockError = ""
+        customerUnlockTimeout.stop()
+    }
+
+    function appendCustomerPinDigit(digit) {
+        if (!customerUnlockOpen || customerPinEntry.length >= 4)
+            return
+
+        customerPinEntry += digit
+        customerUnlockError = ""
+        customerUnlockTimeout.restart()
+
+        if (customerPinEntry.length !== 4)
+            return
+
+        if (backend && backend.unlockCustomerScreen(customerPinEntry)) {
+            closeCustomerUnlock()
+            resetCustomerAutoLock()
+            return
+        }
+
+        customerPinEntry = ""
+        customerUnlockError = I18n.t(lang, "custlock.invalid_pin")
+    }
+
+    function removeCustomerPinDigit() {
+        if (!customerUnlockOpen || customerPinEntry.length === 0)
+            return
+        customerPinEntry = customerPinEntry.slice(0, customerPinEntry.length - 1)
+        customerUnlockError = ""
+        customerUnlockTimeout.restart()
+    }
 
     function openServiceUnlock() {
         if (serviceModeEnabled) {
@@ -37,6 +103,7 @@ ApplicationWindow {
         serviceUnlockOpen = true
         if (floatEditor.active)
             floatEditor.close()
+        resetCustomerAutoLock()
     }
 
     function closeServiceUnlock() {
@@ -45,6 +112,7 @@ ApplicationWindow {
         serviceUnlockError.text = ""
         if (floatEditor.active)
             floatEditor.close()
+        resetCustomerAutoLock()
     }
 
     function submitServiceUnlock() {
@@ -131,7 +199,7 @@ ApplicationWindow {
             }
             onOpenSettings: {
                 if (overlay.depth > 0) overlay.clear()
-                overlay.push(Qt.resolvedUrl("SettingsPage.qml"), { pageStack: overlay })
+                overlay.push(Qt.resolvedUrl("SettingsPage.qml"), { pageStack: overlay, floatEditorRef: floatEditor })
                 topbar.overlayMode = true
                 topbar.overlayTitle = I18n.t(win.lang, "overlay.settings")
             }
@@ -157,18 +225,24 @@ ApplicationWindow {
                 right: parent.right
                 bottom: dock.top
             }
-            interactive: !serviceUnlockOpen
+            interactive: !serviceUnlockOpen && !win.customerScreenLocked
             clip: true
             onCurrentIndexChanged: {
                 if (!win.serviceModeEnabled && currentIndex >= win.publicPageCount)
                     currentIndex = win.publicPageCount - 1
+                if (win.customerScreenLocked && currentIndex !== win.setTempPageIndex)
+                    currentIndex = win.setTempPageIndex
+                win.resetCustomerAutoLock()
             }
 
             HomePage {
                 uiScale: win.uiScale
                 onServiceRequested: win.openServiceUnlock()
             }
-            SetTempPage { uiScale: win.uiScale }  // index 1
+            SetTempPage {
+                uiScale: win.uiScale
+                onUserActivity: win.resetCustomerAutoLock()
+            }  // index 1
             HistPage { uiScale: win.uiScale }     // index 2
             QrPage   { uiScale: win.uiScale }     // index 3
             ReclaimPage { uiScale: win.uiScale }  // index 4
@@ -186,6 +260,7 @@ ApplicationWindow {
             anchors.bottomMargin: 10 // + osk.exposedHeight
             count: win.serviceModeEnabled ? pages.count : win.publicPageCount
             currentIndex: pages.currentIndex
+            enabled: !win.customerScreenLocked
             onGoHome: pages.currentIndex = 0
             onDotClicked: function(i) { pages.currentIndex = i }
         }
@@ -193,6 +268,17 @@ ApplicationWindow {
         Connections {
             target: backend
             ignoreUnknownSignals: true
+            function onCustomerScreenLockChanged() {
+                if (backend.customerScreenLocked) {
+                    pages.currentIndex = win.setTempPageIndex
+                    win.closeCustomerUnlock()
+                    return
+                }
+                win.resetCustomerAutoLock()
+            }
+            function onCustomerLockConfigChanged() {
+                win.resetCustomerAutoLock()
+            }
             function onServiceModeEnabledChanged() {
                 if (!backend.serviceModeEnabled && pages.currentIndex >= win.publicPageCount)
                     pages.currentIndex = 0
@@ -217,10 +303,12 @@ ApplicationWindow {
                 if (depth <= 0) {
                     topbar.overlayMode = false
                     topbar.overlayTitle = ""
+                    win.resetCustomerAutoLock()
                     return
                 }
                 topbar.overlayMode = true
                 if (currentItem && currentItem.title !== undefined) topbar.overlayTitle = currentItem.title
+                win.resetCustomerAutoLock()
             }
         }
 
@@ -237,6 +325,170 @@ ApplicationWindow {
             id: osk
             uiScale: win.uiScale
             z: 240
+        }
+
+        Timer {
+            id: customerAutoLockTimer
+            interval: 30000
+            repeat: false
+            onTriggered: {
+                if (win.canAutoLockCustomer())
+                    backend.lockCustomerScreen()
+            }
+        }
+
+        Timer {
+            id: customerUnlockTimeout
+            interval: 6000
+            repeat: false
+            onTriggered: win.closeCustomerUnlock()
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            z: 225
+            visible: win.customerScreenLocked && pages.currentIndex === win.setTempPageIndex
+            color: win.customerUnlockOpen ? "#C8000000" : "transparent"
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    if (!win.customerUnlockOpen)
+                        win.openCustomerUnlock()
+                    else
+                        customerUnlockTimeout.restart()
+                }
+            }
+
+            Column {
+                anchors.centerIn: parent
+                spacing: 22 * win.uiScale
+                visible: !win.customerUnlockOpen
+
+                Loader {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    sourceComponent: biIcon
+                    onLoaded: {
+                        item.code = "\uF47B"
+                        item.px = 250 * win.uiScale
+                        item.iconColor = "#88272727"
+                    }
+                }
+
+                // Text {
+                //     text: I18n.t(win.lang, "custlock.tap_to_unlock")
+                //     color: "#55272727"
+                //     font.pixelSize: 28 * win.uiScale
+                //     font.bold: true
+                //     horizontalAlignment: Text.AlignHCenter
+                // }
+            }
+
+            Rectangle {
+                width: Math.min(parent.width * 0.54, 620 * win.uiScale)
+                height: 600 * win.uiScale
+                anchors.centerIn: parent
+                radius: 26 * win.uiScale
+                color: "#171A20"
+                border.width: 2 * win.uiScale
+                border.color: "#EDEFF2"
+                visible: win.customerUnlockOpen
+
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 28 * win.uiScale
+                    spacing: 18 * win.uiScale
+
+                    Text {
+                        width: parent.width
+                        text: I18n.t(win.lang, "custlock.enter_pin")
+                        color: "#EDEFF2"
+                        font.pixelSize: 28 * win.uiScale
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+
+                    Rectangle {
+                        width: parent.width
+                        height: 72 * win.uiScale
+                        radius: 18 * win.uiScale
+                        color: "#0E1116"
+                        border.width: 2 * win.uiScale
+                        border.color: win.customerUnlockError.length > 0 ? "#C84C4C" : "#EDEFF2"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: win.customerPinEntry
+                            color: "#EDEFF2"
+                            font.pixelSize: 34 * win.uiScale
+                            font.bold: true
+                            horizontalAlignment: Text.AlignHCenter
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                win.customerPinEntry = ""
+                                win.customerUnlockError = ""
+                                customerUnlockTimeout.restart()
+                            }
+                        }
+                    }
+
+                    Text {
+                        width: parent.width
+                        text: win.customerUnlockError
+                        visible: text.length > 0
+                        color: "#FF7B7B"
+                        font.pixelSize: 18 * win.uiScale
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+
+                    Grid {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        columns: 3
+                        rowSpacing: 14 * win.uiScale
+                        columnSpacing: 14 * win.uiScale
+
+                        Repeater {
+                            model: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "\u232B", "0", ""]
+
+                            delegate: Item {
+                                width: 150 * win.uiScale
+                                height: 82 * win.uiScale
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 20 * win.uiScale
+                                    visible: modelData !== ""
+                                    color: digitArea.pressed ? "#E6E8EB" : "#F6F7F9"
+                                    border.width: 2 * win.uiScale
+                                    border.color: "#EDEFF2"
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: modelData
+                                        color: "#171A20"
+                                        font.pixelSize: modelData === "\u232B" ? 28 * win.uiScale : 34 * win.uiScale
+                                        font.bold: true
+                                    }
+
+                                    MouseArea {
+                                        id: digitArea
+                                        anchors.fill: parent
+                                        onClicked: {
+                                            if (modelData === "\u232B")
+                                                win.removeCustomerPinDigit()
+                                            else
+                                                win.appendCustomerPinDigit(modelData)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         Rectangle {

@@ -71,6 +71,10 @@ class Backend : public QObject {
 
     Q_PROPERTY(QString reclaimOrderNumber READ reclaimOrderNumber NOTIFY reclaimInfoChanged)
     Q_PROPERTY(QString reclaimEmail READ reclaimEmail NOTIFY reclaimInfoChanged)
+    Q_PROPERTY(QString customEmail READ customEmail NOTIFY reclaimInfoChanged)
+    Q_PROPERTY(bool customerScreenLocked READ customerScreenLocked NOTIFY customerScreenLockChanged)
+    Q_PROPERTY(bool customerAutoLockEnabled READ customerAutoLockEnabled WRITE setCustomerAutoLockEnabled NOTIFY customerLockConfigChanged)
+    Q_PROPERTY(QString customerLockPin READ customerLockPin NOTIFY customerLockConfigChanged)
     Q_PROPERTY(bool serviceModeEnabled READ serviceModeEnabled NOTIFY serviceModeEnabledChanged)
 
     // forced sensors for testing
@@ -160,6 +164,10 @@ class Backend : public QObject {
     QString serialNumber() const { return RuntimeConfig::deviceSerial(); }
     QString reclaimOrderNumber() const { return RuntimeConfig::reclaimOrderNumber(); };
     QString reclaimEmail() const { return RuntimeConfig::reclaimEmail(); };
+    QString customEmail() const { return RuntimeConfig::customEmail(); };
+    bool customerScreenLocked() const { return customerScreenLocked_; }
+    bool customerAutoLockEnabled() const { return customerAutoLockEnabled_; }
+    QString customerLockPin() const { return customerLockPin_; }
     bool serviceModeEnabled() const { return serviceModeEnabled_; }
     QStringList historyLog() const { return logManager_.tempsHistory(); }
 
@@ -188,6 +196,8 @@ class Backend : public QObject {
                                  const QString& bssid = QString());
     Q_INVOKABLE bool wifiDisconnect(const QString& ssid = QString());
     Q_INVOKABLE bool wifiForget(const QString& ssid);
+    Q_INVOKABLE bool unlockCustomerScreen(const QString& pin);
+    Q_INVOKABLE void lockCustomerScreen();
     Q_INVOKABLE bool unlockServiceMode(const QString& pin);
     Q_INVOKABLE void lockServiceMode();
 
@@ -212,7 +222,9 @@ class Backend : public QObject {
     void setErrorActive(bool active);
 
     void setReclaimOrderNumber(const QString& number);
-    void setReclaimEmail(const QString& email);
+    void setCustomEmail(const QString& email);
+    void setCustomerLockPin(const QString& pin);
+    void setCustomerAutoLockEnabled(bool enabled);
 
     void setForcedSensors(bool en);
     void setForcedTemp1(double v);
@@ -294,6 +306,8 @@ class Backend : public QObject {
     void autoDefrostTimeChanged();
 
     void reclaimInfoChanged();
+    void customerScreenLockChanged();
+    void customerLockConfigChanged();
     void serviceModeEnabledChanged();
 
     // forced sensors
@@ -388,6 +402,9 @@ class Backend : public QObject {
 
     bool bath1Enabled_ = true;
     bool bath2Enabled_ = true;
+    bool customerScreenLocked_ = false;
+    bool customerAutoLockEnabled_ = false;
+    QString customerLockPin_ = QStringLiteral("1234");
     bool serviceModeEnabled_ = false;
 
     QStringList visibleOneWireIds_;

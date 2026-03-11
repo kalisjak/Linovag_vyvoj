@@ -135,12 +135,38 @@ void setReclaimOrderNumber(const QString& number) {
 
 QString reclaimEmail() {
     QSettings s = makeSettings();
-    return s.value("reclaim/email", "reklamace@gastro.cz").toString();
+    return s.value("reclaim/reclaim_email",
+                   s.value("reclaim/email", QStringLiteral("reklamace@gastro.cz"))).toString();
 }
 
-void setReclaimEmail(const QString& email) {
+QString customEmail() {
     QSettings s = makeSettings();
-    s.setValue("reclaim/email", email);
+    return s.value("reclaim/custom_email", QString()).toString();
+}
+
+void setCustomEmail(const QString& email) {
+    QSettings s = makeSettings();
+    s.setValue("reclaim/custom_email", email);
+}
+
+QString customerLockPin() {
+    QSettings s = makeSettings();
+    return s.value("lock/pin", QStringLiteral("1234")).toString().trimmed();
+}
+
+void setCustomerLockPin(const QString& pin) {
+    QSettings s = makeSettings();
+    s.setValue("lock/pin", pin.trimmed());
+}
+
+bool customerAutoLockEnabled() {
+    QSettings s = makeSettings();
+    return s.value("lock/auto_enabled", false).toBool();
+}
+
+void setCustomerAutoLockEnabled(bool enabled) {
+    QSettings s = makeSettings();
+    s.setValue("lock/auto_enabled", enabled);
 }
 
 QString servicePin() {

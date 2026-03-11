@@ -12,9 +12,17 @@ OverlayPage {
     title: I18n.t(lang, "settings.title")
 
     readonly property real s: uiScale
+    property var floatEditorRef: null
 
     property int activeTimeIdx: 1   // 1 or 2
     readonly property int stepMin: 15   // step for adjusting time, in minutes
+    property string lockPinDraft: backend && backend.customerLockPin ? backend.customerLockPin : "1234"
+    property string lockSaveMessage: ""
+    property bool lockPinDialogOpen: false
+    property string lockPinEntry: ""
+    property string lockPinFirstEntry: ""
+    property string lockPinDialogMessage: ""
+    property bool lockPinConfirmStep: false
 
     function clampMin(v) {
         var m = Math.round(v / stepMin) * stepMin
@@ -43,6 +51,64 @@ OverlayPage {
 
     function adjust(deltaMin) {
         setCurrentMin(activeTimeIdx, currentMin(activeTimeIdx) + deltaMin)
+    }
+
+    function openLockPinDialog() {
+        lockPinDialogOpen = true
+        lockPinEntry = ""
+        lockPinFirstEntry = ""
+        lockPinConfirmStep = false
+        lockPinDialogMessage = ""
+    }
+
+    function closeLockPinDialog() {
+        lockPinDialogOpen = false
+        lockPinEntry = ""
+        lockPinFirstEntry = ""
+        lockPinConfirmStep = false
+        lockPinDialogMessage = ""
+    }
+
+    function appendLockPinDigit(digit) {
+        if (!lockPinDialogOpen || lockPinEntry.length >= 4)
+            return
+        lockPinEntry += digit
+        lockPinDialogMessage = ""
+    }
+
+    function removeLockPinDigit() {
+        if (!lockPinDialogOpen || lockPinEntry.length === 0)
+            return
+        lockPinEntry = lockPinEntry.slice(0, lockPinEntry.length - 1)
+        lockPinDialogMessage = ""
+    }
+
+    function submitLockPinEntry() {
+        if (lockPinEntry.length !== 4) {
+            lockPinDialogMessage = I18n.t(page.lang, "settings.lock_save_invalid")
+            return
+        }
+
+        if (!lockPinConfirmStep) {
+            lockPinFirstEntry = lockPinEntry
+            lockPinEntry = ""
+            lockPinConfirmStep = true
+            lockPinDialogMessage = ""
+            return
+        }
+
+        if (lockPinEntry !== lockPinFirstEntry) {
+            lockPinEntry = ""
+            lockPinFirstEntry = ""
+            lockPinConfirmStep = false
+            lockPinDialogMessage = I18n.t(page.lang, "settings.lock_pin_mismatch")
+            return
+        }
+
+        backend.setCustomerLockPin(lockPinEntry)
+        page.lockPinDraft = backend.customerLockPin
+        page.lockSaveMessage = I18n.t(page.lang, "settings.lock_save_ok")
+        closeLockPinDialog()
     }
 
     Rectangle {
@@ -355,7 +421,174 @@ OverlayPage {
                 color: "#cc2e2e2e"
                 border.width: 1 * s
                 border.color: "#ccc6c5df"
-                height: mainRow.implicitHeight + 28 * s
+                height: lockRow.implicitHeight + 28 * s
+
+                Row {
+                    id: lockRow
+                    anchors.fill: parent
+                    anchors.margins: 14 * s
+                    spacing: 14 * s
+
+                    Rectangle {
+                        width: parent.width * 0.46
+                        height: Math.max(320 * s, parent.height - 28 * s)
+                        radius: 20 * s
+                        color: "#00000044"
+                        border.width: 0
+                        border.color: "#c6c5df"
+
+                        Column {
+                            anchors.fill: parent
+                            anchors.margins: 12 * s
+                            spacing: 15 * s
+
+                            Text {
+                                text: I18n.t(page.lang, "settings.lock_title")
+                                color: "#EDEFF2"
+                                font.pixelSize: 32 * s
+                                font.bold: true
+                            }
+
+                            Rectangle { width: parent.width; height: 1 * s; color: "#c6c5df"; opacity: 0.35 }
+
+                            Text {
+                                text: I18n.t(page.lang, "settings.lock_mode")
+                                color: "#EDEFF2"
+                                font.pixelSize: 24 * s
+                                font.bold: true
+                            }
+
+                            Row {
+                                spacing: 10 * s
+
+                                Rectangle {
+                                    width: 190 * s
+                                    height: 62 * s
+                                    radius: 22 * s
+                                    color: backend.customerAutoLockEnabled ? "#00ff00" : "#00000099"
+                                    border.width: 2 * s
+                                    border.color: "#c6c5df"
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: I18n.t(page.lang, "settings.lock_auto")
+                                        color: backend.customerAutoLockEnabled ? "#000000" : "#c6c5df"
+                                        font.pixelSize: 24 * s
+                                        font.bold: true
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        onClicked: backend.customerAutoLockEnabled = true
+                                    }
+                                }
+
+                                Rectangle {
+                                    width: 190 * s
+                                    height: 62 * s
+                                    radius: 22 * s
+                                    color: !backend.customerAutoLockEnabled ? "orange" : "#00000099"
+                                    border.width: 2 * s
+                                    border.color: "#c6c5df"
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: I18n.t(page.lang, "settings.lock_manual")
+                                        color: !backend.customerAutoLockEnabled ? "#000000" : "#c6c5df"
+                                        font.pixelSize: 24 * s
+                                        font.bold: true
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        onClicked: backend.customerAutoLockEnabled = false
+                                    }
+                                }
+                            }
+
+                            Text {
+                                width: parent.width
+                                wrapMode: Text.WordWrap
+                                text: I18n.t(page.lang, "settings.lock_pin_hint")
+                                color: "#c6c5df"
+                                font.pixelSize: 18 * s
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        width: parent.width * 0.54 - 14 * s
+                        height: Math.max(320 * s, parent.height - 28 * s)
+                        radius: 20 * s
+                        color: "#00000044"
+                        border.width: 0
+                        border.color: "#c6c5df"
+
+                        Column {
+                            anchors.fill: parent
+                            anchors.margins: 16 * s
+                            spacing: 16 * s
+
+                            Text {
+                                text: I18n.t(page.lang, "settings.lock_pin")
+                                color: "#EDEFF2"
+                                font.pixelSize: 30 * s
+                                font.bold: true
+                            }
+
+                            Rectangle { width: parent.width; height: 1 * s; color: "#c6c5df"; opacity: 0.35 }
+
+                            Rectangle {
+                                width: parent.width
+                                height: 84 * s
+                                radius: 16 * s
+                                color: "#1f3a66"
+                                border.width: 2 * s
+                                border.color: "#80c6c5df"
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: page.lockPinDraft
+                                    color: "#EDEFF2"
+                                    font.pixelSize: 34 * s
+                                    font.bold: true
+                                }
+                            }
+
+                            Rectangle {
+                                width: 240 * s
+                                height: 74 * s
+                                radius: 16 * s
+                                color: saveLockPinArea.pressed ? "#1f3a66" : "#00000099"
+                                border.width: 2 * s
+                                border.color: "#c6c5df"
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: I18n.t(page.lang, "settings.lock_save")
+                                    color: "#EDEFF2"
+                                    font.pixelSize: 22 * s
+                                    font.bold: true
+                                }
+
+                                MouseArea {
+                                    id: saveLockPinArea
+                                    anchors.fill: parent
+                                    onClicked: page.openLockPinDialog()
+                                }
+                            }
+
+                            Text {
+                                width: parent.width
+                                text: page.lockSaveMessage
+                                visible: text.length > 0
+                                wrapMode: Text.WordWrap
+                                color: text === I18n.t(page.lang, "settings.lock_save_ok") ? "#9BE39B" : "#FF7B7B"
+                                font.pixelSize: 18 * s
+                            }
+                        }
+                    }
+                }
             }
             // spacer bottom (so it feels scrollable even on small screens)
             Item { width: 1; height: 30 * s }
@@ -443,6 +676,134 @@ OverlayPage {
                                 confirmOff.visible = false
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    Item {
+        anchors.fill: parent
+        visible: page.lockPinDialogOpen
+        z: 10000
+
+        Rectangle {
+            anchors.fill: parent
+            color: "#bb000000"
+        }
+
+        Rectangle {
+            width: Math.min(parent.width * 0.72, 680 * s)
+            height: 590 * s
+            anchors.centerIn: parent
+            radius: 22 * s
+            color: "#1b1b1b"
+            border.width: 2 * s
+            border.color: "#c6c5df"
+
+            Column {
+                anchors.fill: parent
+                anchors.margins: 22 * s
+                spacing: 14 * s
+
+                Text {
+                    width: parent.width
+                    text: page.lockPinConfirmStep ? I18n.t(page.lang, "settings.lock_repeat_pin")
+                                                  : I18n.t(page.lang, "settings.lock_new_pin")
+                    color: "#EDEFF2"
+                    font.pixelSize: 28 * s
+                    font.bold: true
+                    horizontalAlignment: Text.AlignHCenter
+                }
+
+                Rectangle {
+                    width: parent.width
+                    height: 72 * s
+                    radius: 18 * s
+                    color: "#0E1116"
+                    border.width: 2 * s
+                    border.color: page.lockPinDialogMessage.length > 0 ? "#C84C4C" : "#EDEFF2"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: page.lockPinEntry
+                        color: "#EDEFF2"
+                        font.pixelSize: 34 * s
+                        font.bold: true
+                    }
+                }
+
+                Text {
+                    width: parent.width
+                    text: page.lockPinDialogMessage
+                    visible: text.length > 0
+                    color: "#FF7B7B"
+                    font.pixelSize: 18 * s
+                    horizontalAlignment: Text.AlignHCenter
+                }
+
+                Grid {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    columns: 3
+                    rowSpacing: 12 * s
+                    columnSpacing: 12 * s
+
+                    Repeater {
+                        model: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "\u232B", "0", "OK"]
+
+                        delegate: Rectangle {
+                            width: 160 * s
+                            height: 72 * s
+                            radius: 20 * s
+                            color: keypadArea.pressed ? "#ccEDEFF2" : "#F6F7F9"
+                            border.width: 2 * s
+                            border.color: "#EDEFF2"
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: modelData
+                                color: "#171A20"
+                                font.pixelSize: modelData === "\u232B" ? 28 * s : 34 * s
+                                font.bold: true
+                            }
+
+                            MouseArea {
+                                id: keypadArea
+                                anchors.fill: parent
+                                onClicked: {
+                                    if (modelData === "\u232B")
+                                        page.removeLockPinDigit()
+                                    else if (modelData === "OK")
+                                        page.submitLockPinEntry()
+                                    else
+                                        page.appendLockPinDigit(modelData)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    width: 180 * s
+                    height: 44 * s
+                    radius: 18 * s
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    color: cancelLockPinArea.pressed ? "#5a5a5ac4" : "orange"
+                    border.width: 2 * s
+                    border.color: "#c6c5df"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: I18n.t(page.lang, "common.cancel")
+                        color: "#2e2e2e"
+                        font.pixelSize: 20 * s
+                        font.bold: true
+                    }
+
+                    MouseArea {
+                        id: cancelLockPinArea
+                        anchors.fill: parent
+                        onClicked: page.closeLockPinDialog()
                     }
                 }
             }

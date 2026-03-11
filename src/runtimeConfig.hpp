@@ -76,7 +76,14 @@ QString reclaimOrderNumber();
 void setReclaimOrderNumber(const QString& number);
 
 QString reclaimEmail();
-void setReclaimEmail(const QString& email);
+QString customEmail();
+void setCustomEmail(const QString& email);
+
+QString customerLockPin();
+void setCustomerLockPin(const QString& pin);
+
+bool customerAutoLockEnabled();
+void setCustomerAutoLockEnabled(bool enabled);
 
 QString servicePin();
 

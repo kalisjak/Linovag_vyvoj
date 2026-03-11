@@ -57,7 +57,7 @@ OverlayPage {
 
     function syncFromBackend() {
         currentLanguageIndex = languageIndex(lang)
-        emailField.text = backend && backend.reclaimEmail ? backend.reclaimEmail : ""
+        emailField.text = backend && backend.customEmail ? backend.customEmail : ""
     }
 
     Component.onCompleted: syncFromBackend()
@@ -65,7 +65,7 @@ OverlayPage {
     Connections {
         target: backend
         function onAppLanguageChanged() { page.currentLanguageIndex = page.languageIndex(backend.appLanguage) }
-        function onReclaimInfoChanged() { emailField.text = backend.reclaimEmail }
+        function onReclaimInfoChanged() { emailField.text = backend.customEmail }
     }
 
     Rectangle {
@@ -235,7 +235,7 @@ OverlayPage {
                             id: emailField
                             width: parent.width - 300 * s
                             height: 80 * s
-                            text: backend && backend.reclaimEmail ? backend.reclaimEmail : ""
+                            text: backend && backend.customEmail ? backend.customEmail : ""
                             placeholderText: "napr. info@firma.cz"
                             color: "#EDEFF2"
                             placeholderTextColor: "#9DA7B5"
@@ -272,7 +272,7 @@ OverlayPage {
                             MouseArea {
                                 id: saveEmailArea
                                 anchors.fill: parent
-                                onClicked: backend.setReclaimEmail(emailField.text.trim())
+                                onClicked: backend.setCustomEmail(emailField.text.trim())
                             }
                         }
                     }

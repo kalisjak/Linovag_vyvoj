@@ -228,6 +228,9 @@ Backend::Backend(QObject* parent) : QObject(parent), rng_(std::random_device{}()
     appLanguage_ = RuntimeConfig::appLanguage();
     targetTemp_ = 3.0;
     targetTemp2_ = 3.0;
+    customerAutoLockEnabled_ = RuntimeConfig::customerAutoLockEnabled();
+    customerLockPin_ = RuntimeConfig::customerLockPin();
+    if (customerLockPin_.size() != 4) customerLockPin_ = QStringLiteral("1234");
     // auto defrost schedule (from runtime config)
     autoDefrostEnabled_ = RuntimeConfig::autoDefrostEnabled();
     autoDefrostTime1Min_ = RuntimeConfig::autoDefrostTime1Min();
@@ -299,9 +302,43 @@ void Backend::setReclaimOrderNumber(const QString& number) {
     emit reclaimInfoChanged();
 }
 
-void Backend::setReclaimEmail(const QString& email) {
-    RuntimeConfig::setReclaimEmail(email);
+void Backend::setCustomEmail(const QString& email) {
+    RuntimeConfig::setCustomEmail(email);
     emit reclaimInfoChanged();
+}
+
+bool Backend::unlockCustomerScreen(const QString& pin) {
+    if (pin.trimmed() != customerLockPin_) return false;
+    if (!customerScreenLocked_) return true;
+
+    customerScreenLocked_ = false;
+    emit customerScreenLockChanged();
+    return true;
+}
+
+void Backend::lockCustomerScreen() {
+    if (customerScreenLocked_) return;
+    customerScreenLocked_ = true;
+    emit customerScreenLockChanged();
+}
+
+void Backend::setCustomerLockPin(const QString& pin) {
+    const QString trimmed = pin.trimmed();
+    if (trimmed.size() != 4) return;
+    for (const QChar c : trimmed) {
+        if (!c.isDigit()) return;
+    }
+    if (customerLockPin_ == trimmed) return;
+    customerLockPin_ = trimmed;
+    RuntimeConfig::setCustomerLockPin(customerLockPin_);
+    emit customerLockConfigChanged();
+}
+
+void Backend::setCustomerAutoLockEnabled(bool enabled) {
+    if (customerAutoLockEnabled_ == enabled) return;
+    customerAutoLockEnabled_ = enabled;
+    RuntimeConfig::setCustomerAutoLockEnabled(enabled);
+    emit customerLockConfigChanged();
 }
 
 bool Backend::unlockServiceMode(const QString& pin) {
