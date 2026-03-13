@@ -14,7 +14,7 @@ var translations = {
     "home.title": { cs: "Domů", en: "Home", de: "Start", dk: "Hjem" },
     "home.temp": { cs: "Teplota", en: "Temperature", de: "Temperatur", dk: "Temperatur" },
     "home.history": { cs: "Historie", en: "History", de: "Historie", dk: "Historik" },
-    "home.qr": { cs: "QR kód", en: "QR code", de: "QR-Code", dk: "QR-kode" },
+    "home.qr": { cs: "QR kódy", en: "QR codes", de: "QR-Codes", dk: "QR-koder" },
     "home.reclaim": { cs: "Reklamace", en: "Warranty claim", de: "Reklamation", dk: "Reklamation" },
 
     "settings.title": { cs: "Nastavení", en: "Settings", de: "Einstellungen", dk: "Indstillinger" },

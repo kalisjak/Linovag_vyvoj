@@ -41,6 +41,9 @@ Page {
                     previewWidth: 440
                     previewHeight: 440
                     showButton: false
+                    showPopupTitle: false
+                    expandHintSize: 86
+                    expandHintIconSize: 52
                 }
 
                 Text {

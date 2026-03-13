@@ -105,7 +105,7 @@ Rectangle {
                 Label {
                     text: bar.overlayTitle
                     color: "#EDEFF2"
-                    font.pixelSize: 36 * uiScale
+                    font.pixelSize: 40 * uiScale
                     font.bold: true
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -144,9 +144,10 @@ Rectangle {
         // ===== CENTER TIME =====
         Label {
             id: clockLabel
+            visible: !bar.overlayMode
             text: bar.timeText
             color: "#EDEFF2"
-            font.pixelSize: 26 * uiScale
+            font.pixelSize: 30 * uiScale
             font.bold: true
             horizontalAlignment: Text.AlignHCenter
             Layout.alignment: Qt.AlignVCenter | Qt.AlignHCenter
@@ -156,13 +157,13 @@ Rectangle {
         // ===== RIGHT ICONS =====
         Row {
             id: rightIcons
-            spacing: 22 * uiScale
+            spacing: 30 * uiScale
             Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
 
             // 0) Varování (bliká žlutě při chybě)
             ToolButton {
                 id: warnBtn
-                visible: bar.errorActive
+                visible: true // bar.errorActive
                 contentItem: biIcon.createObject(this, {
                     "code": "\uF33A",
                     "px": 48 * uiScale,
@@ -175,7 +176,7 @@ Rectangle {
                     implicitHeight: 58 * uiScale
                 }
                 SequentialAnimation on opacity {
-                    running: bar.errorActive
+                    running: visible
                     loops: Animation.Infinite
                     NumberAnimation { from: 1.0; to: 1.0; duration: 500 }
                     NumberAnimation { from: 1.0; to: 0.1; duration: 500 }
@@ -215,7 +216,7 @@ Rectangle {
                     implicitHeight: 58 * uiScale
                 }
                 SequentialAnimation on opacity {
-                    running: bar.defrost1Active
+                    running: visible
                     loops: Animation.Infinite
                     NumberAnimation { from: 1.0; to: 1.0; duration: 500 }
                     NumberAnimation { from: 1.0; to: 0.1; duration: 500 }
@@ -241,7 +242,7 @@ Rectangle {
 
             ToolButton {
                 id: compressor1Btn
-                visible: !bar.isDual
+                visible: !bar.isDual && !bar.overlayMode
                 contentItem: biIcon.createObject(this, {
                     "code": "\uF670",
                     "px": 48 * uiScale,
@@ -287,7 +288,7 @@ Rectangle {
                     implicitHeight: 58 * uiScale
                 }
                 SequentialAnimation on opacity {
-                    running: bar.defrost1Active
+                    running: visible
                     loops: Animation.Infinite
                     NumberAnimation { from: 1.0; to: 1.0; duration: 500 }
                     NumberAnimation { from: 1.0; to: 0.1; duration: 500 }
@@ -313,7 +314,7 @@ Rectangle {
 
             ToolButton {
                 id: compressor1Btn22
-                visible: bar.isDual
+                visible: bar.isDual && !bar.overlayMode
                 contentItem: biIcon.createObject(this, {
                     "code": "\uF670",
                     "px": 48 * uiScale,
@@ -367,7 +368,7 @@ Rectangle {
                     implicitHeight: 58 * uiScale
                 }
                 SequentialAnimation on opacity {
-                    running: bar.defrost2Active
+                    running: visible
                     loops: Animation.Infinite
                     NumberAnimation { from: 1.0; to: 1.0; duration: 500 }
                     NumberAnimation { from: 1.0; to: 0.1; duration: 500 }
@@ -393,7 +394,7 @@ Rectangle {
 
             ToolButton {
                 id: compressor2Btn22
-                visible: bar.isDual
+                visible: bar.isDual && !bar.overlayMode
                 contentItem: biIcon.createObject(this, {
                     "code": "\uF670",
                     "px": 48 * uiScale,
@@ -413,10 +414,10 @@ Rectangle {
                 onClicked: bar.openWifi()
                 contentItem: biIcon.createObject(this, {
                     "code": Qt.binding(function() {
-                        if (backend.ethernetConnected) return "\uF6D5"
+                        if (backend.ethernetConnected) return "\uF2EC"
                         return backend.wifiConnected ? "\uF61C" : "\uF3EF"
                     }),
-                    "px": 48 * uiScale,
+                    "px": 52 * uiScale,
                     "iconColor": Qt.binding(function() { return wifiBtn.down ? "#C0C3C8" : "#EDEFF2"; })
                 })
                 background: Rectangle {
@@ -432,7 +433,7 @@ Rectangle {
                 onClicked: bar.openSettings()
                 contentItem: biIcon.createObject(this, {
                     "code": Qt.binding(function() { return settingsBtn.down ? "\uF3E2" : "\uF3E5"; }),
-                    "px": 48 * uiScale,
+                    "px": 52 * uiScale,
                     "iconColor": "#EDEFF2"
                 })
                 background: Rectangle {
@@ -448,7 +449,7 @@ Rectangle {
                 onClicked: bar.openLogin()
                 contentItem: biIcon.createObject(this, {
                     "code": Qt.binding(function() { return loginBtn.down ? "\uF4DA" : "\uF4E1"; }),
-                    "px": 48 * uiScale,
+                    "px": 52 * uiScale,
                     "iconColor": "#EDEFF2"
                 })
                 background: Rectangle {

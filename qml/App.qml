@@ -21,6 +21,7 @@ ApplicationWindow {
     // property real uiScale: 2.0
     property real uiScale: Math.min(width / designWidth,
                                     height / designHeight)
+
     readonly property string lang: (backend && backend.appLanguage) ? backend.appLanguage : "cs"
     readonly property int publicPageCount: 5
     readonly property int firstServicePageIndex: 5
@@ -31,6 +32,19 @@ ApplicationWindow {
     property bool customerUnlockOpen: false
     property string customerPinEntry: ""
     property string customerUnlockError: ""
+
+    function openOverlayPage(source, title, extraProps) {
+        var props = { pageStack: overlay, floatEditorRef: floatEditor }
+        if (extraProps) {
+            for (var key in extraProps)
+                props[key] = extraProps[key]
+        }
+        if (overlay.depth > 0)
+            overlay.clear()
+        overlay.push(Qt.resolvedUrl(source), props)
+        topbar.overlayMode = true
+        topbar.overlayTitle = title
+    }
 
     function canAutoLockCustomer() {
         return !!backend
@@ -134,13 +148,13 @@ ApplicationWindow {
         source: "qrc:/qml/fonts/bootstrap-icons.ttf"
     }
     property string biFamily: biFont.name
+    readonly property string biWrench2: "\uF000"
+    readonly property string biWrench3: "\uF001"
 
-    // Jednoduchý ikonový "label"
     Component {
         id: biIcon
         Text {
-            // vstupy
-            property string code: ""            // např. "\uF61C" (wifi)
+            property string code: ""
             property color  iconColor: "#EDEFF2"
             property int    px: 20
 
@@ -154,21 +168,16 @@ ApplicationWindow {
         }
     }
 
+// ============= otočení celé scény pro RPI ==========
+    
+    property bool rotateScene: true
 
-    // --- volitelné otočení celé scény (ponechám pro RPi orientaci) ---
-    property bool rotateScene: false
+// =============================================================================
 
-
-    // --- KOŘEN PRO CELOU SCÉNU (rotovatelný) ---
     Item {
         id: rot
         width: rotateScene ? win.height : win.width
         height: rotateScene ? win.width  : win.height
-
-        // transformOrigin: Item.BottomRight
-        // x: 0
-        // y: rotateScene ? win.height : 0
-        // rotation: rotateScene ? 270 : 0
 
         x: rotateScene ? win.width : 0
         y: 0
@@ -192,22 +201,13 @@ ApplicationWindow {
             anchors.top: parent.top
 
             onOpenWifi: {
-                if (overlay.depth > 0) overlay.clear()
-                overlay.push(Qt.resolvedUrl("WifiPage.qml"), { pageStack: overlay, floatEditorRef: floatEditor })
-                topbar.overlayMode = true
-                topbar.overlayTitle = I18n.t(win.lang, "overlay.wifi")
+                win.openOverlayPage("WifiPage.qml", I18n.t(win.lang, "overlay.wifi"))
             }
             onOpenSettings: {
-                if (overlay.depth > 0) overlay.clear()
-                overlay.push(Qt.resolvedUrl("SettingsPage.qml"), { pageStack: overlay, floatEditorRef: floatEditor })
-                topbar.overlayMode = true
-                topbar.overlayTitle = I18n.t(win.lang, "overlay.settings")
+                win.openOverlayPage("SettingsPage.qml", I18n.t(win.lang, "overlay.settings"))
             }
             onOpenLogin: {
-                if (overlay.depth > 0) overlay.clear()
-                overlay.push(Qt.resolvedUrl("PersonPage.qml"), { pageStack: overlay, floatEditorRef: floatEditor })
-                topbar.overlayMode = true
-                topbar.overlayTitle = I18n.t(win.lang, "overlay.person")
+                win.openOverlayPage("PersonPage.qml", I18n.t(win.lang, "overlay.person"))
             }
             onNavigateBack: {
                 if (overlay.depth > 1) overlay.pop()
@@ -238,6 +238,9 @@ ApplicationWindow {
             HomePage {
                 uiScale: win.uiScale
                 onServiceRequested: win.openServiceUnlock()
+                onPersonRequested: win.openOverlayPage("PersonPage.qml", I18n.t(win.lang, "overlay.person"))
+                onSettingsRequested: win.openOverlayPage("SettingsPage.qml", I18n.t(win.lang, "overlay.settings"))
+                onWarningRequested: win.openOverlayPage("WarningPage.qml", "Varování")
             }
             SetTempPage {
                 uiScale: win.uiScale

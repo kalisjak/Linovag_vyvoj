@@ -177,7 +177,7 @@ class Backend : public QObject {
     bool customerAutoLockEnabled() const { return customerAutoLockEnabled_; }
     QString customerLockPin() const { return customerLockPin_; }
     bool serviceModeEnabled() const { return serviceModeEnabled_; }
-    QStringList historyLog() const { return logManager_.tempsHistory(); }
+    QStringList historyLog() const { return historyLogCache_; }
 
     QStringList visibleOneWireIds() const { return visibleOneWireIds_; }
 
@@ -434,6 +434,7 @@ class Backend : public QObject {
     void setWifiAuthFailure(bool failed);
     void refreshNetworkLinkState();
     void onWifiMonitorTick();
+    void rebuildHistoryLogCache();
 
     QTimer* wifiMonitorTimer_ = nullptr;
     QTimer* historyQrRefreshTimer_ = nullptr;
@@ -441,6 +442,7 @@ class Backend : public QObject {
     QString histQrSource_;
     QString reclaimQrSource_;
     QString tutorialQrSource_;
+    QStringList historyLogCache_;
 
     QString buildTempsSnapshotLine() const;
 };

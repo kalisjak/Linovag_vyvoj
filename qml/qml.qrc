@@ -14,6 +14,7 @@
     <file>WifiPage.qml</file>
     <file>SettingsPage.qml</file>
     <file>PersonPage.qml</file>
+    <file>WarningPage.qml</file>
     <file>TestPage.qml</file>
     <file>SensorConfigPage.qml</file>
     <file>KeyboardPanel.qml</file>

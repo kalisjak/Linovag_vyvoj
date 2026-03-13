@@ -186,7 +186,7 @@ Page {
                         Text {
                             id: currentTempText
                             text: setTP.tempText(setTP.currentTemp, defrost1Active)
-                            color: (setTP.isBadNumber(setTP.currentTemp)  | defrost1Active) ? "#c6c5df" : (setTP.diff > 5.0 ? "orange" : "#00ff00")
+                            color: (setTP.isBadNumber(setTP.currentTemp) || defrost1Active) ? "#c6c5df" : (setTP.diff > 5.0 ? "orange" : "#00ff00")
                             font.pixelSize: setTP.tempPx(setTP.currentTemp, 290 * uiScale)
                             font.bold: true
                         }
@@ -255,7 +255,7 @@ Page {
                             enabled: bathEnabled
                             onClicked: {
                                 setTP.noteActivity()
-                                backend.targetTemp <= 12.0 ? backend.targetTemp = backend.targetTemp + 0.5 : backend.targetTemp = backend.targetTemp
+                                if (backend.targetTemp < 13.0) backend.targetTemp = backend.targetTemp + 0.5
                             }
                         }
                     }
@@ -307,7 +307,7 @@ Page {
                             enabled: bathEnabled
                             onClicked: {
                                 setTP.noteActivity()
-                                backend.targetTemp >= 0.0 ? backend.targetTemp = backend.targetTemp - 0.5 : backend.targetTemp = backend.targetTemp
+                                if (backend.targetTemp > 0.0) backend.targetTemp = backend.targetTemp - 0.5
                             }
                         }
                     }
@@ -383,7 +383,7 @@ Page {
 
                                     Text {
                                         text: setTP.tempText(backend.value1, defrost1Active)
-                                        color: (setTP.isBadNumber(backend.value1) | defrost1Active) ? "#c6c5df" : (setTP.diff1 > 5.0 ? "orange" : "#00ff00")
+                                        color: (setTP.isBadNumber(backend.value1) || defrost1Active) ? "#c6c5df" : (setTP.diff1 > 5.0 ? "orange" : "#00ff00")
                                         font.pixelSize: setTP.tempPx(backend.value1, 200 * uiScale)
                                         font.bold: true
                                     }
@@ -506,8 +506,8 @@ Page {
                                         enabled: (setTP.activeTarget === 1) ? backend.bath1Enabled : backend.bath2Enabled
                                         onClicked: {
                                             setTP.noteActivity()
-                                            if (setTP.activeTarget === 1) backend.targetTemp = backend.targetTemp + 0.5
-                                            else backend.targetTemp2 = backend.targetTemp2 + 0.5
+                                            if (setTP.activeTarget === 1 && backend.targetTemp < 13.0) backend.targetTemp = backend.targetTemp + 0.5
+                                            else if (backend.targetTemp2 < 13.0) backend.targetTemp2 = backend.targetTemp2 + 0.5
                                         }
                                     }
                                 }
@@ -534,8 +534,8 @@ Page {
                                         enabled: (setTP.activeTarget === 1) ? backend.bath1Enabled : backend.bath2Enabled
                                         onClicked: {
                                             setTP.noteActivity()
-                                            if (setTP.activeTarget === 1) backend.targetTemp = backend.targetTemp - 0.5
-                                            else backend.targetTemp2 = backend.targetTemp2 - 0.5
+                                            if (setTP.activeTarget === 1 && backend.targetTemp > 0.0) backend.targetTemp = backend.targetTemp - 0.5
+                                            else if (backend.targetTemp2 > 0.0) backend.targetTemp2 = backend.targetTemp2 - 0.5
                                         }
                                     }
                                 }
@@ -633,7 +633,7 @@ Page {
 
                                     Text {
                                         text: setTP.tempText(backend.value2, defrost2Active)
-                                        color: (setTP.isBadNumber(backend.value2) | defrost2Active) ? "#c6c5df" : (setTP.diff2 > 5.0 ? "orange" : "#00ff00")
+                                        color: (setTP.isBadNumber(backend.value2) || defrost2Active) ? "#c6c5df" : (setTP.diff2 > 5.0 ? "orange" : "#00ff00")
                                         font.pixelSize: setTP.tempPx(backend.value2, 200 * uiScale)
                                         font.bold: true
                                     }

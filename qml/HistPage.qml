@@ -8,17 +8,6 @@ Page {
     property real uiScale: 1.0
     readonly property string lang: (backend && backend.appLanguage) ? backend.appLanguage : "cs"
 
-    function formatHistoryLine(line) {
-        if (!line || line.length === 0)
-            return ""
-
-        var m = line.match(/^(\d{2}:\d{2}) (\d{2}\.\d{2})\.\d{2} - .*?vana-t1: ([^,]+)/)
-        if (m)
-            return m[1] + " " + m[2] + " - room: " + m[3].trim() + " °C"
-
-        return line
-    }
-
     function scrollHistoryToLatest() {
         if (!logView || logView.count <= 0)
             return
@@ -71,6 +60,9 @@ Page {
                     previewWidth: 440
                     previewHeight: 440
                     showButton: false
+                    showPopupTitle: false
+                    expandHintSize: 86
+                    expandHintIconSize: 52
                 }
 
                 Text {
@@ -147,9 +139,9 @@ Page {
                         property bool autoFollow: true
 
                         delegate: Text {
-                            text: histP.formatHistoryLine(modelData)
+                            text: modelData
                             color: "#EDEFF2"
-                            font.pixelSize: Math.min(histP.width, histP.height) * 0.052
+                            font.pixelSize: 37
                             font.family: "monospace"
                             elide: Text.ElideRight
                         }

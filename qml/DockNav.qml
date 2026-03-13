@@ -20,16 +20,16 @@ Item {
         id: dockN
         anchors.centerIn: parent
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 35 * uiScale
+        spacing: 50 * uiScale
 
 
         Repeater {
             model: dock.count
 
             delegate: Rectangle {
-                width: 26 * uiScale
-                height: 26 * uiScale
-                radius: 13 * uiScale
+                width: 34 * uiScale
+                height: 34 * uiScale
+                radius: 17 * uiScale
 
                 color: (index === 0
                         ? "transparent"
@@ -46,18 +46,9 @@ Item {
                         item.code = Qt.binding(function() {
                             return (dock.currentIndex === 0 ? "\uF424" : "\uF425");
                         })
-                        item.px = 37 * uiScale
+                        item.px = 50 * uiScale
                         item.iconColor = "#EDEFF2"
                     }
-                }
-
-                Rectangle {
-                    anchors.fill: parent
-                    radius: parent.radius
-                    visible: index !== 0
-                    color: parent.color
-                    border.color: parent.border.color
-                    border.width: parent.border.width
                 }
 
                 MouseArea {

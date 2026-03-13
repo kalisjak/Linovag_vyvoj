@@ -6,6 +6,7 @@ Item {
 
     property string source: ""
     property string title: ""
+    property string popupTitle: title
     property string biFamily: ""
     property real previewWidth: 340
     property real previewHeight: 340
@@ -13,6 +14,11 @@ Item {
     property real expandedMaxSize: 980
     property bool previewUsesImage: true
     property string previewIcon: "\uF6AE"
+    property real previewIconSize: Math.min(previewFrame.width, previewFrame.height) * 0.75
+    property bool showPopupTitle: true
+    property bool showExpandHint: true
+    property real expandHintSize: 56
+    property real expandHintIconSize: 40
 
     width: previewWidth
     height: showButton ? previewHeight + 92 : previewHeight
@@ -48,16 +54,17 @@ Item {
             text: tile.previewIcon
             color: hoverArea.containsMouse ? "#ffffff" : "#c1d2e4"
             font.family: tile.biFamily
-            font.pixelSize: Math.min(parent.width, parent.height) * 0.75
+            font.pixelSize: tile.previewIconSize
         }
 
         Rectangle {
+            visible: showExpandHint
             anchors.right: parent.right
             anchors.bottom: parent.bottom
             anchors.margins: 10
-            width: 56
-            height: 56
-            radius: 28
+            width: expandHintSize
+            height: expandHintSize
+            radius: expandHintSize / 2
             color: "#12263b"
             border.color: "#dfe7f1"
             border.width: 1
@@ -67,7 +74,7 @@ Item {
                 text: "\uF401"
                 color: "#ffffff"
                 font.family: tile.biFamily
-                font.pixelSize: 32
+                font.pixelSize: expandHintIconSize
             }
 
             SequentialAnimation on opacity {
@@ -113,7 +120,7 @@ Item {
                 text: "\uF401"
                 color: "#f3f6fa"
                 font.family: tile.biFamily
-                font.pixelSize: 32
+                font.pixelSize: 100
             }
         }
 
@@ -154,11 +161,11 @@ Item {
                 Column {
                     anchors.centerIn: parent
                     width: parent.width
-                    spacing: 14
+                    spacing: showPopupTitle ? 14 : 0
 
                     Rectangle {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        width: 640
+                        width: showPopupTitle ? 640 : 700
                         height: width
                         color: "transparent"
 
@@ -177,13 +184,14 @@ Item {
                     }
 
                     Rectangle {
+                        visible: showPopupTitle
                         width: parent.width
                         height: 80
                         color: "transparent"
 
                         Text {
                             anchors.centerIn: parent
-                            text: tile.title
+                            text: tile.popupTitle
                             color: "#f3f6fa"
                             font.pixelSize: 34
                             font.bold: true

@@ -22,6 +22,7 @@
 #include <QUrl>
 #include <QUrlQuery>
 #include <QVariantMap>
+#include <QRegularExpression>
 #include <algorithm>
 
 #include "qrcodegen.hpp"
@@ -387,6 +388,20 @@ QString buildTutorialUrl() {
     return RuntimeConfig::tutorialUrl().trimmed();
 }
 
+QString formatHistoryLineForUi(const QString& line) {
+    static const QRegularExpression roomTempPattern(
+        QStringLiteral(R"(^(\d{2}:\d{2}) (\d{2}\.\d{2})\.\d{2} - .*?vana-t1: ([^,]+))"));
+
+    const QString trimmed = line.trimmed();
+    if (trimmed.isEmpty()) return QString();
+
+    const QRegularExpressionMatch match = roomTempPattern.match(trimmed);
+    if (!match.hasMatch()) return trimmed;
+
+    return QStringLiteral("%1 %2 - room: %3 °C")
+        .arg(match.captured(1), match.captured(2), match.captured(3).trimmed());
+}
+
 }  // namespace
 
 Backend::Backend(QObject* parent) : QObject(parent), rng_(std::random_device{}()) {
@@ -424,14 +439,30 @@ Backend::Backend(QObject* parent) : QObject(parent), rng_(std::random_device{}()
 
 void Backend::initLogManager() {
     logManager_.init(QString());
+    rebuildHistoryLogCache();
 
-    connect(&logManager_, &LogManager::tempsHistoryChanged, this, &Backend::historyLogChanged);
+    connect(&logManager_, &LogManager::tempsHistoryChanged, this, [this]() {
+        rebuildHistoryLogCache();
+        emit historyLogChanged();
+    });
 
     logManager_.setTempsSnapshotProvider([this]() { return buildTempsSnapshotLine(); });
 
     logManager_.startTempsTimer(AppConfig::TEMPS_LOG_INTERVAL_MS);
     // hned po startu jeden řádek, aby bylo jasné, že log běží
     logManager_.appendTempsSnapshotNow();
+}
+
+void Backend::rebuildHistoryLogCache() {
+    const QStringList rawHistory = logManager_.tempsHistory();
+    QStringList formattedHistory;
+    formattedHistory.reserve(rawHistory.size());
+
+    for (const QString& line : rawHistory) {
+        formattedHistory.append(formatHistoryLineForUi(line));
+    }
+
+    historyLogCache_ = formattedHistory;
 }
 
 // =========== Setters ===========
